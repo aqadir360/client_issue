@@ -65,6 +65,30 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
         ],
 
+        'imports' => [
+            'driver' => 'local',
+            'root' => storage_path('imports'),
+        ],
+
+        'sftp' => [
+            'driver'     => 'sftp',
+            'host'       => env('SFTP_HOST', ''),
+            'port'       => env('SFTP_PORT', '22'),
+            'username'   => env('SFTP_USERNAME', ''),
+            'password'   => env('SFTP_PASSWORD', ''),
+            'privateKey' => env('SFTP_PRIVATE_KEY_PATH', ''),
+            'root'       => env('SFTP_ROOT', ''),
+            'timeout'    => env('SFTP_TIMEOUT', '10'),
+        ],
+
+        'hansensFtp' => [
+            'driver'     => 'ftp',
+            'host'       => env('HANSENS_FTP_HOST', ''),
+            'username'   => env('HANSENS_FTP_USERNAME', ''),
+            'password'   => env('HANSENS_FTP_PASSWORD', ''),
+            'root'       => env('HANSENS_FTP_ROOT', ''),
+        ],
+
     ],
 
     /*
