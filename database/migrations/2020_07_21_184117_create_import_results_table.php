@@ -18,9 +18,15 @@ class CreateImportResultsTable extends Migration
             $table->char('company_id', 36);
             $table->string('filename');
 
-            $table->integer('success')->default(0);
+            $table->integer('adds')->default(0);
+            $table->integer('moves')->default(0);
+            $table->integer('discos')->default(0);
             $table->integer('skipped')->default(0);
+            $table->integer('metrics')->default(0);
             $table->integer('skip_list')->default(0);
+            $table->integer('skip_invalid_depts')->default(0);
+            $table->integer('skip_invalid_stores')->default(0);
+            $table->integer('skip_invalid_barcodes')->default(0);
             $table->integer('errors')->default(0);
             $table->integer('barcode_errors')->default(0);
             $table->integer('total')->default(0);
@@ -28,7 +34,8 @@ class CreateImportResultsTable extends Migration
             $table->longText('invalid_depts')->nullable();
             $table->longText('invalid_stores')->nullable();
             $table->longText('invalid_barcodes')->nullable();
-            $table->timestamps();
+
+            $table->timestamp('created_at')->nullable();
             $table->timestamp('completed_at')->nullable();
         });
     }
