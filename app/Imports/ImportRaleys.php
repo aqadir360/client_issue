@@ -104,7 +104,7 @@ class ImportRaleys implements ImportInterface
                 continue;
             }
 
-            $existingProduct = $this->import->fetchProduct($this->proxy, $upc);
+            $existingProduct = $this->import->fetchProduct($upc);
 
             if ($existingProduct === false) {
                 $response = $this->persistProduct(
