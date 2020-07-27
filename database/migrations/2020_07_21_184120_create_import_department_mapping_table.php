@@ -19,6 +19,7 @@ class CreateImportDepartmentMappingTable extends Migration
             $table->char('department_id', 36)->nullable();
             $table->string('department');
             $table->string('category');
+            $table->integer('skip')->default(0);
             $table->timestamps();
         });
     }
