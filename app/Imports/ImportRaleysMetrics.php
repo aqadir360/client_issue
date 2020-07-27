@@ -4,59 +4,56 @@ namespace App\Imports;
 
 use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\ImportFtpManager;
-use App\Objects\ImportStatusOutput;
+use App\Objects\Database;
+use App\Objects\FtpManager;
+use App\Objects\ImportManager;
 
 // Downloads metrics files added to Raleys FTP since the last import
 class ImportRaleysMetrics implements ImportInterface
 {
     private $companyId = 'd48c3be4-5102-1977-4c3c-2de77742dc1e';
-    private $storagePath;
+    private $unzippedPath;
 
-    /** @var ImportStatusOutput */
-    private $importStatus;
+    /** @var ImportManager */
+    private $import;
 
     /** @var Api */
     private $proxy;
 
-    /** @var ImportFtpManager */
+    /** @var FtpManager */
     private $ftpManager;
 
-    public function __construct(Api $api)
+    public function __construct(Api $api, Database $database)
     {
         $this->proxy = $api;
-        $this->storagePath = storage_path('imports/raleys/');
-
-        $this->ftpManager = new ImportFtpManager('imports/raleys/', 'raleys/imports', '/last_metrics.txt');
-        $this->importStatus = new ImportStatusOutput($this->companyId, "Raleys");
+        $this->ftpManager = new FtpManager('raleys/imports', '/last_metrics.txt');
+        $this->import = new ImportManager($database, $this->companyId);
+        $this->unzippedPath = storage_path('imports/raleys_unzipped/');
     }
 
     public function importUpdates()
     {
-        $filesToImport = [];
         $files = $this->ftpManager->getRecentlyModifiedFiles();
         foreach ($files as $file) {
             if (strpos($file, 'dcp_rate_of_sales_last_90_days') !== false) {
                 $zipFile = $this->ftpManager->downloadFile($file);
-                $filesToImport[] = $this->ftpManager->unzipFile($zipFile);
+                $this->ftpManager->unzipFile($zipFile, 'raleys_unzipped');
             }
         }
 
-        if (count($filesToImport) > 0) {
-            $this->importStatus->setStores($this->proxy);
+        $filesToImport = glob($this->unzippedPath . '*.dat');
 
-            foreach ($filesToImport as $file) {
-                $this->importRateOfSalesFile($file);
-            }
-
-            $this->ftpManager->writeLastDate();
-            $this->importStatus->outputResults();
+        foreach ($filesToImport as $file) {
+            $this->importRateOfSalesFile($file);
         }
+
+        $this->ftpManager->writeLastDate();
+        $this->import->completeImport();
     }
 
     private function importRateOfSalesFile($file)
     {
-        $this->importStatus->startNewFile($file);
+        $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
@@ -64,32 +61,36 @@ class ImportRaleysMetrics implements ImportInterface
                     continue;
                 }
 
-                $this->importStatus->recordRow();
+                $this->import->recordRow();
 
-                $storeId = $this->importStatus->storeNumToStoreId($data[0]);
+                $storeId = $this->import->storeNumToStoreId($data[0]);
                 if ($storeId === false) {
                     continue;
                 }
 
-                $barcode = trim($data[1]);
-                if ($this->importStatus->isInvalidBarcode($barcode)) {
+                $barcode = BarcodeFixer::fixUpc(trim($data[1]));
+                if ($this->import->isInvalidBarcode($barcode, $data[1])) {
                     continue;
                 }
 
-                $response = $this->proxy->persistMetric(
-                    BarcodeFixer::fixUpc($barcode),
-                    $storeId,
-                    floatval($data[3]),
-                    floatval($data[2]),
-                    round(floatval($data[4]) / 90)
-                );
+                $product = $this->import->fetchProduct($barcode);
+                if ($product->isExistingProduct === false) {
+                    $this->import->currentFile->skipped++;
+                    continue;
+                }
 
-                $this->importStatus->recordResult($response);
+                $this->import->persistMetric(
+                    $storeId,
+                    $product->productId,
+                    $this->import->convertFloatToInt(floatval($data[3])),
+                    $this->import->convertFloatToInt(floatval($data[2])),
+                    $this->import->convertFloatToInt(round(floatval($data[4]) / 90))
+                );
             }
 
             fclose($handle);
         }
 
-        $this->importStatus->completeFile();
+        $this->import->completeFile();
     }
 }

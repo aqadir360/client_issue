@@ -4,8 +4,9 @@ namespace App\Imports;
 
 use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\ImportFtpManager;
-use App\Objects\ImportStatusOutput;
+use App\Objects\Database;
+use App\Objects\FtpManager;
+use App\Objects\ImportManager;
 
 // Expects file format:
 // [0] - Store Number
@@ -18,21 +19,20 @@ class ImportHansensMetrics implements ImportInterface
 {
     private $companyId = '61ef52da-c0e1-11e7-a59b-080027c30a85';
 
-    /** @var ImportStatusOutput */
-    private $importStatus;
+    /** @var ImportManager */
+    private $import;
 
-    /** @var ImportFtpManager */
+    /** @var FtpManager */
     private $ftpManager;
 
     /** @var Api */
     private $proxy;
 
-    public function __construct(Api $api)
+    public function __construct(Api $api, Database $database)
     {
         $this->proxy = $api;
-        $this->ftpManager = new ImportFtpManager('imports/hansens/', 'hansens/imports');
-        $this->importStatus = new ImportStatusOutput($this->companyId, 'Hansens');
-        $this->importStatus->setStores($this->proxy);
+        $this->ftpManager = new FtpManager('hansens/imports');
+        $this->import = new ImportManager($database, $this->companyId);
     }
 
     public function importUpdates()
@@ -44,12 +44,12 @@ class ImportHansensMetrics implements ImportInterface
             $this->importMetricsFile($filePath);
         }
 
-        $this->importStatus->outputResults();
+        $this->import->completeImport();
     }
 
     private function importMetricsFile($file)
     {
-        $this->importStatus->startNewFile($file);
+        $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
@@ -57,14 +57,14 @@ class ImportHansensMetrics implements ImportInterface
                     continue;
                 }
 
-                $this->importStatus->recordRow();
+                $this->import->recordRow();
 
                 $barcode = '0' . BarcodeFixer::fixUpc(trim($data[1]));
-                if ($this->importStatus->isInvalidBarcode($barcode)) {
+                if ($this->import->isInvalidBarcode($barcode)) {
                     continue;
                 }
 
-                $storeId = $this->importStatus->storeNumToStoreId(
+                $storeId = $this->import->storeNumToStoreId(
                     $this->inputNumToStoreNum(trim($data[0]))
                 );
                 if ($storeId === false) {
@@ -75,7 +75,7 @@ class ImportHansensMetrics implements ImportInterface
                 $retail = $this->parsePositiveFloat($data[2]);
 
                 if ($cost > $retail) {
-                    $this->importStatus->currentFile->skipped++;
+                    $this->import->currentFile->skipped++;
                     continue;
                 }
 
@@ -85,7 +85,7 @@ class ImportHansensMetrics implements ImportInterface
             fclose($handle);
         }
 
-        $this->importStatus->completeFile();
+        $this->import->completeFile();
     }
 
     private function persistMetric($barcode, $storeId, $cost, $retail)
@@ -94,7 +94,7 @@ class ImportHansensMetrics implements ImportInterface
         $movement = 0;
 
         $response = $this->proxy->persistMetric($barcode, $storeId, $cost, $retail, $movement);
-        $this->importStatus->recordResult($response);
+        $this->import->recordMetric($response);
     }
 
     private function inputNumToStoreNum($input)

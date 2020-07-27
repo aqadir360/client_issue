@@ -4,8 +4,9 @@ namespace App\Imports;
 
 use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\ImportFtpManager;
-use App\Objects\ImportStatusOutput;
+use App\Objects\Database;
+use App\Objects\FtpManager;
+use App\Objects\ImportManager;
 
 // Expects file format:
 // [0] - Store Number
@@ -19,21 +20,20 @@ class ImportWebstersMetrics implements ImportInterface
     private $companyId = '2719728a-a16e-ccdc-26f5-b0e9f1f23b6e';
     private $storeId = 'e3fc1cf1-3355-1a03-0684-88bec1538bf2';
 
-    /** @var ImportStatusOutput */
-    private $importStatus;
+    /** @var ImportManager */
+    private $import;
 
     /** @var Api */
     private $proxy;
 
-    /** @var ImportFtpManager */
+    /** @var FtpManager */
     private $ftpManager;
 
-    public function __construct(Api $api)
+    public function __construct(Api $api, Database $database)
     {
         $this->proxy = $api;
-        $this->ftpManager = new ImportFtpManager('imports/websters/', 'websters/imports', '/metrics.txt');
-        $this->importStatus = new ImportStatusOutput($this->companyId, 'Websters Metrics');
-        $this->importStatus->setStores($this->proxy);
+        $this->ftpManager = new FtpManager('websters/imports', '/metrics.txt');
+        $this->import = new ImportManager($database, $this->companyId);
     }
 
     public function importUpdates()
@@ -52,13 +52,13 @@ class ImportWebstersMetrics implements ImportInterface
 
             $this->importMetricsFile($filePath);
 
-            $this->importStatus->outputResults();
+            $this->import->completeImport();
         }
     }
 
     private function importMetricsFile($file)
     {
-        $this->importStatus->startNewFile($file);
+        $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
@@ -66,39 +66,38 @@ class ImportWebstersMetrics implements ImportInterface
                     continue;
                 }
 
-                $this->importStatus->recordRow();
+                $this->import->recordRow();
 
-                $upc = '0' . BarcodeFixer::fixUpc(trim($data[1]));
-                if ($this->importStatus->isInvalidBarcode($upc)) {
+                $upc = BarcodeFixer::fixUpc(trim($data[1]));
+                if ($this->import->isInvalidBarcode($upc, $data[1])) {
                     continue;
                 }
 
-                $cost = $this->parsePositiveFloat($data[5]);
-                $retail = $this->parsePositiveFloat($data[2]);
-                $movement = $this->parsePositiveFloat($data[3]);
+                $product = $this->import->fetchProduct($upc);
+                if ($product->isExistingProduct === false) {
+                    $this->import->currentFile->skipped++;
+                    continue;
+                }
+
+                $cost = $this->import->parsePositiveFloat($data[5]);
+                $retail = $this->import->parsePositiveFloat($data[2]);
+                $movement = $this->import->parsePositiveFloat($data[3]);
                 if ($cost > $retail) {
                     $cost = 0;
                 }
 
-                $response = $this->proxy->persistMetric($upc, $this->storeId, $cost, $retail, $movement);
-
-                if (!$this->proxy->validResponse($response) && strpos($response['message'], "Product Not Found") === false) {
-                    // Unknown barcodes are expected, so only output if another error occurs
-                    $this->importStatus->currentFile->skipped++;
-                } else {
-                    $this->importStatus->recordResult($response);
-                }
+                $this->import->persistMetric(
+                    $this->storeId,
+                    $product->productId,
+                    $this->import->convertFloatToInt($cost),
+                    $this->import->convertFloatToInt($retail),
+                    $this->import->convertFloatToInt($movement)
+                );
             }
 
             fclose($handle);
         }
 
-        $this->importStatus->completeFile();
-    }
-
-    private function parsePositiveFloat($value): float
-    {
-        $float = floatval($value);
-        return $float < 0 ? 0 : $float;
+        $this->import->completeFile();
     }
 }

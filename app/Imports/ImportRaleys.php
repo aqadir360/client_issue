@@ -2,34 +2,38 @@
 
 namespace App\Imports;
 
+use App\Models\Location;
 use App\Objects\Api;
-use App\Objects\ImportFtpManager;
-use App\Objects\ImportStatusOutput;
-use Illuminate\Support\Facades\DB;
+use App\Objects\BarcodeFixer;
+use App\Objects\Database;
+use App\Objects\FtpManager;
+use App\Objects\ImportManager;
 
 // Downloads files added to Raleys FTP since the last import
 class ImportRaleys implements ImportInterface
 {
     private $companyId = 'd48c3be4-5102-1977-4c3c-2de77742dc1e';
-    private $skip = [];
     private $skus = [];
 
-    /** @var ImportStatusOutput */
-    private $importStatus;
+    /** @var ImportManager */
+    private $import;
 
     /** @var Api */
     private $proxy;
 
-    /** @var ImportFtpManager */
+    /** @var FtpManager */
     private $ftpManager;
 
-    public function __construct(Api $api)
+    /** @var Database */
+    private $db;
+
+    public function __construct(Api $api, Database $database)
     {
         $this->proxy = $api;
-        $this->ftpManager = new ImportFtpManager('imports/raleys/', 'raleys/imports');
-        $this->importStatus = new ImportStatusOutput($this->companyId, "Raleys");
-
-        $this->skip = $this->ftpManager->getSkipList();
+        $this->db = $database;
+        $this->ftpManager = new FtpManager('raleys/imports');
+        $this->import = new ImportManager($database, $this->companyId);
+        $this->import->setSkipList();
     }
 
     public function importUpdates()
@@ -51,7 +55,6 @@ class ImportRaleys implements ImportInterface
 
         if (count($newFiles) > 0 || count($discoFiles) > 0 || count($moveFiles) > 0) {
             $this->setSkus();
-            $this->importStatus->setStores($this->proxy);
 
             foreach ($newFiles as $file) {
                 $this->importNewFile($file);
@@ -67,7 +70,7 @@ class ImportRaleys implements ImportInterface
 
             $this->proxy->triggerUpdateCounts($this->companyId);
             $this->ftpManager->writeLastDate();
-            $this->importStatus->outputResults();
+            $this->import->completeImport();
         }
     }
 
@@ -75,7 +78,7 @@ class ImportRaleys implements ImportInterface
     private function importNewFile($file)
     {
         $productsToImport = [];
-        $this->importStatus->startNewFile($file);
+        $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
@@ -83,7 +86,7 @@ class ImportRaleys implements ImportInterface
                     continue;
                 }
 
-                $this->importStatus->recordRow();
+                $this->import->recordRow();
 
                 $productsToImport[intval($data[1])] = [
                     trim($data[1]),
@@ -96,32 +99,32 @@ class ImportRaleys implements ImportInterface
         }
 
         foreach ($productsToImport as $product) {
-            $upc = $this->fixBarcode($product[0]);
-            if ($this->importStatus->isInvalidBarcode($upc)) {
+            $upc = BarcodeFixer::fixLength($product[0]);
+            if ($this->import->isInvalidBarcode($upc, $product[0])) {
                 continue;
             }
 
-            $existingProduct = $this->importStatus->fetchProduct($this->proxy, $upc);
+            $existingProduct = $this->import->fetchProduct($this->proxy, $upc);
 
             if ($existingProduct === false) {
-                $this->persistProduct(
+                $response = $this->persistProduct(
                     $upc,
                     $product[1],
                     $product[2]
                 );
 
-                $this->importStatus->currentFile->success++;
+                $this->import->recordAdd($response);
             } else {
-                $this->importStatus->currentFile->skipped++;
+                $this->import->currentFile->skipped++;
             }
         }
 
-        $this->importStatus->completeFile();
+        $this->import->completeFile();
     }
 
     private function importDiscoFile($file)
     {
-        $this->importStatus->startNewFile($file);
+        $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
@@ -129,31 +132,31 @@ class ImportRaleys implements ImportInterface
                     continue;
                 }
 
-                $this->importStatus->recordRow();
+                $this->import->recordRow();
 
-                $upc = $this->fixBarcode(trim($data[1]));
-                if ($this->importStatus->isInvalidBarcode($upc)) {
+                $upc = BarcodeFixer::fixLength(trim($data[1]));
+                if ($this->import->isInvalidBarcode($upc, $data[1])) {
                     continue;
                 }
 
-                $storeId = $this->importStatus->storeNumToStoreId(trim($data[2]));
+                $storeId = $this->import->storeNumToStoreId(trim($data[2]));
                 if ($storeId === false) {
                     continue;
                 }
 
                 $response = $this->proxy->discontinueProductByBarcode($storeId, $upc);
-                $this->importStatus->recordResult($response);
+                $this->import->recordDisco($response);
             }
 
             fclose($handle);
         }
 
-        $this->importStatus->completeFile();
+        $this->import->completeFile();
     }
 
     private function importAisleLocationsFile($file)
     {
-        $this->importStatus->startNewFile($file);
+        $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
@@ -161,36 +164,33 @@ class ImportRaleys implements ImportInterface
                     continue;
                 }
 
-                $this->importStatus->recordRow();
+                $this->import->recordRow();
 
                 $sku = intval($data[0]);
-                $barcode = $this->fixBarcode($data[1]);
-                if ($this->importStatus->isInvalidBarcode($barcode)) {
+                $barcode = BarcodeFixer::fixLength($data[1]);
+                if ($this->import->isInvalidBarcode($barcode, $data[1])) {
                     continue;
                 }
 
-                $storeId = $this->importStatus->storeNumToStoreId(trim($data[2]));
+                $storeId = $this->import->storeNumToStoreId(trim($data[2]));
                 if ($storeId === false) {
                     continue;
                 }
 
-                $product = $this->importStatus->fetchProduct($this->proxy, $barcode, $storeId);
-                if ($product === null) {
-                    $this->importStatus->addInvalidBarcode($barcode);
-                    continue;
-                } elseif ($product === false) {
-                    $this->importStatus->currentFile->skipped++;
+                $product = $this->import->fetchProduct($barcode, $storeId);
+                if ($product->isExistingProduct === false) {
+                    $this->import->currentFile->skipped++;
                     continue;
                 }
 
                 $location = $this->normalizeRaleysLocation($data[3]);
-                if ($location === false) {
+                if (!$location->valid) {
                     # these items are slated for disco and will appear in an upcoming disco file
-                    $this->importStatus->currentFile->skipped++;
+                    $this->import->currentFile->skipped++;
                     continue;
                 }
 
-                $item = $this->getInventoryItem($product, $location);
+                $item = $product->getMatchingInventoryItem($location);
 
                 if ($item !== false) {
                     if ($this->needToMoveItem($item, $location)) {
@@ -202,19 +202,24 @@ class ImportRaleys implements ImportInterface
                             $location['section']
                         );
 
-                        $this->importStatus->recordResult($response);
+                        $this->import->recordMove($response);
                     }
                 } else {
                     if ($this->primarySkuInventoryExists($sku, $barcode, $storeId)) {
-                        $this->importStatus->currentFile->skipped++;
+                        $this->import->currentFile->skipped++;
                     } else {
-                        $this->implementationScan(
-                            $this->fixBarcode($barcode),
-                            $this->getDepartmentId('GROCERY', ''),
+                        if ($this->import->isInSkipList($barcode)) {
+                            continue;
+                        }
+
+                        $response = $this->proxy->implementationScan(
+                            $product,
                             $storeId,
                             $location['aisle'],
-                            $location['section']
+                            $location['section'],
+                            $this->import->getDepartmentId('grocery')
                         );
+                        $this->import->recordAdd($response);
                     }
                 }
             }
@@ -222,7 +227,7 @@ class ImportRaleys implements ImportInterface
             fclose($handle);
         }
 
-        $this->importStatus->completeFile();
+        $this->import->completeFile();
     }
 
     private function primarySkuInventoryExists($sku, $barcode, $storeId): bool
@@ -231,98 +236,33 @@ class ImportRaleys implements ImportInterface
         $primaryBarcode = $this->getPrimaryBarcode($sku);
 
         if ($primaryBarcode !== false && $primaryBarcode !== $barcode) {
-            $existingPrimaryProduct = $this->importStatus->fetchProduct($this->proxy, $primaryBarcode, $storeId);
-            if ($existingPrimaryProduct && count($existingPrimaryProduct['inventory']) > 0) {
-                return true;
-            }
+            $existing = $this->import->fetchProduct($primaryBarcode, $storeId);
+            return ($existing->isExistingProduct && $existing->hasInventory());
         }
 
         return false;
     }
 
-    private function needToMoveItem($item, $location)
+    private function needToMoveItem($item, Location $location)
     {
-        return !($item['aisle'] == $location['aisle'] && $item['section'] == $location['section']);
+        return !($item->aisle == $location->aisle && $item->section == $location->section);
     }
 
-    private function getInventoryItem($product, $location)
-    {
-        if (count($product['inventory']) == 0) {
-            return false;
-        }
-
-        // use exact match
-        foreach ($product['inventory'] as $item) {
-            if ($item['aisle'] == $location['aisle'] && $item['section'] == $location['section']) {
-                return $item;
-            }
-        }
-
-        // use aisle match
-        foreach ($product['inventory'] as $item) {
-            if ($item['aisle'] == $location['aisle']) {
-                return $item;
-            }
-        }
-
-        // use any non markdown section item
-        foreach ($product['inventory'] as $item) {
-            if ($item['aisle'] != 'MKDN') {
-                return $item;
-            }
-        }
-
-        return false;
-    }
-
-    private function normalizeRaleysLocation(string $input)
+    private function normalizeRaleysLocation(string $input): Location
     {
         if (empty($input)) {
-            return false;
+            return new Location();
         }
 
         if (strlen($input) > 0 && ($input[0] == "W" || $input[0] == "G" || $input[0] == "D")) {
             $input = substr($input, 1);
         }
 
-        return [
-            'aisle' => substr($input, 0, 2),
-            'section' => strlen($input) > 2 ? substr($input, 2) : '',
-        ];
-    }
-
-    private function getDepartmentId($department, $category)
-    {
-        switch ($department) {
-            case 'GROCERY':
-                if ($category == 'BABY FOOD') {
-                    return '6277d3e4-c0e1-11e7-a5a1-080027c30a85'; // Baby Food
-                } else {
-                    return '627731b4-c0e1-11e7-9fd7-080027c30a85'; // Grocery
-                }
-            case 'NON FOOD GROCERY':
-                return '627731b4-c0e1-11e7-9fd7-080027c30a85'; // Grocery
-        }
-
-        switch ($category) {
-            case 'BABY FORMULA':
-            case 'BABY FOOD':
-                return '6277d3e4-c0e1-11e7-a5a1-080027c30a85'; // Baby Food
-            case 'BABY HBC / OTC':
-            case 'UPPER RESPIRATORY':
-            case 'TOOTHPASTE':
-            case 'EYE CARE':
-            case 'EAR CARE':
-            case 'DIGESTIVE HEALTH':
-            case 'DIET NUTRITIONAL':
-            case 'REFRIGERATED SUPPLEMENTS':
-            case 'VITAMINS & SUPPLEMENTS':
-            case 'ADULT NUTRITIONAL':
-                return '62782ba0-c0e1-11e7-8257-080027c30a85'; // OTC
-            default:
-                $this->importStatus->addInvalidDepartment($department . " " . $category);
-                return '627731b4-c0e1-11e7-9fd7-080027c30a85'; // Grocery
-        }
+        $location = new Location();
+        $location->aisle = substr($input, 0, 2);
+        $location->section = strlen($input) > 2 ? substr($input, 2) : '';
+        $location->valid = true;
+        return $location;
     }
 
     private function getPrimaryBarcode($skuNum)
@@ -340,56 +280,22 @@ class ImportRaleys implements ImportInterface
         return false;
     }
 
-    private function implementationScan($barcode, $deptId, $storeId, $aisle, $section)
-    {
-        if (isset($this->skip[intval($barcode)])) {
-            return false;
-        }
-
-        $response = $this->proxy->implementationScan(
-            $barcode,
-            $storeId,
-            $aisle,
-            $section,
-            $deptId
-        );
-
-        if (!$this->proxy->validResponse($response)) {
-            $this->importStatus->addInvalidBarcode($barcode);
-            return false;
-        }
-
-        return true;
-    }
-
     private function persistProduct($barcode, $name, $size)
     {
         $response = $this->proxy->persistProduct($barcode, $name, $size);
 
         if (!$this->proxy->validResponse($response)) {
-            $this->importStatus->addInvalidBarcode($barcode);
-            $this->importStatus->currentFile->invalidBarcodeErrors++;
+            $this->import->addInvalidBarcode($barcode);
+            $this->import->currentFile->invalidBarcodeErrors++;
             return false;
         }
 
         return true;
     }
 
-    private function fixBarcode($barcode)
-    {
-        if (strlen($barcode) == 14) {
-            return substr($barcode, 1);
-        }
-        while (strlen($barcode) < 13) {
-            $barcode = '0' . $barcode;
-        }
-        return $barcode;
-    }
-
     private function setSkus()
     {
-        $sql = "SELECT sku_num, barcode, is_primary FROM `raleys_products` ";
-        $rows = DB::select($sql, []);
+        $rows = $this->db->fetchRaleysSkus();
 
         foreach ($rows as $row) {
             $this->skus[intval($row->sku_num)][] = [$row->barcode, intval($row->is_primary)];

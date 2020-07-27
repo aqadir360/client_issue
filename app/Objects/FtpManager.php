@@ -4,9 +4,10 @@ namespace App\Objects;
 
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Facades\Storage;
+use Log;
 use ZipArchive;
 
-class ImportFtpManager
+class FtpManager
 {
     private $path;
     private $dateFilePath;
@@ -17,11 +18,11 @@ class ImportFtpManager
 
     public $modifiedFiles = [];
 
-    public function __construct(string $path, string $ftpPath, string $dateFilePath = '/last.txt')
+    public function __construct(string $ftpPath, string $dateFilePath = '/last.txt')
     {
-        $this->path = $path;
+//        $this->path = storage_path('imports');
         $this->ftpPath = $ftpPath;
-        $this->dateFilePath = storage_path($this->path . $dateFilePath);
+//        $this->dateFilePath = storage_path($this->path . $dateFilePath);
         $this->ftp = Storage::disk('sftp');
     }
 
@@ -52,25 +53,27 @@ class ImportFtpManager
         return $mostRecentFile;
     }
 
-    // Writes from FTP to local imports/{path}
+    // Writes from FTP to local storage/imports/
     public function downloadFile(string $file)
     {
         try {
-            Storage::disk('imports')->put($this->path . basename($file), $this->ftp->get($file));
-            return storage_path('imports/' . $this->path . basename($file));
+            if (!file_exists(storage_path('imports/' . basename($file)))) {
+                Storage::disk('imports')->put(basename($file), $this->ftp->get($file));
+            }
+            return storage_path('imports/' . basename($file));
         } catch (FileNotFoundException $e) {
-            // TODO: log this
+            Log::error($e);
         }
         return false;
     }
 
-    public function unzipFile(string $zipFile)
+    public function unzipFile(string $zipFile, $unzipPath)
     {
         $zip = new ZipArchive();
         $zipSuccess = $zip->open($zipFile);
 
         if ($zipSuccess === true) {
-            $path = $this->path . '/unzipped/';
+            $path = storage_path("imports/$unzipPath/");
 
             if (!file_exists($path)) {
                 mkdir($path);
@@ -79,11 +82,11 @@ class ImportFtpManager
                 $zip->close();
 
                 unlink($zipFile);
-                return $path . basename($zipFile);
+                return true;
             }
         }
 
-        // TODO: log this
+        Log::error("Unzip Error $zipFile");
         return false;
     }
 
@@ -104,11 +107,11 @@ class ImportFtpManager
     // Sets last date to one week ago if not found
     private function readLastDate()
     {
-        if (file_exists($this->dateFilePath)) {
-            $this->compareDate = intval(file_get_contents($this->dateFilePath));
-        } else {
-            $this->compareDate = time() - 604800;
-        }
+//        if (file_exists($this->dateFilePath)) {
+//            $this->compareDate = intval(file_get_contents($this->dateFilePath));
+//        } else {
+        $this->compareDate = 0;
+//        }
     }
 
     private function isBefore($lastModified): bool
@@ -125,29 +128,10 @@ class ImportFtpManager
 
     public function writeLastDate()
     {
-        if ($this->newDate > 0) {
-            $handle = fopen($this->dateFilePath, 'w');
-            fwrite($handle, $this->newDate);
-            fclose($handle);
-        }
-    }
-
-    public function getSkipList()
-    {
-        $skip = [];
-
-        if (!file_exists(storage_path($this->path . 'skip.csv'))) {
-            return $skip;
-        }
-
-        if (($handle = fopen(storage_path($this->path . 'skip.csv'), "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-                $skip[intval($data[0])] = true;
-            }
-
-            fclose($handle);
-        }
-
-        return $skip;
+//        if ($this->newDate > 0) {
+//            $handle = fopen($this->dateFilePath, 'w');
+//            fwrite($handle, $this->newDate);
+//            fclose($handle);
+//        }
     }
 }

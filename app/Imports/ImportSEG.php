@@ -4,8 +4,9 @@ namespace App\Imports;
 
 use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\ImportFtpManager;
-use App\Objects\ImportStatusOutput;
+use App\Objects\Database;
+use App\Objects\FtpManager;
+use App\Objects\ImportManager;
 
 // TODO: Import does not yet run automatically.  Update when file uploads start.
 // Expects CSV file with format:
@@ -20,38 +21,37 @@ class ImportSEG implements ImportInterface
     private $companyId = '96bec4fe-098f-0e87-2563-11a36e6447ae';
     private $path;
 
-    private $departments;
-
-    /** @var ImportStatusOutput */
-    private $importStatus;
+    /** @var ImportManager */
+    private $import;
 
     /** @var Api */
     private $proxy;
 
-    /** @var ImportFtpManager */
+    /** @var FtpManager */
     private $ftpManager;
 
-    public function __construct(Api $api)
+    /** @var Database */
+    private $db;
+
+    public function __construct(Api $api, Database $database)
     {
         $this->proxy = $api;
+        $this->db = $database;
         $this->path = storage_path('imports/seg/');
 
         if (!file_exists($this->path)) {
             mkdir($this->path);
         }
 
-        $this->ftpManager = new ImportFtpManager('imports/seg/', 'seg/imports');
-        $this->importStatus = new ImportStatusOutput($this->companyId, "SEG");
-        $this->importStatus->setStores($this->proxy);
+        $this->ftpManager = new FtpManager('seg/imports');
+        $this->import = new ImportManager($database, $this->companyId);
     }
 
     public function importUpdates()
     {
-        $this->setDepartments();
-
         $files = glob($this->path . '*.csv');
         foreach ($files as $file) {
-            $this->importStatus->startNewFile($file);
+            $this->import->startNewFile($file);
 
             if (($handle = fopen($file, "r")) !== false) {
                 while (($data = fgetcsv($handle, 1000, ",")) !== false) {
@@ -59,103 +59,46 @@ class ImportSEG implements ImportInterface
                         continue;
                     }
 
-                    $this->importStatus->recordRow();
+                    $this->import->recordRow();
 
-                    $storeId = $this->importStatus->storeNumToStoreId($data[3]);
+                    $storeId = $this->import->storeNumToStoreId($data[3]);
                     if ($storeId === false) {
                         continue;
                     }
 
-                    $departmentId = $this->deptNameToDeptId($data[1]);
+                    $departmentId = $this->import->getDepartmentId($data[1]);
                     if ($departmentId === false) {
                         continue;
                     }
 
-                    $upc = $this->fixBarcode($data[0]);
-                    $product = $this->importStatus->fetchProduct($this->proxy, $upc, $storeId);
+                    $upc = BarcodeFixer::fixUpc(trim($data[0]));
+                    $product = $this->import->fetchProduct($upc, $storeId);
 
-                    if (null === $product) {
-                        continue;
-                    }
+                    if ($product->isExistingProduct && !$product->hasInventory()) {
+                        $product->setDescription($data[4]);
+                        $product->setSize($data[5]);
 
-                    if (false === $product || count($product['inventory']) === 0) {
-                        $this->createNewInventory(
-                            $upc,
+                        $response = $this->proxy->implementationScan(
+                            $product,
                             $storeId,
-                            $departmentId,
-                            ucwords(strtolower(trim($data[4]))),
-                            strtolower($data[5])
+                            "UNKN",
+                            "",
+                            $departmentId
                         );
+
+                        $this->import->recordAdd($response);
                     } else {
-                        $this->importStatus->currentFile->skipped++;
+                        $this->import->currentFile->skipped++;
                     }
                 }
 
                 fclose($handle);
             }
 
-            $this->importStatus->completeFile();
+            $this->import->completeFile();
         }
 
-        $this->importStatus->outputResults();
-    }
-
-    private function createNewInventory(
-        string $barcode,
-        string $storeId,
-        string $departmentId,
-        string $description,
-        string $size
-    ) {
-        $response = $this->proxy->implementationScan(
-            $barcode,
-            $storeId,
-            "UNKN",
-            "",
-            $departmentId,
-            $description,
-            $size
-        );
-
-        $this->importStatus->recordResult($response);
-    }
-
-    private function setDepartments()
-    {
-        $response = $this->proxy->fetchDepartments($this->companyId);
-
-        foreach ($response['departments'] as $department) {
-            $this->departments[$this->normalizeName($department['displayName'])] = $department['departmentId'];
-        }
-    }
-
-    private function deptNameToDeptId($input)
-    {
-        $deptName = $this->normalizeName($input);
-
-        if (isset($this->departments[$deptName])) {
-            return $this->departments[$deptName];
-        }
-
-        $this->importStatus->addInvalidDepartment($input);
-        return false;
-    }
-
-    private function normalizeName($input)
-    {
-        $output = strtolower(preg_replace('![^a-z0-9]+!i', '', $input));
-
-        switch ($output) {
-            case 'yogurt':
-                return 'dairyyogurt';
-            default:
-                return $output;
-        }
-    }
-
-    private function fixBarcode($barcode)
-    {
-        return BarcodeFixer::fixUpc(trim($barcode));
+        $this->import->completeImport();
     }
 }
 

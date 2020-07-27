@@ -4,7 +4,8 @@ namespace App\Imports;
 
 use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\ImportFtpManager;
+use App\Objects\Database;
+use App\Objects\FtpManager;
 
 class ImportHansens implements ImportInterface
 {
@@ -35,14 +36,18 @@ class ImportHansens implements ImportInterface
     /** @var Api */
     private $proxy;
 
-    /** @var ImportFtpManager */
+    /** @var FtpManager */
     private $ftpManager;
 
-    public function __construct(Api $api)
+    /** @var Database */
+    private $db;
+
+    public function __construct(Api $api, Database $database)
     {
         $this->proxy = $api;
+        $this->db = $database;
         $this->path = storage_path('imports/hansens/');
-        $this->ftpManager = new ImportFtpManager('imports/hansens/', 'hansens/imports/weekly');
+        $this->ftpManager = new FtpManager('hansens/imports/weekly');
 
         $this->setStores();
         $this->skip = $this->ftpManager->getSkipList();

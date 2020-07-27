@@ -4,16 +4,22 @@ namespace App\Objects;
 
 use Illuminate\Support\Facades\DB;
 
-class ImportFileStatus
+class FileStatus
 {
     private $companyId;
     private $fileRowId;
     public $filename;
 
-    public $success = 0;
+    public $adds = 0;
+    public $moves = 0;
+    public $discos = 0;
+    public $metrics = 0;
     public $errors = 0;
     public $total = 0;
     public $skipped = 0;
+    public $skipList = 0;
+    public $skipStores = 0;
+    public $skipDepts = 0;
     public $invalidBarcodeErrors = 0;
 
     public $invalidDepts = [];
@@ -30,8 +36,16 @@ class ImportFileStatus
     {
         $str = "{$this->total} Total Rows";
 
-        if ($this->success > 0) {
-            $str .= ", {$this->success} successes";
+        if ($this->adds > 0) {
+            $str .= ", {$this->adds} items added";
+        }
+
+        if ($this->moves > 0) {
+            $str .= ", {$this->moves} items moved";
+        }
+
+        if ($this->discos > 0) {
+            $str .= ", {$this->discos} items discontinued";
         }
 
         if ($this->errors > 0) {
@@ -40,6 +54,10 @@ class ImportFileStatus
 
         if ($this->skipped > 0) {
             $str .= ", {$this->skipped} skipped";
+        }
+
+        if ($this->skipList > 0) {
+            $str .= ", {$this->skipList} skip list items";
         }
 
         if ($this->invalidBarcodeErrors > 0) {
@@ -58,7 +76,7 @@ class ImportFileStatus
 
     public function insertFileRow()
     {
-        $sql = "INSERT INTO dcp2admin.import_results (company_id, filename) VALUES (:company_id, :filename)";
+        $sql = "INSERT INTO dcp2admin.import_results (company_id, filename, created_at) VALUES (:company_id, :filename, NOW())";
 
         DB::insert($sql, [
             'company_id' => $this->companyId,
@@ -71,15 +89,23 @@ class ImportFileStatus
     public function updateCompletedRow()
     {
         $sql = "UPDATE dcp2admin.import_results
-                SET completed_at = NOW(), success = :success, skipped = :skipped, barcode_errors = :barcode_errors, errors = :errors,
-                    total = :total, invalid_depts = :invalid_depts, invalid_stores = :invalid_stores, invalid_barcodes = :invalid_barcodes
+                SET completed_at = NOW(), adds = :adds, moves = :moves, discos = :discos, skipped = :skipped, metrics = :metrics,
+                    skip_list = :skip_list,  errors = :errors, total = :total, skip_invalid_stores = :skip_invalid_stores,
+                    skip_invalid_depts = :skip_invalid_depts, skip_invalid_barcodes = :skip_invalid_barcodes,
+                    invalid_depts = :invalid_depts, invalid_stores = :invalid_stores, invalid_barcodes = :invalid_barcodes
                     WHERE id = :id";
 
         DB::update($sql, [
             'id' => $this->fileRowId,
-            'success' => $this->success,
+            'adds' => $this->adds,
+            'moves' => $this->moves,
+            'discos' => $this->discos,
             'skipped' => $this->skipped,
-            'barcode_errors' => $this->invalidBarcodeErrors,
+            'skip_list' => $this->skipList,
+            'skip_invalid_barcodes' => $this->invalidBarcodeErrors,
+            'skip_invalid_depts' => $this->skipDepts,
+            'skip_invalid_stores' => $this->skipStores,
+            'metrics' => $this->metrics,
             'errors' => $this->errors,
             'total' => $this->total,
             'invalid_depts' => implode(',', $this->invalidDepts),
@@ -90,18 +116,24 @@ class ImportFileStatus
 
     public function recordErrorMessage($response)
     {
-        if (isset($response['status'])) {
-            if ($response['status'] === 'NOT_VALID') {
+        if ($response) {
+            if ($response->status === 'NOT_VALID') {
                 $this->invalidBarcodeErrors++;
             } else {
-                if (strpos($response['message'], 'Invalid Barcode') !== false) {
+                if (strpos($response->message, 'Invalid Barcode') !== false) {
                     $this->invalidBarcodeErrors++;
                 } else {
                     $this->errors++;
-                    $this->insertErrorMessage($response['status'], $response['message']);
+                    $this->insertErrorMessage($response->status, $response->message);
                 }
             }
         }
+    }
+
+    public function recordError($status, $message)
+    {
+        $this->errors++;
+        $this->insertErrorMessage($status, $message);
     }
 
     private function insertErrorMessage($status, $message)

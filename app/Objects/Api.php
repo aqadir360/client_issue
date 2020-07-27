@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Objects;
 
+use App\Models\Product;
 use Exception;
 use Illuminate\Support\Facades\Session;
 use Log;
@@ -43,21 +44,19 @@ class Api
     }
 
     public function implementationScan(
-        $barcode,
+        Product $product,
         $storeId,
         $aisle,
         $section,
         $deptId,
-        $description = null,
-        $size = null,
         $shelf = ''
     ) {
         return $this->request(
             'implementation-scan',
             [
-                'barcode' => $barcode,
-                'name' => $description,
-                'size' => $size,
+                'barcode' => $product->barcode,
+                'name' => $product->description,
+                'size' => $product->size,
                 'storeId' => $storeId,
                 'departmentId' => $deptId,
                 'aisle' => $aisle,
@@ -203,7 +202,7 @@ class Api
 
     public function validResponse($response): bool
     {
-        return ($response['status'] === 'ACCEPTED' || $response['status'] === 'FOUND');
+        return $response && ($response->status === 'ACCEPTED' || $response->status === 'FOUND');
     }
 
     public function request($service, $data, $timestamps = null)
