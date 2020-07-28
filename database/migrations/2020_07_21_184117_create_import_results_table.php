@@ -32,6 +32,7 @@ class CreateImportResultsTable extends Migration
             $table->integer('barcode_errors')->default(0);
             $table->integer('total')->default(0);
 
+            $table->text('output')->nullable();
             $table->longText('invalid_depts')->nullable();
             $table->longText('invalid_stores')->nullable();
             $table->longText('invalid_barcodes')->nullable();

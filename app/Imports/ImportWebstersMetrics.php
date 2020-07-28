@@ -47,13 +47,18 @@ class ImportWebstersMetrics implements ImportInterface
             }
         }
 
-        if ($metricFile !== null) {
+        if ($metricFile === null) {
+            $this->completeImport("No new file found");
+        } else {
             $filePath = $this->ftpManager->downloadFile($metricFile);
-
             $this->importMetricsFile($filePath);
-
-            $this->import->completeImport();
+            $this->completeImport();
         }
+    }
+
+    public function completeImport(string $error = '')
+    {
+        $this->import->completeImport($error);
     }
 
     private function importMetricsFile($file)

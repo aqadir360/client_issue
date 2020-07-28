@@ -48,10 +48,15 @@ class ImportWebsters implements ImportInterface
                 $this->importNewFile($file);
             }
 
-            $this->ftpManager->writeLastDate();
-            $this->proxy->triggerUpdateCounts($this->companyId);
-            $this->import->completeImport();
+            $this->completeImport();
         }
+    }
+
+    public function completeImport(string $error = '')
+    {
+        $this->proxy->triggerUpdateCounts($this->companyId);
+        $this->ftpManager->writeLastDate();
+        $this->import->completeImport($error);
     }
 
     private function importNewFile($file)

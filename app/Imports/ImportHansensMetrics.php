@@ -44,7 +44,12 @@ class ImportHansensMetrics implements ImportInterface
             $this->importMetricsFile($filePath);
         }
 
-        $this->import->completeImport();
+        $this->completeImport();
+    }
+
+    public function completeImport(string $error = '')
+    {
+        $this->import->completeImport($error);
     }
 
     private function importMetricsFile($file)

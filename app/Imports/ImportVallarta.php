@@ -54,9 +54,14 @@ class ImportVallarta implements ImportInterface
             $this->importMetricsFile($filePath);
         }
 
+        $this->completeImport();
+    }
+
+    public function completeImport(string $error = '')
+    {
         $this->proxy->triggerUpdateCounts($this->companyId);
         $this->ftpManager->writeLastDate();
-        $this->import->completeImport();
+        $this->import->completeImport($error);
     }
 
     private function importActiveFile($file)

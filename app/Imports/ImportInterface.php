@@ -10,4 +10,6 @@ interface ImportInterface
     public function __construct(Api $api, Database $database);
 
     public function importUpdates();
+
+    public function completeImport(string $error);
 }

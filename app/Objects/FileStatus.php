@@ -8,6 +8,7 @@ class FileStatus
 {
     private $companyId;
     private $fileRowId;
+    private $content = '';
     public $filename;
 
     public $adds = 0;
@@ -33,6 +34,11 @@ class FileStatus
         $this->companyId = $companyId;
     }
 
+    public function outputContent($content)
+    {
+        $this->content .= $content;
+    }
+
     public function outputResults(): string
     {
         $str = "{$this->total} Total Rows";
@@ -51,6 +57,10 @@ class FileStatus
 
         if ($this->errors > 0) {
             $str .= ", {$this->errors} errors";
+        }
+
+        if ($this->static > 0) {
+            $str .= ", {$this->static} unchanged";
         }
 
         if ($this->skipped > 0) {
@@ -90,8 +100,9 @@ class FileStatus
     public function updateCompletedRow()
     {
         $sql = "UPDATE dcp2admin.import_results
-                SET completed_at = NOW(), adds = :adds, moves = :moves, discos = :discos, skipped = :skipped, metrics = :metrics,
-                    skip_list = :skip_list,  errors = :errors, total = :total, skip_invalid_stores = :skip_invalid_stores,
+                SET completed_at = NOW(), adds = :adds, moves = :moves, discos = :discos, skipped = :skipped,
+                    metrics = :metrics, skip_list = :skip_list,  errors = :errors, total = :total,
+                    static = :static, output = :output, skip_invalid_stores = :skip_invalid_stores,
                     skip_invalid_depts = :skip_invalid_depts, skip_invalid_barcodes = :skip_invalid_barcodes,
                     invalid_depts = :invalid_depts, invalid_stores = :invalid_stores, invalid_barcodes = :invalid_barcodes
                     WHERE id = :id";
@@ -101,6 +112,7 @@ class FileStatus
             'adds' => $this->adds,
             'moves' => $this->moves,
             'discos' => $this->discos,
+            'static' => $this->static,
             'skipped' => $this->skipped,
             'skip_list' => $this->skipList,
             'skip_invalid_barcodes' => $this->invalidBarcodeErrors,
@@ -108,6 +120,7 @@ class FileStatus
             'skip_invalid_stores' => $this->skipStores,
             'metrics' => $this->metrics,
             'errors' => $this->errors,
+            'output' => $this->content,
             'total' => $this->total,
             'invalid_depts' => implode(',', $this->invalidDepts),
             'invalid_stores' => implode(',', $this->invalidStores),

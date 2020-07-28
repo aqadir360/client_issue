@@ -68,10 +68,15 @@ class ImportRaleys implements ImportInterface
                 $this->importAisleLocationsFile($file);
             }
 
-            $this->proxy->triggerUpdateCounts($this->companyId);
-            $this->ftpManager->writeLastDate();
-            $this->import->completeImport();
+            $this->completeImport();
         }
+    }
+
+    public function completeImport(string $error = '')
+    {
+        $this->proxy->triggerUpdateCounts($this->companyId);
+        $this->ftpManager->writeLastDate();
+        $this->import->completeImport($error);
     }
 
     // Since new item files do not include locations, import new products only

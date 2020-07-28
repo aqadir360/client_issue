@@ -36,14 +36,14 @@ class ImportHansens implements ImportInterface
 
     public function importUpdates()
     {
-        $files = $this->ftpManager->getRecentlyModifiedFiles();
-        foreach ($files as $file) {
-            if (strpos($file, 'zip') === false) {
-                continue;
-            }
-            $zipFile = $this->ftpManager->downloadFile($file);
-            $this->ftpManager->unzipFile($zipFile, 'hansens_unzipped');
-        }
+//        $files = $this->ftpManager->getRecentlyModifiedFiles();
+//        foreach ($files as $file) {
+//            if (strpos($file, 'zip') === false) {
+//                continue;
+//            }
+//            $zipFile = $this->ftpManager->downloadFile($file);
+//            $this->ftpManager->unzipFile($zipFile, 'hansens_unzipped');
+//        }
 
         $filesToImport = glob($this->unzippedPath . '*');
 
@@ -51,9 +51,14 @@ class ImportHansens implements ImportInterface
             $this->importStoreInventory($file);
         }
 
+        $this->completeImport();
+    }
+
+    public function completeImport(string $error = '')
+    {
         $this->proxy->triggerUpdateCounts($this->companyId);
         $this->ftpManager->writeLastDate();
-        $this->import->completeImport();
+        $this->import->completeImport($error);
     }
 
     private function importStoreInventory($file)
@@ -86,7 +91,7 @@ class ImportHansens implements ImportInterface
         }
 
         $this->import->completeFile();
-        unlink($file);
+//        unlink($file);
         return true;
     }
 

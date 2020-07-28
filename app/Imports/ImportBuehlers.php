@@ -53,9 +53,14 @@ class ImportBuehlers implements ImportInterface
             $this->importActiveFile($file);
         }
 
+        $this->completeImport();
+    }
+
+    public function completeImport(string $error = '')
+    {
         $this->proxy->triggerUpdateCounts($this->companyId);
         $this->ftpManager->writeLastDate();
-        $this->import->completeImport();
+        $this->import->completeImport($error);
     }
 
     private function importDiscoFile($file)
