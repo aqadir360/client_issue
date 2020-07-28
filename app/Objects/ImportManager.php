@@ -161,8 +161,8 @@ class ImportManager
 
     public function addInvalidBarcode($barcode)
     {
-        $this->invalidBarcodes[intval($barcode)] = $barcode;
-        $this->currentFile->invalidBarcodes[intval($barcode)] = $barcode;
+        $this->invalidBarcodes[intval($barcode)] = utf8_encode($barcode);
+        $this->currentFile->invalidBarcodes[intval($barcode)] = utf8_encode($barcode);
     }
 
     public function isInvalidBarcode($barcode, $original): bool

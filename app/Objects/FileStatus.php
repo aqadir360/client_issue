@@ -16,6 +16,7 @@ class FileStatus
     public $metrics = 0;
     public $errors = 0;
     public $total = 0;
+    public $static = 0;
     public $skipped = 0;
     public $skipList = 0;
     public $skipStores = 0;

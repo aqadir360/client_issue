@@ -192,17 +192,18 @@ class ImportRaleys implements ImportInterface
 
                 $item = $product->getMatchingInventoryItem($location);
 
-                if ($item !== false) {
+                if ($item !== null) {
                     if ($this->needToMoveItem($item, $location)) {
                         $response = $this->proxy->updateInventoryLocation(
-                            $item['inventoryItemId'],
+                            $item->inventory_item_id,
                             $storeId,
-                            $item['departmentId'],
-                            $location['aisle'],
-                            $location['section']
+                            $item->department_id,
+                            $location->aisle,
+                            $location->section
                         );
-
                         $this->import->recordMove($response);
+                    } else {
+                        $this->import->currentFile->static++;
                     }
                 } else {
                     if ($this->primarySkuInventoryExists($sku, $barcode, $storeId)) {
@@ -215,8 +216,8 @@ class ImportRaleys implements ImportInterface
                         $response = $this->proxy->implementationScan(
                             $product,
                             $storeId,
-                            $location['aisle'],
-                            $location['section'],
+                            $location->aisle,
+                            $location->section,
                             $this->import->getDepartmentId('grocery')
                         );
                         $this->import->recordAdd($response);

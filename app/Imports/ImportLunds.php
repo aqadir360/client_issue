@@ -275,9 +275,9 @@ class ImportLunds implements ImportInterface
         Location $location
     ) {
         $response = $this->proxy->updateInventoryLocation(
-            $item->inventoryItemId,
+            $item->inventory_item_id,
             $storeId,
-            $item->departmentId, // do not overwrite the existing department
+            $item->department_id, // do not overwrite the existing department
             $location->aisle,
             $location->section
         );

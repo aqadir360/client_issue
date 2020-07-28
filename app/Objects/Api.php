@@ -45,11 +45,11 @@ class Api
 
     public function implementationScan(
         Product $product,
-        $storeId,
-        $aisle,
-        $section,
-        $deptId,
-        $shelf = ''
+        string $storeId,
+        string $aisle,
+        string $section,
+        string $deptId,
+        string $shelf = ''
     ) {
         return $this->request(
             'implementation-scan',
@@ -229,6 +229,11 @@ class Api
 
             $result = curl_exec($ch);
             curl_close($ch);
+
+            if ($result === false) {
+                Log::error('API Error', ['url' => $url, 'msg' => "No Response"]);
+                return false;
+            }
 
             return json_decode($result);
         } catch (Exception $e) {
