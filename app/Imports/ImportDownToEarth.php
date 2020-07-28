@@ -149,19 +149,25 @@ class ImportDownToEarth implements ImportInterface
                     continue;
                 }
 
-                $response = $this->proxy->persistMetric(
-                    $upc,
-                    $storeId,
-                    $this->import->parsePositiveFloat($data[10]),
-                    $this->import->parsePositiveFloat($data[9]),
-                    $this->import->parsePositiveFloat($data[8])
-                );
-
-                if (!$this->proxy->validResponse($response)) {
-                    $this->import->addInvalidBarcode($upc);
+                $product = $this->import->fetchProduct($upc);
+                if ($product->isExistingProduct === false) {
+                    $this->import->currentFile->skipped++;
+                    return;
                 }
 
-                $this->import->recordMetric($response);
+                $success = $this->import->persistMetric(
+                    $storeId,
+                    $product->productId,
+                    $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[10])),
+                    $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[9])),
+                    $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[8]))
+                );
+
+                if ($success) {
+                    $this->import->recordMetric($success);
+                } else {
+                    $this->import->currentFile->skipped++;
+                }
             }
 
             fclose($handle);

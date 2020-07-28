@@ -250,7 +250,7 @@ class ImportManager
 
     private function validResponse($response): bool
     {
-        return ($response && ($response->status === 'ACCEPTED' || $response->status === 'FOUND'));
+        return ($response && ($response === true || $response->status === 'ACCEPTED' || $response->status === 'FOUND'));
     }
 
     public function outputContent($msg)
@@ -296,8 +296,12 @@ class ImportManager
         return intval($value * 1000);
     }
 
-    public function persistMetric(string $storeId, string $productId, int $cost, int $retail, int $movement)
+    public function persistMetric(string $storeId, string $productId, int $cost, int $retail, int $movement): bool
     {
+        if ($cost === 0 && $retail === 0 && $movement === 0) {
+            return false;
+        }
+
         $existing = $this->db->fetchExistingMetric($storeId, $productId);
 
         if (count($existing) > 0) {
@@ -312,10 +316,14 @@ class ImportManager
 
             if ($cost !== $existingCost || $retail !== $existingRetail || $movement !== $existingMovement) {
                 $this->db->updateMetric($storeId, $productId, $cost, $retail, $movement);
+            } else {
+                return false;
             }
         } else {
             $this->db->insertMetric($storeId, $productId, $cost, $retail, $movement);
         }
+
+        return true;
     }
 }
 

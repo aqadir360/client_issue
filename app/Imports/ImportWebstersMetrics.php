@@ -86,13 +86,19 @@ class ImportWebstersMetrics implements ImportInterface
                     $cost = 0;
                 }
 
-                $this->import->persistMetric(
+                $success = $this->import->persistMetric(
                     $this->storeId,
                     $product->productId,
                     $this->import->convertFloatToInt($cost),
                     $this->import->convertFloatToInt($retail),
                     $this->import->convertFloatToInt($movement)
                 );
+
+                if ($success) {
+                    $this->import->recordMetric($success);
+                } else {
+                    $this->import->currentFile->skipped;
+                }
             }
 
             fclose($handle);

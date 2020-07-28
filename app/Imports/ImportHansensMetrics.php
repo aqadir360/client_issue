@@ -60,7 +60,7 @@ class ImportHansensMetrics implements ImportInterface
                 $this->import->recordRow();
 
                 $barcode = '0' . BarcodeFixer::fixUpc(trim($data[1]));
-                if ($this->import->isInvalidBarcode($barcode)) {
+                if ($this->import->isInvalidBarcode($barcode, $data[1])) {
                     continue;
                 }
 
@@ -71,30 +71,37 @@ class ImportHansensMetrics implements ImportInterface
                     continue;
                 }
 
-                $cost = $this->parsePositiveFloat($data[5]);
-                $retail = $this->parsePositiveFloat($data[2]);
+                $cost = $this->import->parsePositiveFloat($data[5]);
+                $retail = $this->import->parsePositiveFloat($data[2]);
 
                 if ($cost > $retail) {
                     $this->import->currentFile->skipped++;
                     continue;
                 }
 
-                $this->persistMetric($barcode, $storeId, $cost, $retail);
+                $product = $this->import->fetchProduct($barcode);
+                if ($product->isExistingProduct === false) {
+                    $this->import->currentFile->skipped++;
+                    return;
+                }
+
+                // TODO: temporarily skipping movement values
+                $movement = 0;
+
+                $this->import->persistMetric(
+                    $storeId,
+                    $product->productId,
+                    $this->import->convertFloatToInt($cost),
+                    $this->import->convertFloatToInt($retail),
+                    $this->import->convertFloatToInt($movement)
+                );
+                $this->import->recordMetric(true);
             }
 
             fclose($handle);
         }
 
         $this->import->completeFile();
-    }
-
-    private function persistMetric($barcode, $storeId, $cost, $retail)
-    {
-        // TODO: temporarily skipping movement values
-        $movement = 0;
-
-        $response = $this->proxy->persistMetric($barcode, $storeId, $cost, $retail, $movement);
-        $this->import->recordMetric($response);
     }
 
     private function inputNumToStoreNum($input)
@@ -127,11 +134,5 @@ class ImportHansensMetrics implements ImportInterface
         }
 
         return $input;
-    }
-
-    private function parsePositiveFloat($value): float
-    {
-        $float = floatval($value);
-        return $float < 0 ? 0 : $float;
     }
 }

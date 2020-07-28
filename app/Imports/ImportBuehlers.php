@@ -26,7 +26,7 @@ class ImportBuehlers implements ImportInterface
     public function __construct(Api $api, Database $database)
     {
         $this->proxy = $api;
-        $this->ftpManager = new FtpManager( 'buehler/imports');
+        $this->ftpManager = new FtpManager('buehler/imports');
         $this->import = new ImportManager($database, $this->companyId);
         $this->import->setSkipList();
     }
@@ -147,12 +147,17 @@ class ImportBuehlers implements ImportInterface
 
     private function persistMetric($upc, $storeId, $row)
     {
-        $cost = floatval($row[7]);
-        $retail = floatval($row[6]);
-        $movement = floatval($row[8]);
-
-        if ($cost != 0 || $retail != 0 || $movement != 0) {
-            $this->proxy->persistMetric($upc, $storeId, $cost, $retail, $movement);
+        $product = $this->import->fetchProduct($upc);
+        if ($product->isExistingProduct === false) {
+            return;
         }
+
+        $this->import->persistMetric(
+            $storeId,
+            $product->productId,
+            $this->import->convertFloatToInt(floatval($row[7])),
+            $this->import->convertFloatToInt(floatval($row[6])),
+            $this->import->convertFloatToInt(floatval($row[8]))
+        );
     }
 }

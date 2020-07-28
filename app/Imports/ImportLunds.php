@@ -130,7 +130,13 @@ class ImportLunds implements ImportInterface
                     continue;
                 }
 
-                $this->persistMetric($upc, $storeId, $data);
+                $success = $this->persistMetric($upc, $storeId, $data);
+                if ($success) {
+                    $this->import->recordMetric($success);
+                } else {
+                    $this->import->currentFile->skipped;
+                }
+
                 $this->proxy->createVendor($upc, trim($data[8]), $this->companyId);
             }
 
@@ -286,11 +292,21 @@ class ImportLunds implements ImportInterface
             // sending weekly movement
             $movement = round(floatval($row[12]) / 7, 4);
 
-            if ($cost != 0 || $retail != 0 || $movement != 0) {
-                $response = $this->proxy->persistMetric($upc, $storeId, $cost, $retail, $movement);
-                $this->import->recordMetric($response);
+            $product = $this->import->fetchProduct($upc);
+            if ($product->isExistingProduct === false) {
+                return false;
             }
+
+            return $this->import->persistMetric(
+                $storeId,
+                $product->productId,
+                $this->import->convertFloatToInt($cost),
+                $this->import->convertFloatToInt($retail),
+                $this->import->convertFloatToInt($movement)
+            );
         }
+
+        return false;
     }
 
     private function parseLocation(string $input): Location
