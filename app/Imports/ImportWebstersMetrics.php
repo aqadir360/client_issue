@@ -97,7 +97,7 @@ class ImportWebstersMetrics implements ImportInterface
                 if ($success) {
                     $this->import->recordMetric($success);
                 } else {
-                    $this->import->currentFile->skipped;
+                    $this->import->currentFile->skipped++;
                 }
             }
 

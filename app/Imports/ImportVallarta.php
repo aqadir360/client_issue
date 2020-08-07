@@ -198,13 +198,19 @@ class ImportVallarta implements ImportInterface
                     continue;
                 }
 
-                $this->import->persistMetric(
+                $success = $this->import->persistMetric(
                     $storeId,
                     $product->productId,
                     $this->import->convertFloatToInt(floatval($data[4])),
                     $this->import->convertFloatToInt(floatval($data[3])),
                     $this->import->convertFloatToInt(floatval($data[2]))
                 );
+
+                if ($success) {
+                    $this->import->recordMetric($success);
+                } else {
+                    $this->import->currentFile->skipped++;
+                }
             }
 
             fclose($handle);

@@ -35,34 +35,62 @@ class FileStatus
 
     public function outputResults(): string
     {
+        $unaccountedRows = $this->total;
+
         $str = "{$this->total} Total Rows";
 
         if ($this->adds > 0) {
             $str .= ", {$this->adds} items added";
+            $unaccountedRows -= $this->adds;
         }
 
         if ($this->moves > 0) {
             $str .= ", {$this->moves} items moved";
+            $unaccountedRows -= $this->moves;
         }
 
         if ($this->discos > 0) {
             $str .= ", {$this->discos} items discontinued";
+            $unaccountedRows -= $this->discos;
+        }
+
+        if ($this->metrics > 0) {
+            $str .= ", {$this->metrics} metrics";
+            $unaccountedRows -= $this->metrics;
         }
 
         if ($this->errors > 0) {
             $str .= ", {$this->errors} errors";
+            $unaccountedRows -= $this->errors;
         }
 
         if ($this->skipped > 0) {
             $str .= ", {$this->skipped} skipped";
+            $unaccountedRows -= $this->skipped;
+        }
+
+        if ($this->skipDepts > 0) {
+            $str .= ", {$this->skipDepts} skipped departments";
+            $unaccountedRows -= $this->skipDepts;
         }
 
         if ($this->skipList > 0) {
             $str .= ", {$this->skipList} skip list items";
+            $unaccountedRows -= $this->skipList;
+        }
+
+        if ($this->static > 0) {
+            $str .= ", {$this->static} static items";
+            $unaccountedRows -= $this->static;
         }
 
         if ($this->invalidBarcodeErrors > 0) {
             $str .= ", {$this->invalidBarcodeErrors} invalid barcodes";
+            $unaccountedRows -= $this->invalidBarcodeErrors;
+        }
+
+        if ($unaccountedRows > 0) {
+            $str .= "\n{$unaccountedRows} rows unaccounted for";
         }
 
         return $str;

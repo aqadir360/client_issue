@@ -86,8 +86,6 @@ class ImportRaleys implements ImportInterface
                     continue;
                 }
 
-                $this->import->recordRow();
-
                 $productsToImport[intval($data[1])] = [
                     trim($data[1]),
                     ucwords(strtolower(trim($data[3]))),
@@ -99,6 +97,8 @@ class ImportRaleys implements ImportInterface
         }
 
         foreach ($productsToImport as $product) {
+            $this->import->recordRow();
+
             $upc = BarcodeFixer::fixLength($product[0]);
             if ($this->import->isInvalidBarcode($upc, $product[0])) {
                 continue;

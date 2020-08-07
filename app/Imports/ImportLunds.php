@@ -134,7 +134,7 @@ class ImportLunds implements ImportInterface
                 if ($success) {
                     $this->import->recordMetric($success);
                 } else {
-                    $this->import->currentFile->skipped;
+                    $this->import->currentFile->skipped++;
                 }
 
                 $this->proxy->createVendor($upc, trim($data[8]), $this->companyId);
@@ -206,7 +206,13 @@ class ImportLunds implements ImportInterface
                     }
 
                     $this->proxy->createVendor($product->barcode, trim($data[8]), $this->companyId);
-                    $this->persistMetric($product->barcode, $storeId, $data);
+
+                    $success = $this->persistMetric($product->barcode, $storeId, $data);
+                    if ($success) {
+                        $this->import->recordMetric($success);
+                    } else {
+                        $this->import->currentFile->skipped++;
+                    }
                 }
             }
 
