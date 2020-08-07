@@ -17,6 +17,7 @@ class CreateImportStatusTable extends Migration
             $table->id();
             $table->char('company_id', 36);
             $table->char('user_id', 36);
+            $table->text('error_message');
             $table->timestamps();
             $table->timestamp('completed_at')->nullable();
         });

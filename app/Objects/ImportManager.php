@@ -39,9 +39,9 @@ class ImportManager
     public function startNewFile($filePath)
     {
         $file = basename($filePath);
-        $this->outputContent("---- Importing $file");
         $this->currentFile = new FileStatus($filePath, $this->companyId);
         $this->currentFile->insertFileRow();
+        $this->outputContent("---- Importing $file");
     }
 
     public function completeFile()
@@ -256,18 +256,20 @@ class ImportManager
     public function outputContent($msg)
     {
         echo $msg . PHP_EOL;
+        $this->currentFile->outputContent($msg);
     }
 
     private function outputContentList($array)
     {
         foreach ($array as $item) {
             echo $item . PHP_EOL;
+            $this->currentFile->outputContent($item);
         }
     }
 
-    public function completeImport()
+    public function completeImport(string $errorMsg)
     {
-        $this->db->completeImport($this->importId);
+        $this->db->completeImport($this->importId, $errorMsg);
 
         if (count($this->invalidStores) > 0) {
             $this->outputContent("Invalid Stores:");

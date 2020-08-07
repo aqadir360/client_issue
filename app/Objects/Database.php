@@ -106,12 +106,13 @@ class Database
         return DB::getPdo()->lastInsertId();
     }
 
-    public function completeImport($id)
+    public function completeImport($id, $errorMsg)
     {
-        $sql = "UPDATE " . $this->adminDb . ".import_status SET completed_at = NOW() WHERE id = :id";
+        $sql = "UPDATE {$this->adminDb}.import_status SET error_message = :msg, completed_at = NOW() WHERE id = :id";
 
         DB::update($sql, [
             'id' => $id,
+            'msg' => $errorMsg,
         ]);
     }
 

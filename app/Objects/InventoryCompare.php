@@ -57,7 +57,7 @@ class InventoryCompare
                     'found' => false,
                 ];
 
-                $this->updateTrackedLocations($this->getLocKey($item), $item->departmentId);
+                $this->updateTrackedLocations($this->getLocKey($item->aisle, $item->section), $item->departmentId);
             }
         }
     }
@@ -184,7 +184,7 @@ class InventoryCompare
             $this->import->recordMove($response);
 
             $this->updateTrackedLocations(
-                $this->getLocKey($newItem),
+                $this->getLocKey($newItem['aisle'], $newItem['section']),
                 $existingItem['departmentId']
             );
         } else {
@@ -211,7 +211,7 @@ class InventoryCompare
             return;
         }
 
-        $locKey = $this->getLocKey($item);
+        $locKey = $this->getLocKey($item['aisle'], $item['section']);
 
         // Do not add items in untracked locations
         if (!isset($this->trackedLocations[$locKey])) {
@@ -261,9 +261,9 @@ class InventoryCompare
         $this->import->recordDisco($response);
     }
 
-    private function getLocKey($item)
+    private function getLocKey($aisle, $section)
     {
-        return $item->aisle . '-' . $item->section;
+        return $aisle . '-' . $section;
     }
 
     // Tracks how many items we have at a given location

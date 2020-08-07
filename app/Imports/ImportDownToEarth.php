@@ -51,8 +51,14 @@ class ImportDownToEarth implements ImportInterface
             $this->importMetricsFile($file);
         }
 
-        $this->import->completeImport();
+        $this->completeImport();
+    }
+
+    public function completeImport(string $error = '')
+    {
+        $this->proxy->triggerUpdateCounts($this->companyId);
         $this->ftpManager->writeLastDate();
+        $this->import->completeImport($error);
     }
 
     /* Update file format:

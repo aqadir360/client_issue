@@ -18,6 +18,7 @@ use App\Objects\Api;
 use App\Objects\Database;
 use Exception;
 use Illuminate\Console\Command;
+use Log;
 
 class DoImport extends Command
 {
@@ -40,7 +41,8 @@ class DoImport extends Command
             try {
                 $import->importUpdates();
             } catch (Exception $e) {
-                var_dump($e);
+                $import->completeImport($e->getMessage());
+                Log::error($e);
             }
         }
     }

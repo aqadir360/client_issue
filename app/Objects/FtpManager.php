@@ -110,7 +110,6 @@ class FtpManager
 //        if (file_exists($this->dateFilePath)) {
 //            $this->compareDate = intval(file_get_contents($this->dateFilePath));
 //        } else {
-        $this->compareDate = 1595784636;
         $this->compareDate = 0;
 //        }
     }

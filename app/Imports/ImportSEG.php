@@ -98,7 +98,12 @@ class ImportSEG implements ImportInterface
             $this->import->completeFile();
         }
 
-        $this->import->completeImport();
+        $this->completeImport();
+    }
+
+    public function completeImport(string $error = '')
+    {
+        $this->import->completeImport($error);
     }
 }
 
