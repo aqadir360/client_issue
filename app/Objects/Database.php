@@ -12,9 +12,10 @@ class Database
 
     public function __construct()
     {
-        // TODO: set this from config
-        $this->db = 'DateCheckPro';
-        $this->adminDb = 'dcp2admin';
+        $conn = config('database.connections.' . config('database.default'));
+
+        $this->db = $conn['database'];
+        $this->adminDb = $conn['admin_database'];
     }
 
     public function fetchStores(string $companyId)
