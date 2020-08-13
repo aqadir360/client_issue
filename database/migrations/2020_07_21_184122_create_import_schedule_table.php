@@ -22,6 +22,7 @@ class CreateImportScheduleTable extends Migration
             $table->integer('start_hour');
             $table->integer('start_minute');
             $table->timestamp('created_at');
+            $table->timestamp('archived_at')->nullable();
         });
     }
 

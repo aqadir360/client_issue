@@ -73,7 +73,7 @@ class ImportManager
         $this->filesProcessed++;
         $file = basename($filePath);
         $this->currentFile = new FileStatus($filePath);
-        $this->currentFile->insertFileRow($this->importTypeId);
+        $this->currentFile->insertFileRow($this->importId);
         $this->outputContent("---- Importing $file");
     }
 

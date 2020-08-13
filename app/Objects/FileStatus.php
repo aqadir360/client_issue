@@ -112,12 +112,12 @@ class FileStatus
         }
     }
 
-    public function insertFileRow($importTypeId)
+    public function insertFileRow($importStatusId)
     {
-        $sql = "INSERT INTO dcp2admin.import_results (import_type_id, filename, created_at) VALUES (:import_type_id, :filename, NOW())";
+        $sql = "INSERT INTO dcp2admin.import_results (import_status_id, filename, created_at) VALUES (:import_status_id, :filename, NOW())";
 
         DB::insert($sql, [
-            'import_type_id' => $importTypeId,
+            'import_status_id' => $importStatusId,
             'filename' => basename($this->filename),
         ]);
 

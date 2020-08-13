@@ -10,7 +10,8 @@ It requires a connection to the DCP2 API and the DCP2 Admin database.
 ### Add a New Import
 1. Create app/Imports/Import___ class implementing ImportInterface
 2. Add row to import_types table mapping key to company_id
-3. Add key to 
+3. Add key to ImportFactory class mapping
+4. Import will now be available for scheduling in the Admin
 
 ### Manually Run Import
 php artisan dcp:do-import key
