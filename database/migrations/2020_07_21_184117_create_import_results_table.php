@@ -15,7 +15,7 @@ class CreateImportResultsTable extends Migration
     {
         Schema::create('import_results', function (Blueprint $table) {
             $table->id();
-            $table->char('company_id', 36);
+            $table->foreignId('import_type_id');
             $table->string('filename');
 
             $table->integer('adds')->default(0);

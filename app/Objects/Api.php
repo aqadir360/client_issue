@@ -11,11 +11,13 @@ use Log;
 class Api
 {
     private $url;
+    private $debugMode;
     private $token;
 
     public function __construct()
     {
         $this->url = config('scraper.url');
+        $this->debugMode = config('scraper.debug_mode') === 'debug';
         $this->token = $this->setCommandApiToken();
     }
 
@@ -51,7 +53,7 @@ class Api
         string $deptId,
         string $shelf = ''
     ) {
-        return $this->request(
+        return $this->writeRequest(
             'implementation-scan',
             [
                 'barcode' => $product->barcode,
@@ -68,52 +70,13 @@ class Api
         );
     }
 
-    public function persistMetric(
-        $barcode,
-        $storeId,
-        $cost,
-        $retail,
-        $movement
-    ) {
-        return $this->request(
-            'persist-metric',
-            [
-                'barcode' => $barcode,
-                'storeId' => $storeId,
-                'movement' => $movement,
-                'cost' => $cost,
-                'retail' => $retail,
-            ]
-        );
-    }
-
-    public function fetchAllStores($companyId)
-    {
-        return $this->request(
-            'fetch-all-stores',
-            [
-                'companyId' => $companyId,
-            ]
-        );
-    }
-
-    public function fetchDepartments($companyId)
-    {
-        return $this->request(
-            'fetch-departments',
-            [
-                'companyId' => $companyId,
-            ]
-        );
-    }
-
     public function persistProduct(
         $barcode,
         $description,
         $size,
         $createOnly = true
     ) {
-        return $this->request(
+        return $this->writeRequest(
             'persist-product',
             [
                 'barcode' => $barcode,
@@ -126,7 +89,7 @@ class Api
 
     public function updateInventoryLocation($itemId, $storeId, $deptId, $aisle, $section, $shelf = '')
     {
-        return $this->request(
+        return $this->writeRequest(
             'update-inventory-location',
             [
                 'inventoryItemId' => $itemId,
@@ -141,7 +104,7 @@ class Api
 
     public function updateInventoryDisco($itemId, $expiration, $prevStatus)
     {
-        return $this->request(
+        return $this->writeRequest(
             'update-inventory',
             [
                 'inventoryItemId' => $itemId,
@@ -158,7 +121,7 @@ class Api
         $vendor,
         $companyId
     ) {
-        return $this->request(
+        return $this->writeRequest(
             'create-product-vendor',
             [
                 'barcode' => $barcode,
@@ -170,7 +133,7 @@ class Api
 
     public function discontinueProduct($storeId, $productId)
     {
-        return $this->request(
+        return $this->writeRequest(
             'discontinue-product',
             [
                 'storeId' => $storeId,
@@ -181,7 +144,7 @@ class Api
 
     public function discontinueProductByBarcode($storeId, $barcode)
     {
-        return $this->request(
+        return $this->writeRequest(
             'discontinue-product',
             [
                 'storeId' => $storeId,
@@ -192,7 +155,7 @@ class Api
 
     public function triggerUpdateCounts(string $companyId)
     {
-        $this->request(
+        $this->writeRequest(
             'trigger-calc-store-counts',
             [
                 'companyId' => $companyId,
@@ -205,18 +168,25 @@ class Api
         return $response && ($response->status === 'ACCEPTED' || $response->status === 'FOUND');
     }
 
-    public function request($service, $data, $timestamps = null)
+    private function writeRequest($service, $data)
+    {
+        if ($this->debugMode) {
+            return new class {
+                public $status = 'ACCEPTED';
+            };
+        } else {
+            return $this->request($service, $data);
+        }
+    }
+
+    private function request($service, $data)
     {
         if ($this->token === null) {
             $this->token = $this->getApiToken();
         }
 
         $url = $this->url . 'api/' . $service;
-        if ($timestamps == null) {
-            $data['createdTimestamp'] = $data['sentTimestamp'] = date('Y-m-d');
-        } else {
-            $data['createdTimestamp'] = $data['sentTimestamp'] = $timestamps;
-        }
+        $data['createdTimestamp'] = $data['sentTimestamp'] = date('Y-m-d');
 
         $params = json_encode($data);
 

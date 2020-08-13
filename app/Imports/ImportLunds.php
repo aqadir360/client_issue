@@ -4,54 +4,28 @@ namespace App\Imports;
 
 use App\Models\Location;
 use App\Models\Product;
-use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\Database;
-use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 
 // Lunds Inventory and Metrics Import
 // Expects Aisle Change, Discontinued, All Items (metrics), and Exclude (skip) files twice weekly
 class ImportLunds implements ImportInterface
 {
-    private $companyId = '0ba8c4a0-9e50-11e7-b25f-f23c917b0c87';
-
     /** @var ImportManager */
     private $import;
 
-    /** @var Api */
-    private $proxy;
-
-    /** @var FtpManager */
-    private $ftpManager;
-
-    public function __construct(Api $api, Database $database)
+    public function __construct(ImportManager $importManager)
     {
-        $this->proxy = $api;
-        $this->ftpManager = new FtpManager('lunds/imports');
-        $this->import = new ImportManager($database, $this->companyId);
+        $this->import = $importManager;
         $this->import->setSkipList();
     }
 
     public function importUpdates()
     {
-        $importList = [];
-        $discoList = [];
-        $metricsList = [];
-        $skipList = [];
-
-        $files = $this->ftpManager->getRecentlyModifiedFiles();
-        foreach ($files as $file) {
-            if (strpos($file, 'Aisle_Changes') !== false) {
-                $importList[] = $this->ftpManager->downloadFile($file);
-            } elseif (strpos($file, 'Discontinued') !== false) {
-                $discoList[] = $this->ftpManager->downloadFile($file);
-            } elseif (strpos($file, 'All_Items') !== false) {
-                $metricsList[] = $this->ftpManager->downloadFile($file);
-            } elseif (strpos($file, 'Exclude') !== false && strpos($file, 'csv') !== false) {
-                $skipList[] = $this->ftpManager->downloadFile($file);
-            }
-        }
+        $importList = $this->import->downloadFilesByName('Aisle_Changes');
+        $discoList = $this->import->downloadFilesByName('Discontinued');
+        $metricsList = $this->import->downloadFilesByName('All_Items');
+        $skipList = $this->import->downloadFilesByName('Exclude');
 
         foreach ($skipList as $filePath) {
             $this->addToSkipList($filePath);
@@ -69,14 +43,7 @@ class ImportLunds implements ImportInterface
             $this->importMetricsFile($filePath);
         }
 
-        $this->completeImport();
-    }
-
-    public function completeImport(string $error = '')
-    {
-        $this->proxy->triggerUpdateCounts($this->companyId);
-        $this->ftpManager->writeLastDate();
-        $this->import->completeImport($error);
+        $this->import->completeImport();
     }
 
     private function importDiscoFile($file)
@@ -85,7 +52,13 @@ class ImportLunds implements ImportInterface
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-                $this->import->recordRow();
+                if (trim($data[0]) === 'STORE_ID') {
+                    continue;
+                }
+
+                if (!$this->import->recordRow()) {
+                    break;
+                }
 
                 $storeId = $this->import->storeNumToStoreId($data[0]);
                 if ($storeId === false) {
@@ -97,7 +70,7 @@ class ImportLunds implements ImportInterface
                     continue;
                 }
 
-                $this->discontinue($upc, $storeId);
+                $this->import->discontinueProductByBarcode($storeId, $upc);
             }
         }
 
@@ -125,6 +98,14 @@ class ImportLunds implements ImportInterface
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
+                if (trim($data[0]) === 'STORE_ID') {
+                    continue;
+                }
+
+                if (!$this->import->recordRow()) {
+                    break;
+                }
+
                 $storeId = $this->import->storeNumToStoreId($data[0]);
                 if ($storeId === false) {
                     continue;
@@ -135,14 +116,8 @@ class ImportLunds implements ImportInterface
                     continue;
                 }
 
-                $success = $this->persistMetric($upc, $storeId, $data);
-                if ($success) {
-                    $this->import->recordMetric($success);
-                } else {
-                    $this->import->currentFile->skipped++;
-                }
-
-                $this->proxy->createVendor($upc, trim($data[8]), $this->companyId);
+                $this->persistMetric($upc, $storeId, $data);
+                $this->import->createVendor($upc, trim($data[8]));
             }
 
             fclose($handle);
@@ -157,11 +132,17 @@ class ImportLunds implements ImportInterface
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-                $this->import->recordRow();
+                if ($data[0] === 'STORE_ID') {
+                    continue;
+                }
+
+                if (!$this->import->recordRow()) {
+                    break;
+                }
 
                 // skip items with zero or empty tag quantity
                 if (intval($data[5]) <= 0) {
-                    $this->import->currentFile->skipped++;
+                    $this->import->recordSkipped();
                     continue;
                 }
 
@@ -176,13 +157,13 @@ class ImportLunds implements ImportInterface
                 }
 
                 if ($this->import->isInSkipList($upc)) {
-                    $this->import->currentFile->skipList++;
+                    $this->import->recordSkipped();
                     continue;
                 }
 
                 $action = trim($data[9]);
                 if ($action === 'To Discontinue' || $action === 'Discontinued') {
-                    $this->discontinue($upc, $storeId);
+                    $this->import->discontinueProductByBarcode($storeId, $upc);
                 } else {
                     $departmentId = $this->import->getDepartmentId($data[7]);
                     if ($departmentId === false) {
@@ -191,7 +172,7 @@ class ImportLunds implements ImportInterface
 
                     $expires = (string)date('Y-m-d 00:00:00', strtotime($data[6]));
                     if (empty($expires)) {
-                        $this->import->currentFile->recordError('Invalid Expiration Date', $data[6]);
+                        $this->import->recordFileError('Invalid Expiration Date', $data[6]);
                         continue;
                     }
 
@@ -210,14 +191,9 @@ class ImportLunds implements ImportInterface
                         $this->createNewProductAndItem($product, $storeId, $departmentId, $location);
                     }
 
-                    $this->proxy->createVendor($product->barcode, trim($data[8]), $this->companyId);
+                    $this->import->createVendor($upc, trim($data[8]));
 
-                    $success = $this->persistMetric($product->barcode, $storeId, $data);
-                    if ($success) {
-                        $this->import->recordMetric($success);
-                    } else {
-                        $this->import->currentFile->skipped++;
-                    }
+                    $this->persistMetric($product->barcode, $storeId, $data);
                 }
             }
 
@@ -233,14 +209,13 @@ class ImportLunds implements ImportInterface
         string $departmentId,
         Location $location
     ) {
-        $response = $this->proxy->implementationScan(
+        $this->import->implementationScan(
             $product,
             $storeId,
             $location->aisle,
             $location->section,
             $departmentId
         );
-        $this->import->recordAdd($response);
     }
 
     private function handleExistingProduct(
@@ -253,46 +228,30 @@ class ImportLunds implements ImportInterface
 
         if ($item !== null) {
             if ($this->needToMoveItem($item, $location)) {
-                $this->moveInventory($item, $storeId, $location);
+                $this->import->updateInventoryLocation(
+                    $item->inventory_item_id,
+                    $storeId,
+                    $item->department_id, // do not overwrite the existing department
+                    $location->aisle,
+                    $location->section
+                );
             } else {
-                $this->import->currentFile->skipped++;
+                $this->import->recordStatic();
             }
         } else {
-            $response = $this->proxy->implementationScan(
+            $this->import->implementationScan(
                 $product,
                 $storeId,
                 $location->aisle,
                 $location->section,
                 $departmentId
             );
-            $this->import->recordAdd($response);
         }
     }
 
     private function needToMoveItem($item, Location $location)
     {
         return !($item->aisle == $location->aisle && $item->section == $location->section);
-    }
-
-    private function discontinue($upc, $storeId)
-    {
-        $response = $this->proxy->discontinueProductByBarcode($storeId, $upc);
-        $this->import->recordDisco($response);
-    }
-
-    private function moveInventory(
-        $item,
-        string $storeId,
-        Location $location
-    ) {
-        $response = $this->proxy->updateInventoryLocation(
-            $item->inventory_item_id,
-            $storeId,
-            $item->department_id, // do not overwrite the existing department
-            $location->aisle,
-            $location->section
-        );
-        $this->import->recordMove($response);
     }
 
     private function persistMetric($upc, $storeId, $row)
@@ -305,10 +264,10 @@ class ImportLunds implements ImportInterface
 
             $product = $this->import->fetchProduct($upc);
             if ($product->isExistingProduct === false) {
-                return false;
+                return;
             }
 
-            return $this->import->persistMetric(
+            $this->import->persistMetric(
                 $storeId,
                 $product->productId,
                 $this->import->convertFloatToInt($cost),
@@ -316,8 +275,6 @@ class ImportLunds implements ImportInterface
                 $this->import->convertFloatToInt($movement)
             );
         }
-
-        return false;
     }
 
     private function parseLocation(string $input): Location
@@ -339,6 +296,10 @@ class ImportLunds implements ImportInterface
 
     private function addToSkipList($file)
     {
+        if (strpos($file, 'csv') === false) {
+            return;
+        }
+
         $this->import->startNewFile($file);
 
         // adds any new upcs to database
@@ -346,11 +307,13 @@ class ImportLunds implements ImportInterface
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
                 $upc = trim($data[0]);
                 if ($upc != 'UPCs to Exclude') {
-                    $this->import->recordRow();
+                    if (!$this->import->recordRow()) {
+                        break;
+                    }
                     if ($this->import->addToSkipList($upc)) {
-                        $this->import->currentFile->adds++;
+                        $this->import->recordAdd();
                     } else {
-                        $this->import->currentFile->skipped++;
+                        $this->import->recordSkipped();
                     }
                 }
             }

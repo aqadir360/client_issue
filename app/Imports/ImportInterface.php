@@ -2,14 +2,11 @@
 
 namespace App\Imports;
 
-use App\Objects\Api;
-use App\Objects\Database;
+use App\Objects\ImportManager;
 
 interface ImportInterface
 {
-    public function __construct(Api $api, Database $database);
+    public function __construct(ImportManager $importManager);
 
     public function importUpdates();
-
-    public function completeImport(string $error);
 }

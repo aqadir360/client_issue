@@ -2,11 +2,7 @@
 
 namespace App\Imports;
 
-use App\Models\Product;
-use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\Database;
-use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 
 // Webster's Inventory Import
@@ -14,49 +10,23 @@ use App\Objects\ImportManager;
 // Adds all products with unknown location and grocery department
 class ImportWebsters implements ImportInterface
 {
-    private $companyId = '2719728a-a16e-ccdc-26f5-b0e9f1f23b6e';
-    private $storeId = 'e3fc1cf1-3355-1a03-0684-88bec1538bf2';
-
     /** @var ImportManager */
     private $import;
 
-    /** @var Api */
-    private $proxy;
-
-    /** @var FtpManager */
-    private $ftpManager;
-
-    public function __construct(Api $api, Database $database)
+    public function __construct(ImportManager $importManager)
     {
-        $this->proxy = $api;
-        $this->ftpManager = new FtpManager('websters/imports');
-        $this->import = new ImportManager($database, $this->companyId);
+        $this->import = $importManager;
     }
 
     public function importUpdates()
     {
-        $newFiles = [];
-        $files = $this->ftpManager->getRecentlyModifiedFiles();
-        foreach ($files as $file) {
-            if (strpos($file, 'NEW') !== false) {
-                $newFiles[] = $this->ftpManager->downloadFile($file);
-            }
+        $newFiles = $this->import->downloadFilesByName('NEW');
+
+        foreach ($newFiles as $file) {
+            $this->importNewFile($file);
         }
 
-        if (count($newFiles) > 0) {
-            foreach ($newFiles as $file) {
-                $this->importNewFile($file);
-            }
-
-            $this->completeImport();
-        }
-    }
-
-    public function completeImport(string $error = '')
-    {
-        $this->proxy->triggerUpdateCounts($this->companyId);
-        $this->ftpManager->writeLastDate();
-        $this->import->completeImport($error);
+        $this->import->completeImport();
     }
 
     private function importNewFile($file)
@@ -65,36 +35,35 @@ class ImportWebsters implements ImportInterface
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-                $this->import->recordRow();
+                if (!$this->import->recordRow()) {
+                    break;
+                }
+
+                $storeId = $this->import->storeNumToStoreId(1);
+                if ($storeId === false) {
+                    continue;
+                }
 
                 $upc = substr(trim($data[0], "'"), 1);
                 $barcode = $upc . BarcodeFixer::calculateMod10Checksum($upc);
-                $product = $this->import->fetchProduct($barcode, $this->storeId);
+                $product = $this->import->fetchProduct($barcode, $storeId);
 
-                if ($product->isExistingProduct) {
-                    $this->implementationScan($this->storeId, $product);
-                } else {
+                if (!$product->isExistingProduct) {
                     $product->setDescription($data[1]);
-                    $this->implementationScan($this->storeId, $product);
                 }
+
+                $this->import->implementationScan(
+                    $product,
+                    $storeId,
+                    'UNKN',
+                    '',
+                    $this->import->getDepartmentId('grocery')
+                );
             }
 
             fclose($handle);
         }
 
         $this->import->completeFile();
-    }
-
-    private function implementationScan($storeId, Product $product)
-    {
-        $response = $this->proxy->implementationScan(
-            $product,
-            $storeId,
-            'UNKN',
-            '',
-            $this->import->getDepartmentId('grocery')
-        );
-
-        $this->import->recordAdd($response);
     }
 }

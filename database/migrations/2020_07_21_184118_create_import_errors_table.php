@@ -15,10 +15,10 @@ class CreateImportErrorsTable extends Migration
     {
         Schema::create('import_errors', function (Blueprint $table) {
             $table->id();
-            $table->integer('import_id');
+            $table->foreignId('import_id');
             $table->integer('row');
-            $table->string('message');
             $table->string('status');
+            $table->text('message');
             $table->timestamps();
         });
     }

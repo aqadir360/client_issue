@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\DB;
 
 class FileStatus
 {
-    private $companyId;
     private $fileRowId;
     private $content = '';
     public $filename;
@@ -28,15 +27,14 @@ class FileStatus
     public $invalidStores = [];
     public $invalidBarcodes = [];
 
-    public function __construct($filename, $companyId)
+    public function __construct($filename)
     {
         $this->filename = $filename;
-        $this->companyId = $companyId;
     }
 
     public function outputContent($content)
     {
-        $this->content .= $content;
+        $this->content .= "<p>" . $content . "</p>";
     }
 
     public function outputResults(): string
@@ -72,11 +70,17 @@ class FileStatus
 
         if ($this->static > 0) {
             $str .= ", {$this->static} unchanged";
+            $unaccountedRows -= $this->static;
         }
 
         if ($this->skipped > 0) {
             $str .= ", {$this->skipped} skipped";
             $unaccountedRows -= $this->skipped;
+        }
+
+        if ($this->skipStores > 0) {
+            $str .= ", {$this->skipStores} skipped stores";
+            $unaccountedRows -= $this->skipStores;
         }
 
         if ($this->skipDepts > 0) {
@@ -87,11 +91,6 @@ class FileStatus
         if ($this->skipList > 0) {
             $str .= ", {$this->skipList} skip list items";
             $unaccountedRows -= $this->skipList;
-        }
-
-        if ($this->static > 0) {
-            $str .= ", {$this->static} static items";
-            $unaccountedRows -= $this->static;
         }
 
         if ($this->invalidBarcodeErrors > 0) {
@@ -113,12 +112,12 @@ class FileStatus
         }
     }
 
-    public function insertFileRow()
+    public function insertFileRow($importTypeId)
     {
-        $sql = "INSERT INTO dcp2admin.import_results (company_id, filename, created_at) VALUES (:company_id, :filename, NOW())";
+        $sql = "INSERT INTO dcp2admin.import_results (import_type_id, filename, created_at) VALUES (:import_type_id, :filename, NOW())";
 
         DB::insert($sql, [
-            'company_id' => $this->companyId,
+            'import_type_id' => $importTypeId,
             'filename' => basename($this->filename),
         ]);
 
@@ -164,10 +163,16 @@ class FileStatus
             } else {
                 if (strpos($response->message, 'Invalid Barcode') !== false) {
                     $this->invalidBarcodeErrors++;
-                } else {
-                    $this->errors++;
-                    $this->insertErrorMessage($response->status, $response->message);
+                    return;
                 }
+
+                if (strpos($response->message, 'Product Not Found') !== false) {
+                    $this->skipped++;
+                    return;
+                }
+
+                $this->errors++;
+                $this->insertErrorMessage($response->status, $response->message);
             }
         }
     }

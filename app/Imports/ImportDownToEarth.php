@@ -3,45 +3,23 @@
 namespace App\Imports;
 
 use App\Models\Location;
-use App\Objects\Api;
-use App\Objects\Database;
-use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 
 // Down To Earth Inventory and Metrics Import
 class ImportDownToEarth implements ImportInterface
 {
-    private $companyId = '5b4619fc-bc76-989c-53ed-510d0be8c7c4';
-
     /** @var ImportManager */
     private $import;
 
-    /** @var FtpManager */
-    private $ftpManager;
-
-    /** @var Api */
-    private $proxy;
-
-    public function __construct(Api $api, Database $database)
+    public function __construct(ImportManager $importManager)
     {
-        $this->proxy = $api;
-        $this->ftpManager = new FtpManager('downtoearth/imports');
-        $this->import = new ImportManager($database, $this->companyId);
+        $this->import = $importManager;
     }
 
     public function importUpdates()
     {
-        $updateList = [];
-        $metricsList = [];
-
-        $files = $this->ftpManager->getRecentlyModifiedFiles();
-        foreach ($files as $file) {
-            if (strpos($file, 'update_') !== false) {
-                $updateList[] = $this->ftpManager->downloadFile($file);
-            } elseif (strpos($file, 'PRODUCT_FILE_') !== false) {
-                $metricsList[] = $this->ftpManager->downloadFile($file);
-            }
-        }
+        $updateList = $this->import->downloadFilesByName('update_');
+        $metricsList = $this->import->downloadFilesByName('PRODUCT_FILE_');
 
         foreach ($updateList as $file) {
             $this->importUpdateFile($file);
@@ -51,14 +29,7 @@ class ImportDownToEarth implements ImportInterface
             $this->importMetricsFile($file);
         }
 
-        $this->completeImport();
-    }
-
-    public function completeImport(string $error = '')
-    {
-        $this->proxy->triggerUpdateCounts($this->companyId);
-        $this->ftpManager->writeLastDate();
-        $this->import->completeImport($error);
+        $this->import->completeImport();
     }
 
     /* Update file format:
@@ -79,10 +50,12 @@ class ImportDownToEarth implements ImportInterface
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
-                $this->import->recordRow();
+                if (!$this->import->recordRow()) {
+                    break;
+                }
 
                 if (strtolower($data[0]) !== 'add') {
-                    $this->import->currentFile->skipped++;
+                    $this->import->recordSkipped();
                     continue;
                 }
 
@@ -103,7 +76,7 @@ class ImportDownToEarth implements ImportInterface
 
                 $location = $this->parseLocation($data);
                 if (!$location->valid) {
-                    $this->import->currentFile->skipped++;
+                    $this->import->recordSkipped();
                     continue;
                 }
 
@@ -111,22 +84,20 @@ class ImportDownToEarth implements ImportInterface
 
                 // Do not add items with existing inventory
                 if ($product->isExistingProduct && $product->hasInventory()) {
-                    $this->import->currentFile->skipped++;
+                    $this->import->recordSkipped();
                     continue;
                 }
 
                 $product->setDescription($data[7]);
                 $product->setSize($data[8]);
 
-                $response = $this->proxy->implementationScan(
+                $this->import->implementationScan(
                     $product,
                     $storeId,
                     $location->aisle,
                     $location->section,
                     $departmentId
                 );
-
-                $this->import->recordAdd($response);
 
                 // TODO: new products should be added for immediate review
             }
@@ -143,7 +114,9 @@ class ImportDownToEarth implements ImportInterface
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
-                $this->import->recordRow();
+                if (!$this->import->recordRow()) {
+                    break;
+                }
 
                 $upc = trim($data[1]);
                 if ($this->import->isInvalidBarcode($upc, $upc)) {
@@ -157,23 +130,17 @@ class ImportDownToEarth implements ImportInterface
 
                 $product = $this->import->fetchProduct($upc);
                 if ($product->isExistingProduct === false) {
-                    $this->import->currentFile->skipped++;
-                    return;
+                    $this->import->recordSkipped();
+                    continue;
                 }
 
-                $success = $this->import->persistMetric(
+                $this->import->persistMetric(
                     $storeId,
                     $product->productId,
                     $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[10])),
                     $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[9])),
                     $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[8]))
                 );
-
-                if ($success) {
-                    $this->import->recordMetric($success);
-                } else {
-                    $this->import->currentFile->skipped++;
-                }
             }
 
             fclose($handle);

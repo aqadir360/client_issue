@@ -9,8 +9,6 @@ use ZipArchive;
 
 class FtpManager
 {
-    private $path;
-    private $dateFilePath;
     private $ftp;
     private $ftpPath;
     private $newDate = 0;
@@ -18,21 +16,27 @@ class FtpManager
 
     public $modifiedFiles = [];
 
-    public function __construct(string $ftpPath, string $dateFilePath = '/last.txt')
+    public function __construct(string $ftpPath, int $compareDate)
     {
-//        $this->path = storage_path('imports');
         $this->ftpPath = $ftpPath;
-//        $this->dateFilePath = storage_path($this->path . $dateFilePath);
         $this->ftp = Storage::disk('sftp');
+        $this->compareDate = $compareDate;
     }
 
     // Reads most recently modified date from local txt file
     // Pulls list of files modified since that date from FTP
     public function getRecentlyModifiedFiles(): array
     {
-        $this->readLastDate();
-        $this->setRecentlyModified();
+        if (empty($this->modifiedFiles)) {
+            $this->setRecentlyModified();
+        }
+
         return $this->modifiedFiles;
+    }
+
+    public function getNewDate(): int
+    {
+        return $this->newDate;
     }
 
     // Returns the path of the most recently modified file from FTP
@@ -104,16 +108,6 @@ class FtpManager
         }
     }
 
-    // Sets last date to one week ago if not found
-    private function readLastDate()
-    {
-//        if (file_exists($this->dateFilePath)) {
-//            $this->compareDate = intval(file_get_contents($this->dateFilePath));
-//        } else {
-        $this->compareDate = 0;
-//        }
-    }
-
     private function isBefore($lastModified): bool
     {
         return ($lastModified > $this->compareDate);
@@ -124,14 +118,5 @@ class FtpManager
         if ($lastModified > $this->newDate) {
             $this->newDate = $lastModified;
         }
-    }
-
-    public function writeLastDate()
-    {
-//        if ($this->newDate > 0) {
-//            $handle = fopen($this->dateFilePath, 'w');
-//            fwrite($handle, $this->newDate);
-//            fclose($handle);
-//        }
     }
 }

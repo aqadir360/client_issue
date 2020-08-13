@@ -2,10 +2,7 @@
 
 namespace App\Imports;
 
-use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\Database;
-use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 
 // Expects file format:
@@ -17,39 +14,24 @@ use App\Objects\ImportManager;
 // [5] - Cost
 class ImportHansensMetrics implements ImportInterface
 {
-    private $companyId = '61ef52da-c0e1-11e7-a59b-080027c30a85';
-
     /** @var ImportManager */
     private $import;
 
-    /** @var FtpManager */
-    private $ftpManager;
-
-    /** @var Api */
-    private $proxy;
-
-    public function __construct(Api $api, Database $database)
+    public function __construct(ImportManager $importManager)
     {
-        $this->proxy = $api;
-        $this->ftpManager = new FtpManager('hansens/imports');
-        $this->import = new ImportManager($database, $this->companyId);
+        $this->import = $importManager;
     }
 
     public function importUpdates()
     {
-        $newestFile = $this->ftpManager->getMostRecentFile();
+        $newestFile = $this->import->ftpManager->getMostRecentFile();
 
         if ($newestFile !== null) {
-            $filePath = $this->ftpManager->downloadFile($newestFile);
+            $filePath = $this->import->ftpManager->downloadFile($newestFile);
             $this->importMetricsFile($filePath);
         }
 
-        $this->completeImport();
-    }
-
-    public function completeImport(string $error = '')
-    {
-        $this->import->completeImport($error);
+        $this->import->completeImport();
     }
 
     private function importMetricsFile($file)
@@ -62,16 +44,16 @@ class ImportHansensMetrics implements ImportInterface
                     continue;
                 }
 
-                $this->import->recordRow();
+                if (!$this->import->recordRow()) {
+                    break;
+                }
 
                 $barcode = '0' . BarcodeFixer::fixUpc(trim($data[1]));
                 if ($this->import->isInvalidBarcode($barcode, $data[1])) {
                     continue;
                 }
 
-                $storeId = $this->import->storeNumToStoreId(
-                    $this->inputNumToStoreNum(trim($data[0]))
-                );
+                $storeId = $this->import->storeNumToStoreId($this->inputNumToStoreNum(trim($data[0])));
                 if ($storeId === false) {
                     continue;
                 }
@@ -80,13 +62,13 @@ class ImportHansensMetrics implements ImportInterface
                 $retail = $this->import->parsePositiveFloat($data[2]);
 
                 if ($cost > $retail) {
-                    $this->import->currentFile->skipped++;
+                    $this->import->recordSkipped();
                     continue;
                 }
 
                 $product = $this->import->fetchProduct($barcode);
                 if ($product->isExistingProduct === false) {
-                    $this->import->currentFile->skipped++;
+                    $this->import->recordSkipped();
                     return;
                 }
 
@@ -100,7 +82,6 @@ class ImportHansensMetrics implements ImportInterface
                     $this->import->convertFloatToInt($retail),
                     $this->import->convertFloatToInt($movement)
                 );
-                $this->import->recordMetric(true);
             }
 
             fclose($handle);

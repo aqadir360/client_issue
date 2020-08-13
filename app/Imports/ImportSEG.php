@@ -2,10 +2,7 @@
 
 namespace App\Imports;
 
-use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\Database;
-use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 
 // TODO: Import does not yet run automatically.  Update when file uploads start.
@@ -18,33 +15,19 @@ use App\Objects\ImportManager;
 // [5] Size
 class ImportSEG implements ImportInterface
 {
-    private $companyId = '96bec4fe-098f-0e87-2563-11a36e6447ae';
     private $path;
 
     /** @var ImportManager */
     private $import;
 
-    /** @var Api */
-    private $proxy;
-
-    /** @var FtpManager */
-    private $ftpManager;
-
-    /** @var Database */
-    private $db;
-
-    public function __construct(Api $api, Database $database)
+    public function __construct(ImportManager $importManager)
     {
-        $this->proxy = $api;
-        $this->db = $database;
+        $this->import = $importManager;
         $this->path = storage_path('imports/seg/');
 
         if (!file_exists($this->path)) {
             mkdir($this->path);
         }
-
-        $this->ftpManager = new FtpManager('seg/imports');
-        $this->import = new ImportManager($database, $this->companyId);
     }
 
     public function importUpdates()
@@ -59,7 +42,7 @@ class ImportSEG implements ImportInterface
                         continue;
                     }
 
-                    $this->import->recordRow();
+                    if (!$this->import->recordRow()) { continue; }
 
                     $storeId = $this->import->storeNumToStoreId($data[3]);
                     if ($storeId === false) {
@@ -78,17 +61,15 @@ class ImportSEG implements ImportInterface
                         $product->setDescription($data[4]);
                         $product->setSize($data[5]);
 
-                        $response = $this->proxy->implementationScan(
+                        $this->import->implementationScan(
                             $product,
                             $storeId,
                             "UNKN",
                             "",
                             $departmentId
                         );
-
-                        $this->import->recordAdd($response);
                     } else {
-                        $this->import->currentFile->skipped++;
+                        $this->import->recordSkipped();
                     }
                 }
 
@@ -98,12 +79,7 @@ class ImportSEG implements ImportInterface
             $this->import->completeFile();
         }
 
-        $this->completeImport();
-    }
-
-    public function completeImport(string $error = '')
-    {
-        $this->import->completeImport($error);
+        $this->import->completeImport();
     }
 }
 

@@ -3,10 +3,7 @@
 namespace App\Imports;
 
 use App\Models\Location;
-use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\Database;
-use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 
 // Vallarta Inventory and Metrics Import
@@ -14,37 +11,18 @@ use App\Objects\ImportManager;
 // Adds all products with unknown location and grocery department
 class ImportVallarta implements ImportInterface
 {
-    private $companyId = 'c3c9f97e-e095-1f19-0c5e-441da2520a9a';
-
     /** @var ImportManager */
     private $import;
 
-    /** @var Api */
-    private $proxy;
-
-    /** @var FtpManager */
-    private $ftpManager;
-
-    public function __construct(Api $api, Database $database)
+    public function __construct(ImportManager $importManager)
     {
-        $this->proxy = $api;
-        $this->ftpManager = new FtpManager('vallarta/imports');
-        $this->import = new ImportManager($database, $this->companyId);
+        $this->import = $importManager;
     }
 
     public function importUpdates()
     {
-        $updateList = [];
-        $metricsList = [];
-
-        $files = $this->ftpManager->getRecentlyModifiedFiles();
-        foreach ($files as $file) {
-            if (strpos($file, 'update_') !== false) {
-                $updateList[] = $this->ftpManager->downloadFile($file);
-            } elseif (strpos($file, 'metrics_') !== false) {
-                $metricsList[] = $this->ftpManager->downloadFile($file);
-            }
-        }
+        $updateList = $this->import->downloadFilesByName('update_');
+        $metricsList = $this->import->downloadFilesByName('metrics_');
 
         foreach ($updateList as $filePath) {
             $this->importActiveFile($filePath);
@@ -54,14 +32,7 @@ class ImportVallarta implements ImportInterface
             $this->importMetricsFile($filePath);
         }
 
-        $this->completeImport();
-    }
-
-    public function completeImport(string $error = '')
-    {
-        $this->proxy->triggerUpdateCounts($this->companyId);
-        $this->ftpManager->writeLastDate();
-        $this->import->completeImport($error);
+        $this->import->completeImport();
     }
 
     private function importActiveFile($file)
@@ -70,7 +41,9 @@ class ImportVallarta implements ImportInterface
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
-                $this->import->recordRow();
+                if (!$this->import->recordRow()) {
+                    break;
+                }
 
                 $storeId = $this->import->storeNumToStoreId(intval($data[1]));
                 if ($storeId === false) {
@@ -85,7 +58,7 @@ class ImportVallarta implements ImportInterface
                 switch (trim($data[0])) {
                     case 'disco':
                         // Skipping discontinues due to incorrect timing
-                        $this->import->currentFile->skipped++;
+                        $this->import->recordSkipped();
                         break;
                     case 'move':
                         $location = new Location(trim($data[5]), trim($data[6]));
@@ -112,7 +85,7 @@ class ImportVallarta implements ImportInterface
 
         $product = $this->import->fetchProduct($barcode, $storeId);
         if ($product->hasInventory()) {
-            $this->import->currentFile->skipped++;
+            $this->import->recordSkipped();
             return;
         }
 
@@ -121,15 +94,13 @@ class ImportVallarta implements ImportInterface
             $product->setSize($data[7]);
         }
 
-        $response = $this->proxy->implementationScan(
+        $this->import->implementationScan(
             $product,
             $storeId,
             trim($data[3]),
             trim($data[4]),
             $departmentId
         );
-
-        $this->import->recordAdd($response);
     }
 
     private function handleMove($barcode, $storeId, $department, Location $location)
@@ -140,14 +111,14 @@ class ImportVallarta implements ImportInterface
         }
 
         if ($this->shouldSkip($location->aisle, $location->section)) {
-            $this->import->currentFile->skipped++;
+            $this->import->recordSkipped();
             return;
         }
 
         $product = $this->import->fetchProduct($barcode, $storeId);
         if ($product->isExistingProduct === false) {
             // Moves do not include product information
-            $this->import->currentFile->skipped++;
+            $this->import->recordSkipped();
             return;
         }
 
@@ -155,28 +126,25 @@ class ImportVallarta implements ImportInterface
             $item = $product->getMatchingInventoryItem($location, $deptId);
 
             if ($item !== null) {
-                $response = $this->proxy->updateInventoryLocation(
+                $this->import->updateInventoryLocation(
                     $item->inventory_item_id,
                     $storeId,
                     $deptId,
                     $location->aisle,
                     $location->section
                 );
-                $this->import->recordAdd($response);
                 return;
             }
         }
 
         // Adding as new any moves that do not exist in inventory
-        $response = $this->proxy->implementationScan(
+        $this->import->implementationScan(
             $product,
             $storeId,
             $location->aisle,
             $location->section,
             $deptId
         );
-
-        $this->import->recordAdd($response);
     }
 
     private function importMetricsFile($file)
@@ -185,7 +153,9 @@ class ImportVallarta implements ImportInterface
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
-                $this->import->recordRow();
+                if (!$this->import->recordRow()) {
+                    break;
+                }
 
                 $storeId = $this->import->storeNumToStoreId(intval($data[0]));
                 if ($storeId === false) {
@@ -199,23 +169,18 @@ class ImportVallarta implements ImportInterface
 
                 $product = $this->import->fetchProduct($barcode);
                 if ($product->isExistingProduct === false) {
-                    $this->import->currentFile->skipped++;
+                    $this->import->recordSkipped();
                     continue;
                 }
 
-                $success = $this->import->persistMetric(
+                $this->import->persistMetric(
                     $storeId,
                     $product->productId,
                     $this->import->convertFloatToInt(floatval($data[4])),
                     $this->import->convertFloatToInt(floatval($data[3])),
-                    $this->import->convertFloatToInt(floatval($data[2]))
+                    $this->import->convertFloatToInt(floatval($data[2])),
+                    true
                 );
-
-                if ($success) {
-                    $this->import->recordMetric($success);
-                } else {
-                    $this->import->currentFile->skipped++;
-                }
             }
 
             fclose($handle);

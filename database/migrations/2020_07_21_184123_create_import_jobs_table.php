@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateImportStatusTable extends Migration
+class CreateImportJobsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,13 +13,12 @@ class CreateImportStatusTable extends Migration
      */
     public function up()
     {
-        Schema::create('import_status', function (Blueprint $table) {
+        Schema::create('import_jobs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('import_type_id');
-            $table->char('user_id', 36)->nullable();
-            $table->text('error_message')->nullable();
-            $table->integer('files_processed')->nullable();
-            $table->timestamp('created_at')->nullable();
+            $table->foreignId('import_schedule_id');
+            $table->timestamp('created_at');
+            $table->timestamp('started_at')->nullable();
+            $table->timestamp('pending_at')->nullable();
             $table->timestamp('completed_at')->nullable();
         });
     }
@@ -31,6 +30,6 @@ class CreateImportStatusTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('import_status');
+        Schema::dropIfExists('import_jobs');
     }
 }

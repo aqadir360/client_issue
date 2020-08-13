@@ -2,10 +2,7 @@
 
 namespace App\Imports;
 
-use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\Database;
-use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 
 // Expects file format:
@@ -17,30 +14,19 @@ use App\Objects\ImportManager;
 // [5] - Cost
 class ImportWebstersMetrics implements ImportInterface
 {
-    private $companyId = '2719728a-a16e-ccdc-26f5-b0e9f1f23b6e';
-    private $storeId = 'e3fc1cf1-3355-1a03-0684-88bec1538bf2';
-
     /** @var ImportManager */
     private $import;
 
-    /** @var Api */
-    private $proxy;
-
-    /** @var FtpManager */
-    private $ftpManager;
-
-    public function __construct(Api $api, Database $database)
+    public function __construct(ImportManager $importManager)
     {
-        $this->proxy = $api;
-        $this->ftpManager = new FtpManager('websters/imports', '/metrics.txt');
-        $this->import = new ImportManager($database, $this->companyId);
+        $this->import = $importManager;
     }
 
     public function importUpdates()
     {
         $metricFile = null;
 
-        $files = $this->ftpManager->getRecentlyModifiedFiles();
+        $files = $this->import->ftpManager->getRecentlyModifiedFiles();
         foreach ($files as $file) {
             if (strpos($file, 'ITEMS') === false) {
                 $metricFile = $file;
@@ -48,17 +34,12 @@ class ImportWebstersMetrics implements ImportInterface
         }
 
         if ($metricFile === null) {
-            $this->completeImport("No new file found");
+            $this->import->completeImport("No new file found");
         } else {
-            $filePath = $this->ftpManager->downloadFile($metricFile);
+            $filePath = $this->import->ftpManager->downloadFile($metricFile);
             $this->importMetricsFile($filePath);
-            $this->completeImport();
+            $this->import->completeImport();
         }
-    }
-
-    public function completeImport(string $error = '')
-    {
-        $this->import->completeImport($error);
     }
 
     private function importMetricsFile($file)
@@ -71,7 +52,14 @@ class ImportWebstersMetrics implements ImportInterface
                     continue;
                 }
 
-                $this->import->recordRow();
+                if (!$this->import->recordRow()) {
+                    break;
+                }
+
+                $storeId = $this->import->storeNumToStoreId($data[0]);
+                if ($storeId === false) {
+                    continue;
+                }
 
                 $upc = BarcodeFixer::fixUpc(trim($data[1]));
                 if ($this->import->isInvalidBarcode($upc, $data[1])) {
@@ -80,7 +68,7 @@ class ImportWebstersMetrics implements ImportInterface
 
                 $product = $this->import->fetchProduct($upc);
                 if ($product->isExistingProduct === false) {
-                    $this->import->currentFile->skipped++;
+                    $this->import->recordSkipped();
                     continue;
                 }
 
@@ -91,19 +79,14 @@ class ImportWebstersMetrics implements ImportInterface
                     $cost = 0;
                 }
 
-                $success = $this->import->persistMetric(
-                    $this->storeId,
+                $this->import->persistMetric(
+                    $storeId,
                     $product->productId,
                     $this->import->convertFloatToInt($cost),
                     $this->import->convertFloatToInt($retail),
-                    $this->import->convertFloatToInt($movement)
+                    $this->import->convertFloatToInt($movement),
+                    true
                 );
-
-                if ($success) {
-                    $this->import->recordMetric($success);
-                } else {
-                    $this->import->currentFile->skipped++;
-                }
             }
 
             fclose($handle);

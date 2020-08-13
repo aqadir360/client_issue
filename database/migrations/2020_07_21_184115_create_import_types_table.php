@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateImportSkipListTable extends Migration
+class CreateImportTypesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,15 @@ class CreateImportSkipListTable extends Migration
      */
     public function up()
     {
-        Schema::create('import_skip_list', function (Blueprint $table) {
+        Schema::create('import_types', function (Blueprint $table) {
             $table->id();
             $table->char('company_id', 36);
-            $table->string('barcode');
+            $table->string('type');
+            $table->string('name');
             $table->string('description');
-            $table->timestamps();
+            $table->string('ftp_path');
+            $table->timestamp('last_run')->nullable();
+            $table->timestamp('created_at');
         });
     }
 
@@ -29,6 +32,6 @@ class CreateImportSkipListTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('import_skip_list');
+        Schema::dropIfExists('import_types');
     }
 }

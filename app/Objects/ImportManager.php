@@ -7,17 +7,27 @@ use Exception;
 
 class ImportManager
 {
+    /** @var FtpManager */
+    public $ftpManager;
+
     /** @var FileStatus */
-    public $currentFile;
+    private $currentFile;
+
+    /** @var Api */
+    private $proxy;
 
     /** @var Database */
-    private $db;
+    public $db;
 
     /** @var DepartmentMapper */
     private $departments;
 
     private $companyId;
+    private $importTypeId;
     private $importId;
+    private $filesProcessed = 0;
+
+    private $debugMode;
 
     private $stores = [];
     private $skipList = [];
@@ -26,29 +36,78 @@ class ImportManager
     private $invalidStores = [];
     private $invalidBarcodes = [];
 
-    public function __construct(Database $database, string $companyId)
-    {
+    public function __construct(
+        Api $api,
+        Database $database,
+        string $companyId,
+        string $ftpPath,
+        int $importTypeId,
+        int $compareDate,
+        bool $debugMode = false
+    ) {
+        $this->proxy = $api;
         $this->db = $database;
         $this->companyId = $companyId;
-        $this->importId = $this->db->startImport($this->companyId);
+        $this->importTypeId = $importTypeId;
+        $this->importId = $this->db->startImport($importTypeId);
 
         $this->setStores();
         $this->setDepartments();
+
+        $this->ftpManager = new FtpManager($ftpPath, $compareDate);
+        $this->debugMode = $debugMode;
+    }
+
+    public function companyId(): string
+    {
+        return $this->companyId;
+    }
+
+    public function getProxy(): Api
+    {
+        return $this->proxy;
     }
 
     public function startNewFile($filePath)
     {
+        $this->filesProcessed++;
         $file = basename($filePath);
-        $this->currentFile = new FileStatus($filePath, $this->companyId);
-        $this->currentFile->insertFileRow();
+        $this->currentFile = new FileStatus($filePath);
+        $this->currentFile->insertFileRow($this->importTypeId);
         $this->outputContent("---- Importing $file");
+    }
+
+    public function recordFileError($status, $message)
+    {
+        $this->currentFile->recordError($status, $message);
     }
 
     public function completeFile()
     {
         $this->outputContent($this->currentFile->outputResults());
         $this->currentFile->updateCompletedRow();
-        $this->currentFile->deleteFile();
+
+        if (!$this->debugMode) {
+            $this->currentFile->deleteFile();
+        }
+    }
+
+    public function downloadFilesByName(string $name, bool $matching = true): array
+    {
+        $output = [];
+        $files = $this->ftpManager->getRecentlyModifiedFiles();
+        foreach ($files as $file) {
+            if ($matching) {
+                if (strpos($file, $name) !== false) {
+                    $output[] = $this->ftpManager->downloadFile($file);
+                }
+            } else {
+                if (strpos($file, $name) === false) {
+                    $output[] = $this->ftpManager->downloadFile($file);
+                }
+            }
+        }
+        return $output;
     }
 
     public function addInvalidStore($storeId)
@@ -199,32 +258,88 @@ class ImportManager
         return $product;
     }
 
-    public function recordRow()
+    public function recordRow(): bool
     {
+        if ($this->debugMode && $this->currentFile->total + 1 > 1000) {
+            return false;
+        }
+
         $this->currentFile->total++;
+        return true;
     }
 
-    public function recordDisco($response)
+    public function recordSkipped()
     {
+        $this->currentFile->skipped++;
+    }
+
+    public function recordStatic()
+    {
+        $this->currentFile->static++;
+    }
+
+    public function recordAdd()
+    {
+        $this->currentFile->adds++;
+    }
+
+    public function discontinueProduct(string $storeId, string $productId)
+    {
+        $response = $this->proxy->discontinueProduct($storeId, $productId);
         $this->recordResponse($response, 'disco');
     }
 
-    public function recordAdd($response)
+    public function discontinueProductByBarcode(string $storeId, string $barcode)
     {
+        $response = $this->proxy->discontinueProductByBarcode($storeId, $barcode);
+        $this->recordResponse($response, 'disco');
+    }
+
+    public function persistProduct($barcode, $name, $size): bool
+    {
+        $response = $this->proxy->persistProduct($barcode, $name, $size);
+
+        if (!$this->proxy->validResponse($response)) {
+            $this->addInvalidBarcode($barcode);
+            $this->currentFile->invalidBarcodeErrors++;
+            return false;
+        }
+
+        return true;
+    }
+
+    public function implementationScan(Product $product, string $storeId, string $aisle, string $section, string $deptId, string $shelf = '')
+    {
+        $response = $this->proxy->implementationScan(
+            $product,
+            $storeId,
+            $aisle,
+            $section,
+            $deptId,
+            $shelf
+        );
         $this->recordResponse($response, 'add');
     }
 
-    public function recordMove($response)
+    public function updateInventoryLocation(string $itemId, string $storeId, string $deptId, string $aisle, string $section, string $shelf = '')
     {
+        $response = $this->proxy->updateInventoryLocation(
+            $itemId,
+            $storeId,
+            $deptId,
+            $aisle,
+            $section,
+            $shelf
+        );
         $this->recordResponse($response, 'move');
     }
 
-    public function recordMetric($response)
+    public function createVendor(string $barcode, string $vendor)
     {
-        $this->recordResponse($response, 'metric');
+        $this->proxy->createVendor($barcode, $vendor, $this->companyId);
     }
 
-    private function recordResponse($response, $type)
+    public function recordResponse($response, $type)
     {
         if ($response === null || $response === false) {
             $this->currentFile->errors++;
@@ -238,9 +353,6 @@ class ImportManager
                     break;
                 case 'move':
                     $this->currentFile->moves++;
-                    break;
-                case 'metric':
-                    $this->currentFile->metrics++;
                     break;
             }
         } else {
@@ -267,9 +379,16 @@ class ImportManager
         }
     }
 
-    public function completeImport(string $errorMsg)
+    public function completeImport(string $errorMsg = '')
     {
-        $this->db->completeImport($this->importId, $errorMsg);
+        $this->proxy->triggerUpdateCounts($this->companyId);
+        $this->db->completeImport(
+            $this->importId,
+            $this->importTypeId,
+            $this->filesProcessed,
+            $this->ftpManager->getNewDate(),
+            $errorMsg
+        );
 
         if (count($this->invalidStores) > 0) {
             $this->outputContent("Invalid Stores:");
@@ -298,10 +417,18 @@ class ImportManager
         return intval($value * 1000);
     }
 
-    public function persistMetric(string $storeId, string $productId, int $cost, int $retail, int $movement): bool
+    public function persistMetric(string $storeId, string $productId, int $cost, int $retail, int $movement, bool $recordSkipped = false)
     {
         if ($cost === 0 && $retail === 0 && $movement === 0) {
-            return false;
+            if ($recordSkipped) {
+                $this->currentFile->skipped++;
+            }
+            return;
+        }
+
+        if ($this->debugMode) {
+            $this->currentFile->metrics++;
+            return;
         }
 
         $existing = $this->db->fetchExistingMetric($storeId, $productId);
@@ -318,14 +445,13 @@ class ImportManager
 
             if ($cost !== $existingCost || $retail !== $existingRetail || $movement !== $existingMovement) {
                 $this->db->updateMetric($storeId, $productId, $cost, $retail, $movement);
-            } else {
-                return false;
+                $this->currentFile->metrics++;
+            } elseif ($recordSkipped) {
+                $this->currentFile->skipped++;
             }
         } else {
             $this->db->insertMetric($storeId, $productId, $cost, $retail, $movement);
+            $this->currentFile->metrics++;
         }
-
-        return true;
     }
 }
-

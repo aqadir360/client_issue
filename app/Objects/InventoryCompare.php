@@ -21,11 +21,11 @@ class InventoryCompare
     private $maxAllowedDiscoPercent = 40;
     private $minItemsForTrackedLoc = 3;
 
-    public function __construct(string $companyId, string $storeId, Api $proxy, ImportManager $import)
+    public function __construct(ImportManager $import, string $storeId)
     {
-        $this->companyId = $companyId;
+        $this->companyId = $import->companyId();
         $this->storeId = $storeId;
-        $this->proxy = $proxy;
+        $this->proxy = $import->getProxy();
         $this->import = $import;
     }
 
@@ -60,6 +60,8 @@ class InventoryCompare
                 $this->updateTrackedLocations($this->getLocKey($item->aisle, $item->section), $item->departmentId);
             }
         }
+
+        $this->import->outputContent($this->totalExistingItems . " existing inventory items");
     }
 
     // Moves any products with a 1:1 match
@@ -125,9 +127,10 @@ class InventoryCompare
         ];
     }
 
-    public function hasFileInventory(): bool
+    public function fileInventoryCount(): int
     {
-        return count($this->fileItemsLookup) > 0;
+        $this->import->outputContent(count($this->fileItemsLookup) . " inventory items in file");
+        return count($this->fileItemsLookup);
     }
 
     private function handleOneToOneMatch($barcode, $items)
@@ -173,7 +176,7 @@ class InventoryCompare
     private function moveItem($existingItem, $newItem)
     {
         if ($this->shouldMoveItem($existingItem, $newItem)) {
-            $response = $this->proxy->updateInventoryLocation(
+            $this->import->updateInventoryLocation(
                 $existingItem['id'],
                 $this->storeId,
                 $existingItem['departmentId'],
@@ -181,14 +184,13 @@ class InventoryCompare
                 $newItem['section'],
                 $newItem['shelf']
             );
-            $this->import->recordMove($response);
 
             $this->updateTrackedLocations(
                 $this->getLocKey($newItem['aisle'], $newItem['section']),
                 $existingItem['departmentId']
             );
         } else {
-            $this->import->currentFile->static++;
+            $this->import->recordStatic();
         }
     }
 
@@ -215,7 +217,7 @@ class InventoryCompare
 
         // Do not add items in untracked locations
         if (!isset($this->trackedLocations[$locKey])) {
-            $this->import->currentFile->skipped++;
+            $this->import->recordSkipped();
             return;
         }
 
@@ -238,7 +240,7 @@ class InventoryCompare
             $product->setSize($this->parseSize($item['size']));
         }
 
-        $response = $this->proxy->implementationScan(
+        $this->import->implementationScan(
             $product,
             $this->storeId,
             $item['aisle'],
@@ -246,8 +248,6 @@ class InventoryCompare
             $item['departmentId'],
             $item['shelf']
         );
-
-        $this->import->recordAdd($response);
     }
 
     private function discontinue($item)
@@ -258,7 +258,7 @@ class InventoryCompare
             $item['status']
         );
 
-        $this->import->recordDisco($response);
+        $this->import->recordResponse($response, 'disco');
     }
 
     private function getLocKey($aisle, $section)

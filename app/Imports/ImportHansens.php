@@ -2,48 +2,37 @@
 
 namespace App\Imports;
 
-use App\Objects\Api;
 use App\Objects\BarcodeFixer;
-use App\Objects\Database;
-use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 use App\Objects\InventoryCompare;
 
 class ImportHansens implements ImportInterface
 {
-    private $companyId = '61ef52da-c0e1-11e7-a59b-080027c30a85';
     private $path;
     private $unzippedPath;
-
-    /** @var Api */
-    private $proxy;
-
-    /** @var FtpManager */
-    private $ftpManager;
 
     /** @var ImportManager */
     private $import;
 
-    public function __construct(Api $api, Database $database)
+    public function __construct(ImportManager $importManager)
     {
-        $this->proxy = $api;
-        $this->path = storage_path('imports/hansens/');
-        $this->ftpManager = new FtpManager('hansens/imports/weekly');
-        $this->import = new ImportManager($database, $this->companyId);
+        $this->import = $importManager;
         $this->import->setSkipList();
+
+        $this->path = storage_path('imports/hansens/');
         $this->unzippedPath = storage_path('imports/hansens_unzipped/');
     }
 
     public function importUpdates()
     {
-//        $files = $this->ftpManager->getRecentlyModifiedFiles();
-//        foreach ($files as $file) {
-//            if (strpos($file, 'zip') === false) {
-//                continue;
-//            }
-//            $zipFile = $this->ftpManager->downloadFile($file);
-//            $this->ftpManager->unzipFile($zipFile, 'hansens_unzipped');
-//        }
+        $files = $this->import->ftpManager->getRecentlyModifiedFiles();
+        foreach ($files as $file) {
+            if (strpos($file, 'zip') === false) {
+                continue;
+            }
+            $zipFile = $this->import->ftpManager->downloadFile($file);
+            $this->import->ftpManager->unzipFile($zipFile, 'hansens_unzipped');
+        }
 
         $filesToImport = glob($this->unzippedPath . '*');
 
@@ -51,14 +40,7 @@ class ImportHansens implements ImportInterface
             $this->importStoreInventory($file);
         }
 
-        $this->completeImport();
-    }
-
-    public function completeImport(string $error = '')
-    {
-        $this->proxy->triggerUpdateCounts($this->companyId);
-        $this->ftpManager->writeLastDate();
-        $this->import->completeImport($error);
+        $this->import->completeImport();
     }
 
     private function importStoreInventory($file)
@@ -71,7 +53,7 @@ class ImportHansens implements ImportInterface
             return $this->completeFile($file, "Invalid Store $storeNum");
         }
 
-        $compare = new InventoryCompare($this->companyId, $storeId, $this->proxy, $this->import);
+        $compare = new InventoryCompare($this->import, $storeId);
 
         $exists = $this->setFileInventory($compare, $file);
         if (!$exists) {
@@ -91,7 +73,7 @@ class ImportHansens implements ImportInterface
         }
 
         $this->import->completeFile();
-//        unlink($file);
+        unlink($file);
         return true;
     }
 
@@ -119,7 +101,7 @@ class ImportHansens implements ImportInterface
             fclose($handle);
         }
 
-        return $compare->hasFileInventory();
+        return $compare->fileInventoryCount() > 0;
     }
 
     private function parseLocation(string $location)
