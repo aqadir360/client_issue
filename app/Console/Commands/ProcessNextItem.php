@@ -27,7 +27,7 @@ class ProcessNextItem extends Command
 
         $active = $database->fetchCurrentImport();
         if ($active) {
-            echo "Import already in progress" . PHP_EOL;
+            Log::error("Import already in progress");
             return;
         }
 
@@ -36,9 +36,11 @@ class ProcessNextItem extends Command
 
         $pending = $database->fetchNextUpcomingImport($now->format('Y-m-d H:i:s'));
         if ($pending === null) {
-            echo "No pending imports" . PHP_EOL;
+            Log::error("No pending imports");
             return;
         }
+
+        Log::error("Starting import");
 
         $importManager = new ImportManager(
             new Api(),
