@@ -78,19 +78,18 @@ class FtpManager
 
         if ($zipSuccess === true) {
             $path = storage_path("imports/$unzipPath/");
-
             if (!file_exists($path)) {
                 mkdir($path);
-
-                $zip->extractTo($path);
-                $zip->close();
-
-                unlink($zipFile);
-                return true;
             }
+
+            $zip->extractTo($path);
+            $zip->close();
+
+            unlink($zipFile);
+            return true;
         }
 
-        Log::error("Unzip Error $zipFile");
+        Log::error("Unzip Error $zipSuccess in $zipFile");
         return false;
     }
 

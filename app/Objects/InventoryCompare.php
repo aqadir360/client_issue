@@ -46,7 +46,7 @@ class InventoryCompare
                 $this->totalExistingItems++;
 
                 // Sort all items by barcode
-                $this->inventoryLookup[$item->barcode][] = [
+                $this->inventoryLookup[intval($item->barcode)][] = [
                     'id' => $item->inventoryItemId,
                     'expiration' => $item->expirationDate,
                     'status' => $item->status,
@@ -118,7 +118,7 @@ class InventoryCompare
     public function setFileInventoryItem($barcode, $aisle, $section, $shelf, $description, $size)
     {
         // Sort by barcode, then include only one item per aisle
-        $this->fileItemsLookup[$barcode][$aisle] = [
+        $this->fileItemsLookup[intval($barcode)][$aisle] = [
             'aisle' => $aisle,
             'section' => $section,
             'shelf' => $shelf,

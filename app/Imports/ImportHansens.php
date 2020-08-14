@@ -8,9 +8,6 @@ use App\Objects\InventoryCompare;
 
 class ImportHansens implements ImportInterface
 {
-    private $path;
-    private $unzippedPath;
-
     /** @var ImportManager */
     private $import;
 
@@ -18,9 +15,6 @@ class ImportHansens implements ImportInterface
     {
         $this->import = $importManager;
         $this->import->setSkipList();
-
-        $this->path = storage_path('imports/hansens/');
-        $this->unzippedPath = storage_path('imports/hansens_unzipped/');
     }
 
     public function importUpdates()
@@ -34,8 +28,7 @@ class ImportHansens implements ImportInterface
             $this->import->ftpManager->unzipFile($zipFile, 'hansens_unzipped');
         }
 
-        $filesToImport = glob($this->unzippedPath . '*');
-
+        $filesToImport = glob(storage_path('imports/hansens_unzipped/*'));
         foreach ($filesToImport as $file) {
             $this->importStoreInventory($file);
         }
