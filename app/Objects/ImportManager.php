@@ -384,7 +384,6 @@ class ImportManager
         $this->proxy->triggerUpdateCounts($this->companyId);
         $this->db->completeImport(
             $this->importId,
-            $this->importTypeId,
             $this->filesProcessed,
             $this->ftpManager->getNewDate(),
             $errorMsg

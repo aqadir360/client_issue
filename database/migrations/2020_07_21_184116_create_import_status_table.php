@@ -19,6 +19,7 @@ class CreateImportStatusTable extends Migration
             $table->char('user_id', 36)->nullable();
             $table->text('error_message')->nullable();
             $table->integer('files_processed')->nullable();
+            $table->integer('compare_date')->default(0);
             $table->timestamp('created_at')->nullable();
             $table->timestamp('completed_at')->nullable();
         });

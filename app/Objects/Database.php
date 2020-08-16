@@ -89,9 +89,11 @@ class Database
 
     public function fetchImportByType(string $type)
     {
-        $sql = "SELECT company_id, ftp_path, id, last_run
-            FROM {$this->adminDb}.import_types
-            WHERE type = :type";
+        $sql = "SELECT t.company_id, t.ftp_path, t.id, max(s.compare_date)
+            FROM {$this->adminDb}.import_types t
+            LEFT JOIN {$this->adminDb}.import_status s ON s.import_type_id = t.id
+            WHERE t.type = :type
+            GROUP BY t.id";
 
         return DB::selectOne($sql, [
             'type' => $type,
@@ -107,7 +109,7 @@ class Database
     public function fetchNextUpcomingImport(string $now)
     {
         $sql = "SELECT j.id as import_job_id, s.id as import_schedule_id, t.id as import_type_id, t.type, t.ftp_path,
-                t.company_id, t.last_run, s.daily, s.week_day, s.month_day, s.start_hour, s.start_minute, s.archived_at
+                t.company_id, s.daily, s.week_day, s.month_day, s.start_hour, s.start_minute, s.archived_at
                 FROM {$this->adminDb}.import_jobs j
                 INNER JOIN {$this->adminDb}.import_schedule s ON s.id = j.import_schedule_id
                 INNER JOIN {$this->adminDb}.import_types t ON t.id = s.import_type_id
@@ -117,6 +119,24 @@ class Database
         return DB::selectOne($sql, [
             'now' => $now,
         ]);
+    }
+
+    public function fetchLastRun($importTypeId): int
+    {
+        $sql = "SELECT compare_date
+                FROM {$this->adminDb}.import_status
+                WHERE import_type_id = :import_type_id
+                order by compare_date desc";
+
+        $result = DB::selectOne($sql, [
+            'import_type_id' => $importTypeId,
+        ]);
+
+        if (empty($result)) {
+            return 0;
+        }
+
+        return intval($result->compare_date);
     }
 
     public function setImportJobInProgess($jobId)
@@ -169,24 +189,19 @@ class Database
         return DB::getPdo()->lastInsertId();
     }
 
-    public function completeImport($importId, int $importTypeId, int $filesProcessed, int $lastRun, string $errorMsg)
+    public function completeImport($importId, int $filesProcessed, int $lastRun, string $errorMsg)
     {
-        $sql = "UPDATE {$this->adminDb}.import_status SET error_message = :msg, files_processed = :files_processed, completed_at = NOW() WHERE id = :id";
+        $sql = "UPDATE {$this->adminDb}.import_status
+        SET error_message = :msg, files_processed = :files_processed, compare_date = :compare_date,
+            completed_at = NOW()
+        WHERE id = :id";
 
         DB::update($sql, [
             'id' => $importId,
             'msg' => $errorMsg,
             'files_processed' => $filesProcessed,
+            'compare_date' => $lastRun,
         ]);
-
-        if ($lastRun > 0) {
-            $sql = "UPDATE {$this->adminDb}.import_types SET last_run = :last_run WHERE id = :id";
-
-            DB::update($sql, [
-                'id' => $importTypeId,
-                'last_run' => $lastRun,
-            ]);
-        }
     }
 
     public function cancelRunningImports()

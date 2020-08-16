@@ -43,13 +43,15 @@ class ProcessNextItem extends Command
 
         Log::info("Starting import");
 
+        $lastRun = $database->fetchLastRun($pending->import_type_id);
+
         $importManager = new ImportManager(
             new Api(),
             $database,
             $pending->company_id,
             $pending->ftp_path,
             intval($pending->import_type_id),
-            intval($pending->last_run),
+            $lastRun,
             config('scraper.debug_mode') === 'debug'
         );
 

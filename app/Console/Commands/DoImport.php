@@ -42,7 +42,7 @@ class DoImport extends Command
             $import->company_id,
             $import->ftp_path,
             intval($import->id),
-            intval($import->last_run),
+            intval($import->compare_date),
             config('scraper.debug_mode') === 'debug'
         );
 
