@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Imports\ImportFactory;
 use App\Objects\Api;
+use App\Objects\CalculateSchedule;
 use App\Objects\Database;
 use App\Objects\ImportManager;
 use Exception;
@@ -27,7 +28,7 @@ class ProcessNextItem extends Command
 
         $active = $database->fetchCurrentImport();
         if ($active) {
-            Log::error("Import already in progress");
+            Log::info("Import already in progress");
             return;
         }
 
@@ -36,11 +37,11 @@ class ProcessNextItem extends Command
 
         $pending = $database->fetchNextUpcomingImport($now->format('Y-m-d H:i:s'));
         if ($pending === null) {
-            Log::error("No pending imports");
+            Log::info("No pending imports");
             return;
         }
 
-        Log::error("Starting import");
+        Log::info("Starting import");
 
         $importManager = new ImportManager(
             new Api(),
@@ -66,62 +67,15 @@ class ProcessNextItem extends Command
         }
 
         $database->setImportJobComplete($pending->import_job_id);
-        $this->calculateNextRun(
-            $database,
+        $calculator = new CalculateSchedule($database);
+        $calculator->calculateNextRun(
             $pending->import_schedule_id,
             $pending->daily,
             $pending->week_day,
             $pending->month_day,
             $pending->start_hour,
-            $pending->start_minute
+            $pending->start_minute,
+            $pending->archived_at
         );
-    }
-
-    private function calculateNextRun(
-        Database $database,
-        $importScheduleId,
-        $daily,
-        $weekDay,
-        $monthDay,
-        $startHour,
-        $startMinute
-    ) {
-        $date = new \DateTime();
-
-        if (intval($daily) === 1) {
-            $date->add(new \DateInterval('P1D'));
-        } else {
-            if ($weekDay !== null) {
-                $date->modify('next ' . $this->getWeekDay($weekDay));
-            } elseif ($monthDay !== null) {
-                $date->setDate($date->format('Y'), (intval($date->format('m')) + 1), $monthDay);
-            }
-        }
-
-        $date->setTimezone(new \DateTimeZone('CST'));
-        $date->setTime($startHour, $startMinute);
-
-        $date->setTimezone(new \DateTimeZone('UTC'));
-        $database->insertNewJob($importScheduleId, $date->format('Y-m-d H:i:s'));
-    }
-
-    private function getWeekDay(int $day)
-    {
-        switch ($day) {
-            case 0:
-                return 'monday';
-            case 1:
-                return 'tuesday';
-            case 2:
-                return 'wednesday';
-            case 3:
-                return 'thursday';
-            case 4:
-                return 'friday';
-            case 5:
-                return 'saturday';
-            case 6:
-                return 'sunday';
-        }
     }
 }

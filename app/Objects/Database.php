@@ -106,8 +106,8 @@ class Database
 
     public function fetchNextUpcomingImport(string $now)
     {
-        $sql = "SELECT j.id as import_job_id, s.id as import_schedule_id, t.id as import_type_id, t.type,
-                t.ftp_path, t.company_id, t.last_run, s.daily, s.week_day, s.month_day, s.start_hour, s.start_minute
+        $sql = "SELECT j.id as import_job_id, s.id as import_schedule_id, t.id as import_type_id, t.type, t.ftp_path,
+                t.company_id, t.last_run, s.daily, s.week_day, s.month_day, s.start_hour, s.start_minute, s.archived_at
                 FROM {$this->adminDb}.import_jobs j
                 INNER JOIN {$this->adminDb}.import_schedule s ON s.id = j.import_schedule_id
                 INNER JOIN {$this->adminDb}.import_types t ON t.id = s.import_type_id
@@ -130,13 +130,17 @@ class Database
 
     public function fetchIncompleteJobs()
     {
-        $sql = "SELECT id FROM {$this->adminDb}.import_jobs WHERE started_at is not null and completed_at is null";
+        $sql = "SELECT j.id, s.id as import_schedule_id,
+                s.daily, s.week_day, s.month_day, s.start_hour, s.start_minute, s.archived_at
+                FROM {$this->adminDb}.import_jobs j
+                INNER JOIN {$this->adminDb}.import_schedule s ON s.id = j.import_schedule_id
+                WHERE started_at is not null and completed_at is null";
         return DB::select($sql, []);
     }
 
     public function setImportJobComplete($jobId)
     {
-        $sql = "UPDATE {$this->adminDb}.import_jobs SET completed_at = NOW() WHERE id = :id";
+        $sql = "UPDATE {$this->adminDb}.import_jobs SET started_at = NOW() WHERE id = :id";
 
         return DB::update($sql, [
             'id' => $jobId,
