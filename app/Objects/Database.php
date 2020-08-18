@@ -67,6 +67,27 @@ class Database
         ]);
     }
 
+    public function hasDiscoInventory(string $productId, string $storeId)
+    {
+        $params = [
+            'product_id' => $productId,
+            'store_id' => $storeId,
+        ];
+
+        $sql = "SELECT * FROM {$this->db}.inventory_items i
+             INNER JOIN {$this->db}.locations l on l.location_id = i.location_id
+             WHERE i.product_id = :product_id AND l.store_id = :store_id AND i.disco = 1";
+        $result = DB::selectOne($sql, $params);
+        if (!empty($result)) {
+            return true;
+        }
+
+        $sql = "SELECT * FROM {$this->db}.disco_items i
+             WHERE i.product_id = :product_id AND i.store_id = :store_id";
+        $result = DB::selectOne($sql, $params);
+        return !empty($result);
+    }
+
     public function fetchRaleysSkus()
     {
         $sql = "SELECT sku_num, barcode, is_primary FROM {$this->db}.raleys_products";

@@ -31,10 +31,12 @@ class DoImport extends Command
 
         $database = new Database();
         $import = $database->fetchImportByType($key);
-        if ($import === false) {
+        if ($import === null) {
             echo "Invalid Input $key" . PHP_EOL;
             return;
         }
+
+        $lastRun = $database->fetchLastRun($import->id);
 
         $importManager = new ImportManager(
             new Api(),
@@ -42,7 +44,7 @@ class DoImport extends Command
             $import->company_id,
             $import->ftp_path,
             intval($import->id),
-            intval($import->compare_date),
+            $lastRun,
             config('scraper.debug_mode') === 'debug'
         );
 

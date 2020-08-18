@@ -105,7 +105,11 @@ class ImportBuehlers implements ImportInterface
                         continue;
                     }
 
-                    // TODO: check if discontinued inventory exists
+                    $disco = $this->import->db->hasDiscoInventory($product->productId, $storeId);
+                    if ($disco) {
+                        $this->import->recordSkipped();
+                        continue;
+                    }
                 }
 
                 $product->setDescription($data[4]);
