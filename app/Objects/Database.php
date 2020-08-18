@@ -255,4 +255,27 @@ class Database
             'movement' => $movement,
         ]);
     }
+
+    public function fetchSkipListItems()
+    {
+        $sql = "SELECT l.id, l.barcode FROM {$this->adminDb}.import_skip_list l
+            WHERE l.description is null and l.updated_at is null";
+        return DB::select($sql);
+    }
+
+    public function updateSkipItem($id, $description)
+    {
+        $sql = "UPDATE {$this->adminDb}.import_skip_list SET description = :description, updated_at = NOW() WHERE id = :id";
+        DB::update($sql, [
+            'description' => $description,
+            'id' => $id,
+        ]);
+    }
+
+    public function fetchProductDescription(string $barcode)
+    {
+        $sql = "SELECT p.description FROM {$this->db}.products p WHERE p.barcode LIKE '%$barcode%'";
+        $result = DB::selectOne($sql);
+        return $result ? $result->description : '';
+    }
 }
