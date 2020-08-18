@@ -160,7 +160,7 @@ class Database
 
     public function setImportJobComplete($jobId)
     {
-        $sql = "UPDATE {$this->adminDb}.import_jobs SET started_at = NOW() WHERE id = :id";
+        $sql = "UPDATE {$this->adminDb}.import_jobs SET completed_at = NOW() WHERE id = :id";
 
         return DB::update($sql, [
             'id' => $jobId,
