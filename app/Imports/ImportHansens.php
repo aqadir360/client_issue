@@ -30,7 +30,9 @@ class ImportHansens implements ImportInterface
 
         $filesToImport = glob(storage_path('imports/hansens_unzipped/*'));
         foreach ($filesToImport as $file) {
+            $this->import->startNewFile($file);
             $this->importStoreInventory($file);
+            $this->import->completeFile();
         }
 
         $this->import->completeImport();
@@ -38,8 +40,6 @@ class ImportHansens implements ImportInterface
 
     private function importStoreInventory($file)
     {
-        $this->import->startNewFile($file);
-
         $storeNum = substr(basename($file), 0, 4);
         $storeId = $this->import->storeNumToStoreId($storeNum);
         if ($storeId === false) {
@@ -57,8 +57,6 @@ class ImportHansens implements ImportInterface
 
         $compare->setExistingInventory();
         $compare->compareInventorySets();
-
-        $this->import->completeFile();
     }
 
     private function setFileInventory(InventoryCompare $compare, $file): bool
