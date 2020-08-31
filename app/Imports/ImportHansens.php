@@ -43,31 +43,22 @@ class ImportHansens implements ImportInterface
         $storeNum = substr(basename($file), 0, 4);
         $storeId = $this->import->storeNumToStoreId($storeNum);
         if ($storeId === false) {
-            return $this->completeFile($file, "Invalid Store $storeNum");
+            $this->import->outputContent("Invalid Store $storeNum");
+            return;
         }
 
         $compare = new InventoryCompare($this->import, $storeId);
 
         $exists = $this->setFileInventory($compare, $file);
         if (!$exists) {
-            return $this->completeFile($file, "Skipping $storeNum - Import file was empty");
+            $this->import->outputContent("Skipping $storeNum - Import file was empty");
+            return;
         }
 
         $compare->setExistingInventory();
         $compare->compareInventorySets();
 
-        return $this->completeFile($file);
-    }
-
-    private function completeFile($file, $message = '')
-    {
-        if ($message !== '') {
-            $this->import->outputContent($message);
-        }
-
         $this->import->completeFile();
-        unlink($file);
-        return true;
     }
 
     private function setFileInventory(InventoryCompare $compare, $file): bool
