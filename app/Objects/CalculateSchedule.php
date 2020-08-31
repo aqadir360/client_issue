@@ -28,9 +28,15 @@ class CalculateSchedule
 
         $date = new \DateTime();
 
+        $date->setTimezone(new \DateTimeZone('CST'));
+        $date->setTime($startHour, $startMinute);
+
         if (intval($daily) === 1) {
             $date->add(new \DateInterval('P1D'));
+            $date->setTimezone(new \DateTimeZone('UTC'));
         } else {
+            $date->setTimezone(new \DateTimeZone('UTC'));
+
             if ($weekDay !== null) {
                 $date->modify('next ' . $this->getWeekDay($weekDay));
             } elseif ($monthDay !== null) {
@@ -38,10 +44,6 @@ class CalculateSchedule
             }
         }
 
-        $date->setTimezone(new \DateTimeZone('CST'));
-        $date->setTime($startHour, $startMinute);
-
-        $date->setTimezone(new \DateTimeZone('UTC'));
         $this->database->insertNewJob($importScheduleId, $date->format('Y-m-d H:i:s'));
     }
 
