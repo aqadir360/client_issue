@@ -18,7 +18,6 @@ class FileStatus
     public $total = 0;
     public $static = 0;
     public $skipped = 0;
-    public $skipList = 0;
     public $skipStores = 0;
     public $skipDepts = 0;
     public $invalidBarcodeErrors = 0;
@@ -88,11 +87,6 @@ class FileStatus
             $unaccountedRows -= $this->skipDepts;
         }
 
-        if ($this->skipList > 0) {
-            $str .= ", {$this->skipList} skip list items";
-            $unaccountedRows -= $this->skipList;
-        }
-
         if ($this->invalidBarcodeErrors > 0) {
             $str .= ", {$this->invalidBarcodeErrors} invalid barcodes";
             $unaccountedRows -= $this->invalidBarcodeErrors;
@@ -128,10 +122,10 @@ class FileStatus
     {
         $sql = "UPDATE dcp2admin.import_results
                 SET completed_at = NOW(), adds = :adds, moves = :moves, discos = :discos, skipped = :skipped,
-                    metrics = :metrics, skip_list = :skip_list,  errors = :errors, total = :total,
-                    static = :static, output = :output, skip_invalid_stores = :skip_invalid_stores,
-                    skip_invalid_depts = :skip_invalid_depts, skip_invalid_barcodes = :skip_invalid_barcodes,
-                    invalid_depts = :invalid_depts, invalid_stores = :invalid_stores, invalid_barcodes = :invalid_barcodes
+                    metrics = :metrics, errors = :errors, total = :total, static = :static, output = :output,
+                    skip_invalid_stores = :skip_invalid_stores, skip_invalid_barcodes = :skip_invalid_barcodes,
+                    skip_invalid_depts = :skip_invalid_depts, invalid_barcodes = :invalid_barcodes,
+                    invalid_depts = :invalid_depts, invalid_stores = :invalid_stores
                     WHERE id = :id";
 
         DB::update($sql, [
@@ -141,7 +135,6 @@ class FileStatus
             'discos' => $this->discos,
             'static' => $this->static,
             'skipped' => $this->skipped,
-            'skip_list' => $this->skipList,
             'skip_invalid_barcodes' => $this->invalidBarcodeErrors,
             'skip_invalid_depts' => $this->skipDepts,
             'skip_invalid_stores' => $this->skipStores,

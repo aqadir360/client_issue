@@ -24,12 +24,10 @@ class CreateImportResultsTable extends Migration
             $table->integer('static')->default(0);
             $table->integer('skipped')->default(0);
             $table->integer('metrics')->default(0);
-            $table->integer('skip_list')->default(0);
             $table->integer('skip_invalid_depts')->default(0);
             $table->integer('skip_invalid_stores')->default(0);
             $table->integer('skip_invalid_barcodes')->default(0);
             $table->integer('errors')->default(0);
-            $table->integer('barcode_errors')->default(0);
             $table->integer('total')->default(0);
 
             $table->text('output')->nullable();
