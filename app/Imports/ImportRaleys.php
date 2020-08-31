@@ -51,9 +51,9 @@ class ImportRaleys implements ImportInterface
             foreach ($moveFiles as $file) {
                 $this->importAisleLocationsFile($file);
             }
-
-            $this->import->completeImport();
         }
+
+        $this->import->completeImport();
     }
 
     // Since new item files do not include locations, import new products only
