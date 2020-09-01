@@ -145,7 +145,7 @@ class ImportManager
     public function isInSkipList($barcode): bool
     {
         if (isset($this->skip[intval($barcode)])) {
-            $this->currentFile->skipList++;
+            $this->currentFile->skipped++;
             return true;
         }
 
@@ -183,17 +183,22 @@ class ImportManager
         $dept = $this->departments->getMatchingDepartment($department, $category);
 
         if ($dept === null) {
-            $this->addInvalidDepartment($department);
+            $this->addInvalidDepartment($department . trim(' ' . $category));
             $this->currentFile->skipDepts++;
             return false;
         }
 
         if ($dept->wildcardDeptMatch) {
             // Record unmatched departments
-            $this->addInvalidDepartment($department);
+            $this->addInvalidDepartment($department . trim(' ' . $category));
         }
 
-        if ($dept->skip || $dept->departmentId === null) {
+        if ($dept->skip) {
+            $this->currentFile->skipped++;
+            return false;
+        }
+
+        if ($dept->departmentId === null) {
             $this->currentFile->skipDepts++;
             return false;
         }
@@ -237,6 +242,7 @@ class ImportManager
 
         $this->currentFile->invalidBarcodeErrors++;
         $this->addInvalidBarcode($original);
+        echo "Invalid Barcode " . $original . " " . $barcode . PHP_EOL;
         return true;
     }
 

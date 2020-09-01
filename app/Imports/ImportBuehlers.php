@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\Product;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 
@@ -21,7 +22,7 @@ class ImportBuehlers implements ImportInterface
     public function importUpdates()
     {
         $discoFiles = $this->import->downloadFilesByName('Disc');
-        $activeFiles = $this->import->downloadFilesByName('Disc', false);
+        $activeFiles = $this->import->downloadFilesByName('Sales');
 
         foreach ($discoFiles as $file) {
             $this->importDiscoFile($file);
@@ -83,46 +84,27 @@ class ImportBuehlers implements ImportInterface
                     continue;
                 }
 
+                if ($this->import->isInSkipList($upc)) {
+                    continue;
+                }
+
                 $storeId = $this->import->storeNumToStoreId($data[0]);
                 if ($storeId === false) {
                     continue;
                 }
 
-                $departmentId = $this->import->getDepartmentId($data[2], $data[3]);
+                $departmentId = $this->import->getDepartmentId(trim($data[2]), trim($data[3]));
                 if ($departmentId === false) {
-                    continue;
-                }
-
-                if ($this->import->isInSkipList($upc)) {
                     continue;
                 }
 
                 $product = $this->import->fetchProduct($upc, $storeId);
 
                 if ($product->isExistingProduct) {
-                    if ($product->hasInventory()) {
-                        $this->import->recordSkipped();
-                        continue;
-                    }
-
-                    $disco = $this->import->db->hasDiscoInventory($product->productId, $storeId);
-                    if ($disco) {
-                        $this->import->recordSkipped();
-                        continue;
-                    }
+                    $this->handleExistingProduct($product, $storeId, $departmentId, $data);
+                } else {
+                    $this->handleNewProduct($product, $storeId, $departmentId, $data);
                 }
-
-                $product->setDescription($data[4]);
-                $product->setSize($data[5]);
-
-                $this->import->implementationScan(
-                    $product,
-                    $storeId,
-                    'UNKN',
-                    '',
-                    $departmentId
-                );
-                $this->persistMetric($upc, $storeId, $data);
             }
 
             fclose($handle);
@@ -131,13 +113,46 @@ class ImportBuehlers implements ImportInterface
         $this->import->completeFile();
     }
 
-    private function persistMetric(string $upc, string $storeId, array $row)
+    private function handleExistingProduct(Product $product, string $storeId, string $departmentId, array $data)
     {
-        $product = $this->import->fetchProduct($upc);
-        if ($product->isExistingProduct === false) {
+        $this->persistMetric($product, $storeId, $data);
+
+        if ($product->hasInventory() || $this->import->db->hasDiscoInventory($product->productId, $storeId)) {
+            $this->import->recordSkipped();
             return;
         }
 
+        $this->import->implementationScan(
+            $product,
+            $storeId,
+            'UNKN',
+            '',
+            $departmentId
+        );
+    }
+
+    private function handleNewProduct(Product $product, string $storeId, string $departmentId, array $data)
+    {
+        $product->setDescription($data[4]);
+        $product->setSize($data[5]);
+
+        $this->import->implementationScan(
+            $product,
+            $storeId,
+            'UNKN',
+            '',
+            $departmentId
+        );
+
+        $product = $this->import->fetchProduct($product->barcode);
+
+        if ($product->isExistingProduct) {
+            $this->persistMetric($product, $storeId, $data);
+        }
+    }
+
+    private function persistMetric(Product $product, string $storeId, array $row)
+    {
         $this->import->persistMetric(
             $storeId,
             $product->productId,
