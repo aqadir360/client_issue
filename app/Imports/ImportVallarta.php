@@ -202,10 +202,13 @@ class ImportVallarta implements ImportInterface
         return false;
     }
 
-    // Always add check digit
-    private function fixBarcode(string $input)
+    private function fixBarcode(string $upc)
     {
-        $upc = str_pad(ltrim($input, '0'), 11, '0', STR_PAD_LEFT);
+        $output = BarcodeFixer::fixLength($upc);
+        if (BarcodeFixer::isValid($output)) {
+            return $output;
+        }
+
         return $upc . BarcodeFixer::calculateMod10Checksum($upc);
     }
 }
