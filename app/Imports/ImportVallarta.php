@@ -126,13 +126,7 @@ class ImportVallarta implements ImportInterface
             $item = $product->getMatchingInventoryItem($location, $deptId);
 
             if ($item !== null) {
-                $this->import->updateInventoryLocation(
-                    $item->inventory_item_id,
-                    $storeId,
-                    $deptId,
-                    $location->aisle,
-                    $location->section
-                );
+                $this->moveInventory($item, $storeId, $deptId, $location);
                 return;
             }
         }
@@ -144,6 +138,30 @@ class ImportVallarta implements ImportInterface
             $location->aisle,
             $location->section,
             $deptId
+        );
+    }
+
+    private function moveInventory($item, string $storeId, string $deptId, Location $location)
+    {
+        if ($item->aisle == $location->aisle) {
+            if ($item->section == $location->section) {
+                $this->import->recordStatic();
+                return;
+            }
+
+            if (empty($location->section) && !empty($item->section)) {
+                // Do not clear existing section information
+                $this->import->recordStatic();
+                return;
+            }
+        }
+
+        $this->import->updateInventoryLocation(
+            $item->inventory_item_id,
+            $storeId,
+            $deptId,
+            $location->aisle,
+            $location->section
         );
     }
 
