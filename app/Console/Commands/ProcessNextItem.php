@@ -69,9 +69,8 @@ class ProcessNextItem extends Command
         }
 
         $database->setImportJobComplete($pending->import_job_id);
-        $calculator = new CalculateSchedule($database);
-        $calculator->calculateNextRun(
-            $pending->import_schedule_id,
+
+        $nextRun = CalculateSchedule::calculateNextRun(
             $pending->daily,
             $pending->week_day,
             $pending->month_day,
@@ -79,5 +78,9 @@ class ProcessNextItem extends Command
             $pending->start_minute,
             $pending->archived_at
         );
+
+        if ($nextRun !== null) {
+            $database->insertNewJob($pending->import_schedule_id, $nextRun);
+        }
     }
 }

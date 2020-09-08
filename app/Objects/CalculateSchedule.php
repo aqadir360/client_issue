@@ -4,26 +4,17 @@ namespace App\Objects;
 
 class CalculateSchedule
 {
-    /** @var Database */
-    private $database;
-
-    public function __construct(Database $database)
-    {
-        $this->database = $database;
-    }
-
-    public function calculateNextRun(
-        $importScheduleId,
+    public static function calculateNextRun(
         $daily,
         $weekDay,
         $monthDay,
         $startHour,
         $startMinute,
         $archivedAt
-    ) {
+    ): ?string {
         if ($archivedAt !== null) {
             // Subscription is no longer active
-            return;
+            return null;
         }
 
         $date = new \DateTime();
@@ -38,16 +29,16 @@ class CalculateSchedule
             $date->setTimezone(new \DateTimeZone('UTC'));
 
             if ($weekDay !== null) {
-                $date->modify('next ' . $this->getWeekDay($weekDay));
+                $date->modify('next ' . CalculateSchedule::getWeekDay($weekDay));
             } elseif ($monthDay !== null) {
                 $date->setDate($date->format('Y'), (intval($date->format('m')) + 1), $monthDay);
             }
         }
 
-        $this->database->insertNewJob($importScheduleId, $date->format('Y-m-d H:i:s'));
+        return $date->format('Y-m-d H:i:s');
     }
 
-    private function getWeekDay(int $day)
+    public static function getWeekDay(int $day): string
     {
         switch ($day) {
             case 0:
