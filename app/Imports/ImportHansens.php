@@ -17,7 +17,7 @@ class ImportHansens implements ImportInterface
         $this->import->setSkipList();
     }
 
-    public function importUpdates()
+    public function getFilesToImport()
     {
         $files = $this->import->ftpManager->getRecentlyModifiedFiles();
         foreach ($files as $file) {
@@ -28,13 +28,22 @@ class ImportHansens implements ImportInterface
             $this->import->ftpManager->unzipFile($zipFile, 'hansens_unzipped');
         }
 
-        $filesToImport = glob(storage_path('imports/hansens_unzipped/*'));
-        foreach ($filesToImport as $file) {
+        return glob(storage_path('imports/hansens_unzipped/*'));
+    }
+
+    public function processFiles($files)
+    {
+        foreach ($files as $file) {
             $this->import->startNewFile($file);
             $this->importStoreInventory($file);
             $this->import->completeFile();
         }
+    }
 
+    public function importUpdates()
+    {
+        $filesToImport = $this->getFilesToImport();
+        $this->processFiles($filesToImport);
         $this->import->completeImport();
     }
 
