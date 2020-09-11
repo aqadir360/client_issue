@@ -33,6 +33,7 @@ class ClearRunning extends Command
                 $job->month_day,
                 $job->start_hour,
                 $job->start_minute,
+                new \DateTime(),
                 $job->archived_at
             );
 
