@@ -32,15 +32,6 @@ class Product
         $this->size = strtolower(trim($input));
     }
 
-    public function setFromResponse($response)
-    {
-        $this->description = $response->product->description;
-        $this->size = $response->product->size;
-        $this->productId = $response->product->productId;
-        $this->isValidBarcode = true;
-        $this->isExistingProduct = true;
-    }
-
     public function getMatchingInventoryItem(Location $location, ?string $deptId = null)
     {
         if (count($this->inventory) === 0) {

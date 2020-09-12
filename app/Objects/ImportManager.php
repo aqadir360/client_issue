@@ -289,6 +289,12 @@ class ImportManager
         $this->currentFile->adds++;
     }
 
+    public function discontinueInventory(string $itemId)
+    {
+        $response = $this->proxy->writeInventoryDisco($itemId);
+        $this->recordResponse($response, 'disco');
+    }
+
     public function discontinueProduct(string $storeId, string $productId)
     {
         $response = $this->proxy->discontinueProduct($storeId, $productId);

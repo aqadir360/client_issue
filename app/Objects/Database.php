@@ -60,7 +60,8 @@ class Database
     {
         $sql = "SELECT * FROM {$this->db}.inventory_items i
              INNER JOIN {$this->db}.locations l on l.location_id = i.location_id
-             WHERE i.product_id = :product_id AND l.store_id = :store_id AND i.disco = 0";
+             WHERE i.product_id = :product_id AND l.store_id = :store_id
+             AND i.disco = 0 AND l.markdown_department_id IS NULL";
         return DB::select($sql, [
             'product_id' => $productId,
             'store_id' => $storeId,
