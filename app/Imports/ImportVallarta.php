@@ -62,7 +62,7 @@ class ImportVallarta implements ImportInterface
                         break;
                     case 'move':
                         $location = new Location(trim($data[5]), trim($data[6]));
-                        $this->handleMove($barcode, $storeId, trim($data[7]), $location);
+                        $this->handleMove($barcode, $storeId, trim($data[7]), trim($data[9]), $location);
                         break;
                     case 'add':
                         $this->handleAdd($data, $barcode, $storeId);
@@ -78,7 +78,7 @@ class ImportVallarta implements ImportInterface
 
     private function handleAdd($data, $barcode, $storeId)
     {
-        $departmentId = $this->import->getDepartmentId(trim(strtolower($data[5])));
+        $departmentId = $this->import->getDepartmentId(trim(strtolower($data[5])), trim(strtolower($data[9])));
         if ($departmentId === false) {
             return;
         }
@@ -103,9 +103,9 @@ class ImportVallarta implements ImportInterface
         );
     }
 
-    private function handleMove($barcode, $storeId, $department, Location $location)
+    private function handleMove($barcode, $storeId, $department, $category, Location $location)
     {
-        $deptId = $this->import->getDepartmentId(trim(strtolower($department)));
+        $deptId = $this->import->getDepartmentId(trim(strtolower($department)), trim(strtolower($category)));
         if ($deptId === false) {
             return;
         }
