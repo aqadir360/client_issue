@@ -10,32 +10,32 @@ class CalculateSchedule
         $monthDay,
         $startHour,
         $startMinute,
-        $archivedAt
+        \DateTime $date,
+        $archivedAt = null
     ): ?string {
         if ($archivedAt !== null) {
             // Subscription is no longer active
             return null;
         }
 
-        $date = new \DateTime();
-
-        $date->setTimezone(new \DateTimeZone('CST'));
-        $date->setTime($startHour, $startMinute);
+        $localDate = new \DateTime($date->format('Y-m-d'), new \DateTimeZone('America/Chicago'));
+        $localDate->setTime($startHour, $startMinute);
 
         if (intval($daily) === 1) {
-            $date->add(new \DateInterval('P1D'));
-            $date->setTimezone(new \DateTimeZone('UTC'));
+            $localDate->add(new \DateInterval('P1D'));
         } else {
-            $date->setTimezone(new \DateTimeZone('UTC'));
-
             if ($weekDay !== null) {
-                $date->modify('next ' . CalculateSchedule::getWeekDay($weekDay));
+                $weekDate = clone $localDate;
+                $weekDate->modify(CalculateSchedule::getWeekDay($weekDay) . ' next week');
+                $localDate->setDate($weekDate->format('Y'), $weekDate->format('m'), $weekDate->format('d'));
             } elseif ($monthDay !== null) {
-                $date->setDate($date->format('Y'), (intval($date->format('m')) + 1), $monthDay);
+                $localDate->add(new \DateInterval('P1M'));
+                $localDate->setDate($localDate->format('Y'), $localDate->format('m'), $monthDay);
             }
         }
 
-        return $date->format('Y-m-d H:i:s');
+        $localDate->setTimezone(new \DateTimeZone('UTC'));
+        return $localDate->format('Y-m-d H:i:s');
     }
 
     public static function getWeekDay(int $day): string

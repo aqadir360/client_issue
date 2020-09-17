@@ -76,6 +76,7 @@ class ProcessNextItem extends Command
             $pending->month_day,
             $pending->start_hour,
             $pending->start_minute,
+            new \DateTime(),
             $pending->archived_at
         );
 

@@ -69,7 +69,7 @@ class ImportHansensMetrics implements ImportInterface
                 $product = $this->import->fetchProduct($barcode);
                 if ($product->isExistingProduct === false) {
                     $this->import->recordSkipped();
-                    return;
+                    continue;
                 }
 
                 // TODO: temporarily skipping movement values

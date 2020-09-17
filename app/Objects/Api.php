@@ -70,6 +70,28 @@ class Api
         );
     }
 
+    public function writeInventoryDisco($inventoryItemId)
+    {
+        return $this->writeRequest(
+            'write-inventory',
+            [
+                'inventoryItemId' => $inventoryItemId,
+                'productId' => null,
+                'locationId' => null,
+                'departmentId' => null,
+                'expiration' => null,
+                'closeDated' => null,
+                'expiring' => null,
+                'setDates' => false,
+                'status' => null,
+                'flag' => 'DISCO',
+                'clearFlag' => false,
+                'count' => null,
+                'markdown' => null,
+            ]
+        );
+    }
+
     public function persistProduct(
         $barcode,
         $description,
