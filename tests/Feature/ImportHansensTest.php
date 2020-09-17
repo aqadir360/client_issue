@@ -3,12 +3,8 @@
 namespace Tests\Feature;
 
 use App\Imports\ImportHansens;
-use App\Objects\Api;
 use App\Objects\Database;
 use App\Objects\ImportManager;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use phpDocumentor\Reflection\Types\Array_;
 use Tests\TestCase;
 
 class ImportHansensTest extends TestCase
@@ -42,10 +38,17 @@ class ImportHansensTest extends TestCase
                 array('0 existing inventory items'),
                 array('Disco percent: 0%'));
 
-        $importHansens = new ImportHansens($importManager);
-        $importHansens->processFiles(array(__DIR__ . "/9166_PLA_test.csv"));
+        $importHansens = $this->getMockBuilder(ImportHansens::class)
+            ->setConstructorArgs(array($importManager))
+            ->setMethods(array('getFilesToImport'))
+            ->getMock();
 
-        $this->assertTrue(true);
+        $importHansens
+            ->expects($this->once())
+            ->method('getFilesToImport')
+            ->willReturn(array(__DIR__ . "/9166_PLA_test.csv"));
+
+        $importHansens->importUpdates();
     }
 
     public function testEmpty()
@@ -76,8 +79,17 @@ class ImportHansensTest extends TestCase
                 array('0 inventory items in file'),
                 array('Skipping 9166 - Import file was empty'));
 
-        $importHansens = new ImportHansens($importManager);
-        $importHansens->processFiles(array(__DIR__ . "/9166_PLA_empty_test.csv"));
+        $importHansens = $this->getMockBuilder(ImportHansens::class)
+            ->setConstructorArgs(array($importManager))
+            ->setMethods(array('getFilesToImport'))
+            ->getMock();
+
+        $importHansens
+            ->expects($this->once())
+            ->method('getFilesToImport')
+            ->willReturn(array(__DIR__ . "/9166_PLA_empty_test.csv"));
+
+        $importHansens->importUpdates();
     }
 
     public function testStoreNotFound()
@@ -106,7 +118,16 @@ class ImportHansensTest extends TestCase
             ->method('outputContent')
             ->with('Invalid Store 9166');
 
-        $importHansens = new ImportHansens($importManager);
-        $importHansens->processFiles(array(__DIR__ . "/9166_PLA_empty_test.csv"));
+        $importHansens = $this->getMockBuilder(ImportHansens::class)
+            ->setConstructorArgs(array($importManager))
+            ->setMethods(array('getFilesToImport'))
+            ->getMock();
+
+        $importHansens
+            ->expects($this->once())
+            ->method('getFilesToImport')
+            ->willReturn(array(__DIR__ . "/9166_PLA_empty_test.csv"));
+
+        $importHansens->importUpdates();
     }
 }

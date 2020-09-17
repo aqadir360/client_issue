@@ -31,19 +31,16 @@ class ImportHansens implements ImportInterface
         return glob(storage_path('imports/hansens_unzipped/*'));
     }
 
-    public function processFiles($files)
+    public function importUpdates()
     {
-        foreach ($files as $file) {
+        $filesToImport = $this->getFilesToImport();
+
+        foreach ($filesToImport as $file) {
             $this->import->startNewFile($file);
             $this->importStoreInventory($file);
             $this->import->completeFile();
         }
-    }
 
-    public function importUpdates()
-    {
-        $filesToImport = $this->getFilesToImport();
-        $this->processFiles($filesToImport);
         $this->import->completeImport();
     }
 
