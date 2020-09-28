@@ -2,8 +2,32 @@
 
 namespace App\Objects;
 
+// Any changes should be replicated in Admin project
 class CalculateSchedule
 {
+    // Chooses the next pending run from available schedules and inserts job
+    public static function createNextRun(Database $db, $scheduleId)
+    {
+        $schedule = $db->fetchImportSchedule($scheduleId);
+
+        if ($schedule->once !== null) {
+            $db->archiveSchedule($scheduleId);
+        } else {
+            $nextRun = CalculateSchedule::calculateNextRun(
+                $schedule->daily,
+                $schedule->week_day,
+                $schedule->month_day,
+                $schedule->start_hour,
+                $schedule->start_minute,
+                new \DateTime()
+            );
+
+            if ($nextRun !== null) {
+                $db->insertNewJob($scheduleId, $nextRun);
+            }
+        }
+    }
+
     public static function calculateNextRun(
         $daily,
         $weekDay,

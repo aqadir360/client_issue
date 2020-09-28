@@ -24,22 +24,9 @@ class ClearRunning extends Command
 
         $jobs = $database->fetchIncompleteJobs();
         foreach ($jobs as $job) {
-            $database->setImportJobComplete($job->id);
             echo "Clearing Job Id " . $job->id . PHP_EOL;
-
-            $nextRun = CalculateSchedule::calculateNextRun(
-                $job->daily,
-                $job->week_day,
-                $job->month_day,
-                $job->start_hour,
-                $job->start_minute,
-                new \DateTime(),
-                $job->archived_at
-            );
-
-            if ($nextRun !== null) {
-                $database->insertNewJob($job->import_schedule_id, $nextRun);
-            }
+            $database->setImportJobComplete($job->id);
+            CalculateSchedule::createNextRun($database, $job->import_schedule_id);
         }
 
         $database->cancelRunningImports();

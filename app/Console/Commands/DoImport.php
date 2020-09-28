@@ -36,7 +36,7 @@ class DoImport extends Command
             return;
         }
 
-        $lastRun = $database->fetchLastRun($import->id);
+        $lastRun = $database->fetchLastRun($import->schedule_id);
 
         $importManager = new ImportManager(
             new Api(),
@@ -44,6 +44,7 @@ class DoImport extends Command
             $import->company_id,
             $import->ftp_path,
             intval($import->id),
+            intval($import->schedule_id),
             $lastRun,
             config('scraper.debug_mode') === 'debug'
         );

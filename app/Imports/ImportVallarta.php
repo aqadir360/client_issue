@@ -233,11 +233,12 @@ class ImportVallarta implements ImportInterface
 
     private function fixBarcode(string $upc)
     {
-        $output = BarcodeFixer::fixLength($upc);
-        if (BarcodeFixer::isValid($output)) {
-            return $output;
+        while (strlen($upc) > 0 && $upc[0] === '0') {
+            $upc = substr($upc, 1);
         }
 
-        return $upc . BarcodeFixer::calculateMod10Checksum($upc);
+        $output = str_pad(ltrim($upc, '0'), 12, '0', STR_PAD_LEFT);
+
+        return $output . BarcodeFixer::calculateMod10Checksum($output);
     }
 }
