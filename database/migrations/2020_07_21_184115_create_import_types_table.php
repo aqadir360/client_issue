@@ -15,7 +15,7 @@ class CreateImportTypesTable extends Migration
     {
         Schema::create('import_types', function (Blueprint $table) {
             $table->id();
-            $table->char('company_id', 36);
+            $table->char('company_id', 36)->nullable(true);
             $table->string('type');
             $table->string('name');
             $table->string('description');

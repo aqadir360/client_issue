@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Imports\ImportFactory;
+use App\Imports\OverlayNewItems;
 use App\Objects\Api;
 use App\Objects\CalculateSchedule;
 use App\Objects\Database;
@@ -43,7 +44,23 @@ class ProcessNextItem extends Command
 
         Log::info("Starting import");
 
-        $lastRun = $database->fetchLastRun($pending->import_type_id);
+        $database->setImportJobInProgess($pending->import_job_id);
+
+        echo "Starting " . $pending->type . PHP_EOL;
+
+        if ($pending->type === 'overlay_new') {
+            $this->runOverlay($database, $pending);
+        } else {
+            $this->runFileImport($database, $pending);
+        }
+
+        $database->setImportJobComplete($pending->import_job_id);
+        CalculateSchedule::createNextRun($database, $pending->import_schedule_id);
+    }
+
+    private function runFileImport(Database $database, $pending)
+    {
+        $lastRun = $database->fetchLastRun($pending->import_schedule_id);
 
         $importManager = new ImportManager(
             new Api(),
@@ -51,11 +68,11 @@ class ProcessNextItem extends Command
             $pending->company_id,
             $pending->ftp_path,
             intval($pending->import_type_id),
+            intval($pending->import_schedule_id),
             $lastRun,
             config('scraper.debug_mode') === 'debug'
         );
 
-        $database->setImportJobInProgess($pending->import_job_id);
         $import = ImportFactory::createImport($pending->type, $importManager);
 
         if ($import !== null) {
@@ -67,21 +84,11 @@ class ProcessNextItem extends Command
                 Log::error($e);
             }
         }
+    }
 
-        $database->setImportJobComplete($pending->import_job_id);
-
-        $nextRun = CalculateSchedule::calculateNextRun(
-            $pending->daily,
-            $pending->week_day,
-            $pending->month_day,
-            $pending->start_hour,
-            $pending->start_minute,
-            new \DateTime(),
-            $pending->archived_at
-        );
-
-        if ($nextRun !== null) {
-            $database->insertNewJob($pending->import_schedule_id, $nextRun);
-        }
+    private function runOverlay(Database $database, $pending)
+    {
+        $import = new OverlayNewItems(new Api(), $database);
+        $import->importUpdates($pending->company_id, $pending->import_schedule_id);
     }
 }

@@ -42,6 +42,7 @@ class ImportManager
         string $companyId,
         string $ftpPath,
         int $importTypeId,
+        int $scheduleId,
         int $compareDate,
         bool $debugMode = false
     ) {
@@ -49,7 +50,7 @@ class ImportManager
         $this->db = $database;
         $this->companyId = $companyId;
         $this->importTypeId = $importTypeId;
-        $this->importId = $this->db->startImport($importTypeId);
+        $this->importId = $this->db->startImport($scheduleId);
 
         $this->setStores();
         $this->setDepartments();

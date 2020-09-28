@@ -92,6 +92,28 @@ class Api
         );
     }
 
+    public function writeInventoryExpiration($inventoryItemId, $expirationDate)
+    {
+        return $this->writeRequest(
+            'write-inventory',
+            [
+                'inventoryItemId' => $inventoryItemId,
+                'productId' => null,
+                'locationId' => null,
+                'departmentId' => null,
+                'expiration' => $expirationDate,
+                'closeDated' => null,
+                'expiring' => null,
+                'setDates' => true,
+                'status' => null,
+                'flag' => null,
+                'clearFlag' => true,
+                'count' => null,
+                'markdown' => null,
+            ]
+        );
+    }
+
     public function persistProduct(
         $barcode,
         $description,

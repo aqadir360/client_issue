@@ -3,10 +3,60 @@
 namespace Tests\Unit;
 
 use App\Objects\CalculateSchedule;
+use App\Objects\Database;
 use PHPUnit\Framework\TestCase;
 
 class CalculateScheduleTest extends TestCase
 {
+    public function testCreateNextRun()
+    {
+        $database = $this->createMock(Database::class);
+
+        $schedule = new \StdClass;
+        $schedule->once = null;
+        $schedule->daily = true;
+        $schedule->week_day = null;
+        $schedule->month_day = null;
+        $schedule->start_hour = 1;
+        $schedule->start_minute = 4;
+
+        $database->expects($this->once())
+            ->method('fetchImportSchedule')
+            ->with(1)
+            ->willReturn($schedule);
+
+        $database->expects($this->never())
+            ->method('archiveSchedule');
+
+        $database->expects($this->once())
+            ->method('insertNewJob')
+            ->with(1);
+
+        CalculateSchedule::createNextRun($database, 1);
+    }
+
+    public function testCreateNextRunOneTime()
+    {
+        $database = $this->createMock(Database::class);
+
+        $schedule = new \StdClass;
+        $schedule->once = '2020-01-01';
+
+        $database->expects($this->once())
+            ->method('fetchImportSchedule')
+            ->with(1)
+            ->willReturn($schedule);
+
+        $database->expects($this->once())
+            ->method('archiveSchedule')
+            ->with(1);
+
+        $database->expects($this->never())
+            ->method('insertNewJob');
+
+        CalculateSchedule::createNextRun($database, 1);
+    }
+
     public function testCalculateArchived()
     {
         $output = CalculateSchedule::calculateNextRun(

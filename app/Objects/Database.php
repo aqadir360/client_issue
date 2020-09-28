@@ -111,11 +111,10 @@ class Database
 
     public function fetchImportByType(string $type)
     {
-        $sql = "SELECT t.company_id, t.ftp_path, t.id, max(s.compare_date)
+        $sql = "SELECT t.company_id, t.ftp_path, t.id, s.id as schedule_id
             FROM {$this->adminDb}.import_types t
-            LEFT JOIN {$this->adminDb}.import_status s ON s.import_type_id = t.id
-            WHERE t.type = :type
-            GROUP BY t.id";
+            LEFT JOIN {$this->adminDb}.import_schedule s ON s.import_type_id = t.id
+            WHERE t.type = :type";
 
         return DB::selectOne($sql, [
             'type' => $type,
@@ -130,8 +129,8 @@ class Database
 
     public function fetchNextUpcomingImport(string $now)
     {
-        $sql = "SELECT j.id as import_job_id, s.id as import_schedule_id, t.id as import_type_id, t.type, t.ftp_path,
-                t.company_id, s.daily, s.week_day, s.month_day, s.start_hour, s.start_minute, s.archived_at
+        $sql = "SELECT j.id as import_job_id, t.id as import_type_id, t.type, t.ftp_path,
+                s.company_id, s.id as import_schedule_id
                 FROM {$this->adminDb}.import_jobs j
                 INNER JOIN {$this->adminDb}.import_schedule s ON s.id = j.import_schedule_id
                 INNER JOIN {$this->adminDb}.import_types t ON t.id = s.import_type_id
@@ -143,15 +142,33 @@ class Database
         ]);
     }
 
-    public function fetchLastRun($importTypeId): int
+    public function fetchImportSchedule($scheduleId)
+    {
+        $sql = "SELECT * FROM {$this->adminDb}.import_schedule WHERE id = :id AND archived_at IS NULL";
+
+        return DB::selectOne($sql, [
+            'id' => $scheduleId,
+        ]);
+    }
+
+    public function archiveSchedule($scheduleId)
+    {
+        $sql = "UPDATE {$this->adminDb}.import_schedule SET archived_at = NOW() WHERE id = :id";
+
+        return DB::update($sql, [
+            'id' => $scheduleId,
+        ]);
+    }
+
+    public function fetchLastRun($importScheduleId): int
     {
         $sql = "SELECT compare_date
                 FROM {$this->adminDb}.import_status
-                WHERE import_type_id = :import_type_id
+                WHERE import_schedule_id = :import_schedule_id
                 order by compare_date desc";
 
         $result = DB::selectOne($sql, [
-            'import_type_id' => $importTypeId,
+            'import_schedule_id' => $importScheduleId,
         ]);
 
         if (empty($result)) {
@@ -172,10 +189,8 @@ class Database
 
     public function fetchIncompleteJobs()
     {
-        $sql = "SELECT j.id, s.id as import_schedule_id,
-                s.daily, s.week_day, s.month_day, s.start_hour, s.start_minute, s.archived_at
+        $sql = "SELECT j.id, j.import_type_id
                 FROM {$this->adminDb}.import_jobs j
-                INNER JOIN {$this->adminDb}.import_schedule s ON s.id = j.import_schedule_id
                 WHERE started_at is not null and completed_at is null";
         return DB::select($sql, []);
     }
@@ -191,7 +206,8 @@ class Database
 
     public function insertNewJob($scheduleId, $date)
     {
-        $sql = "INSERT INTO {$this->adminDb}.import_jobs (import_schedule_id, pending_at, created_at) VALUES (:id, :pending, NOW())";
+        $db = $this->adminDb;
+        $sql = "INSERT INTO $db.import_jobs (import_schedule_id, pending_at, created_at) VALUES (:id, :pending, NOW())";
 
         return DB::update($sql, [
             'id' => $scheduleId,
@@ -199,27 +215,25 @@ class Database
         ]);
     }
 
-    public function startImport($importTypeId, $userId = 'cmd')
+    public function startImport($importScheduleId)
     {
-        $sql = "INSERT INTO {$this->adminDb}.import_status (import_type_id, user_id, created_at) VALUES (:import_type_id, :user_id, NOW())";
+        $sql = "INSERT INTO {$this->adminDb}.import_status (import_schedule_id, created_at) VALUES (:import_schedule_id, NOW())";
 
         DB::insert($sql, [
-            'import_type_id' => $importTypeId,
-            'user_id' => $userId,
+            'import_schedule_id' => $importScheduleId,
         ]);
 
         return DB::getPdo()->lastInsertId();
     }
 
-    public function completeImport($importId, int $filesProcessed, int $lastRun, string $errorMsg)
+    public function completeImport($importStatusId, int $filesProcessed, int $lastRun, string $errorMsg)
     {
         $sql = "UPDATE {$this->adminDb}.import_status
-        SET error_message = :msg, files_processed = :files_processed, compare_date = :compare_date,
-            completed_at = NOW()
+        SET error_message = :msg, files_processed = :files_processed, compare_date = :compare_date, completed_at = NOW()
         WHERE id = :id";
 
         DB::update($sql, [
-            'id' => $importId,
+            'id' => $importStatusId,
             'msg' => $errorMsg,
             'files_processed' => $filesProcessed,
             'compare_date' => $lastRun,
@@ -299,5 +313,131 @@ class Database
         $sql = "SELECT p.description FROM {$this->db}.products p WHERE p.barcode LIKE '%$barcode%'";
         $result = DB::selectOne($sql);
         return $result ? $result->description : '';
+    }
+
+    public function insertResultsRow($importStatusId, string $filename)
+    {
+        $sql = "INSERT INTO dcp2admin.import_results (import_status_id, filename, created_at) VALUES (:import_status_id, :filename, NOW())";
+
+        DB::insert($sql, [
+            'import_status_id' => $importStatusId,
+            'filename' => $filename,
+        ]);
+
+        return DB::getPdo()->lastInsertId();
+    }
+
+    public function updateOverlayResultsRow($id, $total, $updated, $skipped, $output)
+    {
+        $sql = "UPDATE dcp2admin.import_results
+                SET completed_at = NOW(), total = :total, adds = :adds, skipped = :skipped, output = :output WHERE id = :id";
+
+        DB::update($sql, [
+            'id' => $id,
+            'output' => $output,
+            'skipped' => $skipped,
+            'adds' => $updated,
+            'total' => $total,
+        ]);
+    }
+
+    public function fetchClosestDate(
+        string $productId,
+        string $companyId,
+        array $copyFromStores,
+        string $orderDirection = 'asc'
+    ) {
+        $sql = "select i.expiration_date from inventory_items i
+            inner join locations l on l.location_id = i.location_id
+            inner join stores s on l.store_id = s.store_id
+            where i.product_id = :product_id and s.company_id = :company_id
+            and i.expiration_date > NOW() and i.expiration_date is not null and i.flag is null and i.disco = 0";
+
+        if (!empty($copyFromStores)) {
+            $sql .= " and s.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
+        }
+
+        $sql .= " order by i.expiration_date $orderDirection ";
+
+        return DB::selectOne($sql, [
+            'product_id' => $productId,
+            'company_id' => $companyId,
+        ]);
+    }
+
+    public function fetchNewCompanyProducts(string $companyId)
+    {
+        $sql = "select p.product_id from products p
+            inner join inventory_items i on i.product_id = p.product_id
+            inner join locations l on l.location_id = i.location_id
+            inner join stores s on l.store_id = s.store_id
+            where i.flag = 'NEW' and s.company_id = :company_id and p.no_expiration = 0
+            group by p.product_id";
+
+        return DB::select($sql, [
+            'company_id' => $companyId,
+        ]);
+    }
+
+    public function fetchNewCompanyInventory(string $productId, string $companyId, array $excludeStores, array $excludeDepts)
+    {
+        $sql = "select i.inventory_item_id from inventory_items i
+            inner join locations l on l.location_id = i.location_id
+            inner join stores s on l.store_id = s.store_id
+            where i.flag = 'NEW' and s.company_id = :company_id and i.product_id = :product_id
+            and i.disco = 0 and l.markdown_department_id is null ";
+
+        if (!empty($excludeStores)) {
+            $sql .= " and s.store_id NOT IN (" . $this->getListParams($excludeStores) . ") ";
+        }
+
+        if (!empty($excludeDepts)) {
+            $sql .= " and i.department_id NOT IN (" . $this->getListParams($excludeDepts) . ") ";
+        }
+
+        return DB::select($sql, [
+            'company_id' => $companyId,
+            'product_id' => $productId,
+        ]);
+    }
+
+    public function fetchCustomImportSettings(string $key, string $companyId)
+    {
+        $sql = "select s.type, s.value from {$this->adminDb}.import_settings s
+            inner join {$this->adminDb}.import_schedule i on i.id = s.import_schedule_id
+            inner join {$this->adminDb}.import_types t on t.id = i.import_type_id
+            where t.type = :key and i.company_id = :company_id";
+
+        return DB::select($sql, [
+            'company_id' => $companyId,
+            'key' => $key,
+        ]);
+    }
+
+    public function fetchCustomImportInstances(string $key)
+    {
+        $sql = "select s.company_id, s.id from {$this->adminDb}.import_schedule s
+            inner join {$this->adminDb}.import_types t on t.id = s.import_type_id
+            where t.type = :key";
+
+        return DB::select($sql, [
+            'key' => $key,
+        ]);
+    }
+
+    // Converts an array of strings to a sql list
+    private function getListParams(array $elements)
+    {
+        $list = "";
+
+        if (!empty($elements)) {
+            foreach ($elements as $item) {
+                $list .= "'" . $item . "',";
+            }
+
+            $list = substr($list, 0, -1);
+        }
+
+        return $list;
     }
 }
