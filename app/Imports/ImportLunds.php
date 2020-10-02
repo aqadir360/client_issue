@@ -151,13 +151,13 @@ class ImportLunds implements ImportInterface
                     continue;
                 }
 
-                $upc = BarcodeFixer::fixLength($data[1]);
-                if ($this->import->isInvalidBarcode($upc, $data[1])) {
+                $inputUpc = trim($data[1]);
+                $upc = BarcodeFixer::fixLength($inputUpc);
+                if ($this->import->isInvalidBarcode($upc, $inputUpc)) {
                     continue;
                 }
 
-                if ($this->import->isInSkipList($upc)) {
-                    $this->import->recordSkipped();
+                if ($this->import->isInSkipList($upc) || $this->import->isInSkipList($inputUpc)) {
                     continue;
                 }
 
