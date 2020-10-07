@@ -14,6 +14,7 @@ class FileStatus
     public $moves = 0;
     public $discos = 0;
     public $metrics = 0;
+    public $newproducts = 0;
     public $errors = 0;
     public $total = 0;
     public $static = 0;
@@ -55,6 +56,10 @@ class FileStatus
         if ($this->discos > 0) {
             $str .= ", {$this->discos} items discontinued";
             $unaccountedRows -= $this->discos;
+        }
+
+        if ($this->newproducts > 0) {
+            $str .= ", {$this->newproducts} products created";
         }
 
         if ($this->metrics > 0) {
@@ -125,7 +130,7 @@ class FileStatus
                     metrics = :metrics, errors = :errors, total = :total, static = :static, output = :output,
                     skip_invalid_stores = :skip_invalid_stores, skip_invalid_barcodes = :skip_invalid_barcodes,
                     skip_invalid_depts = :skip_invalid_depts, invalid_barcodes = :invalid_barcodes,
-                    invalid_depts = :invalid_depts, invalid_stores = :invalid_stores
+                    invalid_depts = :invalid_depts, invalid_stores = :invalid_stores, new_products = :new_products
                     WHERE id = :id";
 
         DB::update($sql, [
@@ -133,6 +138,7 @@ class FileStatus
             'adds' => $this->adds,
             'moves' => $this->moves,
             'discos' => $this->discos,
+            'new_products' => $this->newproducts,
             'static' => $this->static,
             'skipped' => $this->skipped,
             'skip_invalid_barcodes' => $this->invalidBarcodeErrors,

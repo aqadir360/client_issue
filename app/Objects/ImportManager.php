@@ -331,7 +331,11 @@ class ImportManager
             $deptId,
             $shelf
         );
-        $this->recordResponse($response, 'add');
+
+        $success = $this->recordResponse($response, 'add');
+        if ($success && $product->isExistingProduct === false) {
+            $this->currentFile->newproducts++;
+        }
     }
 
     public function updateInventoryLocation(string $itemId, string $storeId, string $deptId, string $aisle, string $section, string $shelf = '')
@@ -352,7 +356,7 @@ class ImportManager
         $this->proxy->createVendor($barcode, $vendor, $this->companyId);
     }
 
-    public function recordResponse($response, $type)
+    public function recordResponse($response, $type): bool
     {
         if ($response === null || $response === false) {
             $this->currentFile->errors++;
@@ -368,9 +372,11 @@ class ImportManager
                     $this->currentFile->moves++;
                     break;
             }
+            return true;
         } else {
             $this->currentFile->recordErrorMessage($response);
         }
+        return false;
     }
 
     private function validResponse($response): bool
