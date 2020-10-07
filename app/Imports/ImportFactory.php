@@ -13,6 +13,8 @@ class ImportFactory
                 return new ImportBuehlers($importManager);
             case 'downtoearth':
                 return new ImportDownToEarth($importManager);
+            case 'foxbros':
+                return new ImportFoxBros($importManager);
             case 'hansens':
                 return new ImportHansens($importManager);
             case 'hansens_metrics':

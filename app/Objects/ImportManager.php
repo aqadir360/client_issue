@@ -78,7 +78,7 @@ class ImportManager
         $this->outputContent("---- Importing $file");
     }
 
-    public function recordFileError($status, $message)
+    public function recordFileLineError($status, $message)
     {
         $this->currentFile->recordError($status, $message);
     }

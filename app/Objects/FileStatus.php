@@ -115,7 +115,7 @@ class FileStatus
             'filename' => basename($this->filename),
         ]);
 
-        $this->fileRowId = DB::getPdo()->lastInsertId();;
+        $this->fileRowId = DB::getPdo()->lastInsertId();
     }
 
     public function updateCompletedRow()

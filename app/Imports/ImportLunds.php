@@ -172,7 +172,7 @@ class ImportLunds implements ImportInterface
 
                     $expires = (string)date('Y-m-d 00:00:00', strtotime($data[6]));
                     if (empty($expires)) {
-                        $this->import->recordFileError('Invalid Expiration Date', $data[6]);
+                        $this->import->recordFileLineError('Invalid Expiration Date', $data[6]);
                         continue;
                     }
 
