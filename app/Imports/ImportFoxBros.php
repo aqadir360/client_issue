@@ -40,7 +40,7 @@ class ImportFoxBros implements ImportInterface
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
                 $action = strtolower(trim($data[0]));
-                if ($action === 'action') {
+                if ($action === 'action' || $data[1] === 'STORE') {
                     continue;
                 }
 
@@ -118,7 +118,8 @@ class ImportFoxBros implements ImportInterface
                     continue;
                 }
 
-                $barcode = $this->fixBarcode(trim($data[2]));
+                // Metrics barcodes include check digit
+                $barcode = str_pad(ltrim(trim($data[2]), '0'), 13, '0', STR_PAD_LEFT);
                 if ($this->import->isInvalidBarcode($barcode, $data[2])) {
                     continue;
                 }
@@ -147,12 +148,8 @@ class ImportFoxBros implements ImportInterface
 
     private function fixBarcode(string $upc)
     {
-        while (strlen($upc) > 0 && $upc[0] === '0') {
-            $upc = substr($upc, 1);
-        }
-
+        // Update barcodes do not include check digit and may be left zero padded
         $output = str_pad(ltrim($upc, '0'), 12, '0', STR_PAD_LEFT);
-
         return $output . BarcodeFixer::calculateMod10Checksum($output);
     }
 }

@@ -404,7 +404,7 @@ class ImportManager
         $this->db->completeImport(
             $this->importId,
             $this->filesProcessed,
-            $this->ftpManager->getNewDate(),
+            $this->debugMode ? 0 : $this->ftpManager->getNewDate(),
             $errorMsg
         );
 
