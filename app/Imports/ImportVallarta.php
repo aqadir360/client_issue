@@ -220,7 +220,7 @@ class ImportVallarta implements ImportInterface
 
     private function shouldSkip($aisle, $section): bool
     {
-        if ($aisle == 'zzz' || $aisle == 'xxx' || $aisle == '*80') {
+        if ($aisle == 'zzz' || $aisle == 'xxx' || $aisle == '*80' || $aisle == 'out') {
             return true;
         }
 
