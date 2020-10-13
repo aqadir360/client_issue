@@ -13,9 +13,13 @@ class ImportWebsters implements ImportInterface
     /** @var ImportManager */
     private $import;
 
+    private $storeId;
+
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
+        // TODO: remove hard coding and switch to store number
+        $this->storeId = "e3fc1cf1-3355-1a03-0684-88bec1538bf2"; // Webster's Marketplace
     }
 
     public function importUpdates()
@@ -39,14 +43,9 @@ class ImportWebsters implements ImportInterface
                     break;
                 }
 
-                $storeId = $this->import->storeNumToStoreId(1);
-                if ($storeId === false) {
-                    continue;
-                }
-
                 $upc = substr(trim($data[0], "'"), 1);
                 $barcode = $upc . BarcodeFixer::calculateMod10Checksum($upc);
-                $product = $this->import->fetchProduct($barcode, $storeId);
+                $product = $this->import->fetchProduct($barcode, $this->storeId);
 
                 if (!$product->isExistingProduct) {
                     $product->setDescription($data[1]);
@@ -54,7 +53,7 @@ class ImportWebsters implements ImportInterface
 
                 $this->import->implementationScan(
                     $product,
-                    $storeId,
+                    $this->storeId,
                     'UNKN',
                     '',
                     $this->import->getDepartmentId('grocery')
