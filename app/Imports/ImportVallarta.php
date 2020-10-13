@@ -110,7 +110,7 @@ class ImportVallarta implements ImportInterface
             return;
         }
 
-        if ($this->shouldSkip($location->aisle, $location->section)) {
+        if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
             $this->import->recordSkipped();
             return;
         }
@@ -220,11 +220,11 @@ class ImportVallarta implements ImportInterface
 
     private function shouldSkip($aisle, $section): bool
     {
-        if ($aisle == 'zzz' || $aisle == 'XXX' || $aisle == '*80') {
+        if ($aisle == 'zzz' || $aisle == 'xxx' || $aisle == '*80') {
             return true;
         }
 
-        if ($aisle == '000' && ($section == '000' || empty($section))) {
+        if (($aisle == '000' || empty($aisle)) && ($section == '000' || empty($section))) {
             return true;
         }
 
