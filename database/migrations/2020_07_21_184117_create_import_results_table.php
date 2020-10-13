@@ -23,6 +23,7 @@ class CreateImportResultsTable extends Migration
             $table->integer('discos')->default(0);
             $table->integer('static')->default(0);
             $table->integer('skipped')->default(0);
+            $table->integer('skip_list')->default(0);
             $table->integer('metrics')->default(0);
             $table->integer('new_products')->default(0);
             $table->integer('skip_invalid_depts')->default(0);

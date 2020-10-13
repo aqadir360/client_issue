@@ -19,6 +19,7 @@ class FileStatus
     public $total = 0;
     public $static = 0;
     public $skipped = 0;
+    public $skipList = 0;
     public $skipStores = 0;
     public $skipDepts = 0;
     public $invalidBarcodeErrors = 0;
@@ -82,6 +83,11 @@ class FileStatus
             $unaccountedRows -= $this->skipped;
         }
 
+        if ($this->skipList > 0) {
+            $str .= ", {$this->skipList} skip list items skipped";
+            $unaccountedRows -= $this->skipList;
+        }
+
         if ($this->skipStores > 0) {
             $str .= ", {$this->skipStores} skipped stores";
             $unaccountedRows -= $this->skipStores;
@@ -129,7 +135,7 @@ class FileStatus
                 SET completed_at = NOW(), adds = :adds, moves = :moves, discos = :discos, skipped = :skipped,
                     metrics = :metrics, errors = :errors, total = :total, static = :static, output = :output,
                     skip_invalid_stores = :skip_invalid_stores, skip_invalid_barcodes = :skip_invalid_barcodes,
-                    skip_invalid_depts = :skip_invalid_depts, invalid_barcodes = :invalid_barcodes,
+                    skip_invalid_depts = :skip_invalid_depts, invalid_barcodes = :invalid_barcodes, skip_list = :skip_list,
                     invalid_depts = :invalid_depts, invalid_stores = :invalid_stores, new_products = :new_products
                     WHERE id = :id";
 
@@ -141,6 +147,7 @@ class FileStatus
             'new_products' => $this->newproducts,
             'static' => $this->static,
             'skipped' => $this->skipped,
+            'skip_list' => $this->skipList,
             'skip_invalid_barcodes' => $this->invalidBarcodeErrors,
             'skip_invalid_depts' => $this->skipDepts,
             'skip_invalid_stores' => $this->skipStores,

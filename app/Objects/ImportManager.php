@@ -39,11 +39,10 @@ class ImportManager
     public function __construct(
         Api $api,
         Database $database,
+        FtpManager $ftpManager,
         string $companyId,
-        string $ftpPath,
         int $importTypeId,
         int $scheduleId,
-        int $compareDate,
         bool $debugMode = false
     ) {
         $this->proxy = $api;
@@ -55,7 +54,7 @@ class ImportManager
         $this->setStores();
         $this->setDepartments();
 
-        $this->ftpManager = new FtpManager($ftpPath, $compareDate);
+        $this->ftpManager = $ftpManager;
         $this->debugMode = $debugMode;
     }
 
@@ -145,8 +144,10 @@ class ImportManager
 
     public function isInSkipList($barcode): bool
     {
-        if (isset($this->skip[intval($barcode)])) {
-            $this->currentFile->skipped++;
+        if (isset($this->skipList[intval($barcode)])) {
+            if ($this->currentFile) {
+                $this->currentFile->skipList++;
+            }
             return true;
         }
 

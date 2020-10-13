@@ -7,6 +7,7 @@ use App\Imports\OverlayNewItems;
 use App\Objects\Api;
 use App\Objects\CalculateSchedule;
 use App\Objects\Database;
+use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 use Exception;
 use Illuminate\Console\Command;
@@ -65,11 +66,10 @@ class ProcessNextItem extends Command
         $importManager = new ImportManager(
             new Api(),
             $database,
+            new FtpManager($pending->ftp_path, $lastRun),
             $pending->company_id,
-            $pending->ftp_path,
             intval($pending->import_type_id),
             intval($pending->import_schedule_id),
-            $lastRun,
             config('scraper.debug_mode') === 'debug'
         );
 

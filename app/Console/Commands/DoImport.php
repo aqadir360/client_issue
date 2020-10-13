@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Imports\ImportFactory;
 use App\Objects\Api;
 use App\Objects\Database;
+use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 use Exception;
 use Illuminate\Console\Command;
@@ -41,11 +42,10 @@ class DoImport extends Command
         $importManager = new ImportManager(
             new Api(),
             $database,
+            new FtpManager($import->ftp_path, $lastRun),
             $import->company_id,
-            $import->ftp_path,
             intval($import->id),
             intval($import->schedule_id),
-            $lastRun,
             config('scraper.debug_mode') === 'debug'
         );
 
