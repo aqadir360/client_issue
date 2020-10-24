@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\Location;
+use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 
 // Down To Earth Inventory and Metrics Import
@@ -69,7 +70,7 @@ class ImportDownToEarth implements ImportInterface
                     continue;
                 }
 
-                $barcode = trim($data[2]);
+                $barcode = $this->fixBarcode(trim($data[2]));
                 if ($this->import->isInvalidBarcode($barcode, $data[2])) {
                     continue;
                 }
@@ -118,8 +119,8 @@ class ImportDownToEarth implements ImportInterface
                     break;
                 }
 
-                $upc = trim($data[1]);
-                if ($this->import->isInvalidBarcode($upc, $upc)) {
+                $barcode = $this->fixBarcode(trim($data[1]));
+                if ($this->import->isInvalidBarcode($barcode, $data[1])) {
                     continue;
                 }
 
@@ -128,7 +129,7 @@ class ImportDownToEarth implements ImportInterface
                     continue;
                 }
 
-                $product = $this->import->fetchProduct($upc);
+                $product = $this->import->fetchProduct($barcode);
                 if ($product->isExistingProduct === false) {
                     $this->import->recordSkipped();
                     continue;
@@ -170,5 +171,21 @@ class ImportDownToEarth implements ImportInterface
         }
 
         return $location;
+    }
+
+    private function fixBarcode($input)
+    {
+        $upc = '0' . BarcodeFixer::fixUpc($input);
+
+        if (!BarcodeFixer::isValid($upc)) {
+            $upc = BarcodeFixer::fixLength($input);
+
+            if (!BarcodeFixer::isValid($upc)) {
+                echo $input . PHP_EOL;
+                echo "Not valid" . PHP_EOL;
+            }
+        }
+
+        return $upc;
     }
 }

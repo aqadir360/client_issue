@@ -268,9 +268,9 @@ class ImportManager
 
     public function recordRow(): bool
     {
-        if ($this->debugMode && $this->currentFile->total + 1 > 1000) {
-            return false;
-        }
+//        if ($this->debugMode && $this->currentFile->total + 1 > 1000) {
+//            return false;
+//        }
 
         $this->currentFile->total++;
         return true;
