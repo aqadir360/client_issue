@@ -244,7 +244,7 @@ class ImportManager
 
         $this->currentFile->invalidBarcodeErrors++;
         $this->addInvalidBarcode($original);
-        echo "Invalid Barcode " . $original . " " . $barcode . PHP_EOL;
+//        echo "Invalid Barcode " . $original . " " . $barcode . PHP_EOL;
         return true;
     }
 
@@ -268,9 +268,9 @@ class ImportManager
 
     public function recordRow(): bool
     {
-//        if ($this->debugMode && $this->currentFile->total + 1 > 1000) {
-//            return false;
-//        }
+        if ($this->debugMode && $this->currentFile->total + 1 > 1000) {
+            return false;
+        }
 
         $this->currentFile->total++;
         return true;

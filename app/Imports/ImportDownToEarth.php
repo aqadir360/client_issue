@@ -33,18 +33,6 @@ class ImportDownToEarth implements ImportInterface
         $this->import->completeImport();
     }
 
-    /* Update file format:
-         [0] - Store Number
-         [1] - Barcode
-         [2] - Aisle
-         [3] - Section
-         [4] - Shelf
-         [5] - Department
-         [6] - Description
-         [7] - Size
-         [8] - Daily Movement
-         [9] - Retail
-         [10] - Cost */
     private function importUpdateFile($file)
     {
         $this->import->startNewFile($file);
@@ -55,18 +43,8 @@ class ImportDownToEarth implements ImportInterface
                     break;
                 }
 
-                if (strtolower($data[0]) !== 'add') {
-                    $this->import->recordSkipped();
-                    continue;
-                }
-
                 $storeId = $this->import->storeNumToStoreId(intval($data[1]));
                 if ($storeId === false) {
-                    continue;
-                }
-
-                $departmentId = $this->import->getDepartmentId(trim($data[6]));
-                if ($departmentId === false) {
                     continue;
                 }
 
@@ -75,38 +53,99 @@ class ImportDownToEarth implements ImportInterface
                     continue;
                 }
 
-                $location = $this->parseLocation($data);
-                if (!$location->valid) {
-                    $this->import->recordSkipped();
-                    continue;
+                $action = strtolower($data[0]);
+                switch ($action) {
+                    case 'disco':
+                        $this->import->discontinueProductByBarcode($storeId, $barcode);
+                        break;
+                    case 'add':
+                        $this->addInventory($storeId, $barcode, $data);
+                        break;
+                    case 'move':
+                        $this->moveInventory($storeId, $barcode, $data);
+                        break;
+                    default:
+                        $this->import->recordFileLineError('ERROR', 'Unknown Action ' . $action);
                 }
-
-                $product = $this->import->fetchProduct($barcode, $storeId);
-
-                // Do not add items with existing inventory
-                if ($product->isExistingProduct && $product->hasInventory()) {
-                    $this->import->recordSkipped();
-                    continue;
-                }
-
-                $product->setDescription($data[7]);
-                $product->setSize($data[8]);
-
-                $this->import->implementationScan(
-                    $product,
-                    $storeId,
-                    $location->aisle,
-                    $location->section,
-                    $departmentId
-                );
-
-                // TODO: new products should be added for immediate review
             }
 
             fclose($handle);
         }
 
         $this->import->completeFile();
+    }
+
+    private function addInventory($storeId, $barcode, $data)
+    {
+        $departmentId = $this->import->getDepartmentId(trim($data[6]));
+        if ($departmentId === false) {
+            return;
+        }
+
+        $location = $this->parseLocation($data[3], $data[5]);
+        if (!$location->valid) {
+            $this->import->recordSkipped();
+            return;
+        }
+
+        $product = $this->import->fetchProduct($barcode, $storeId);
+
+        // Do not add items with existing inventory
+        if ($product->isExistingProduct && $product->hasInventory()) {
+            $this->import->recordSkipped();
+            return;
+        }
+
+        $product->setDescription($data[7]);
+        $product->setSize($data[8]);
+
+        $this->import->implementationScan(
+            $product,
+            $storeId,
+            $location->aisle,
+            $location->section,
+            $departmentId
+        );
+    }
+
+    private function moveInventory($storeId, $barcode, $data)
+    {
+        $existingLocation = $this->parseLocation($data[3], $data[4]);
+        $newLocation = $this->parseLocation($data[5], $data[6]);
+
+        if (!$newLocation->valid) {
+            $this->import->recordFileLineError('ERROR', 'Location ' . $data[5] . " " . $data[6]);
+            return;
+        }
+
+        $product = $this->import->fetchProduct($barcode, $storeId);
+        if (!($product->isExistingProduct && $product->hasInventory())) {
+            $this->import->recordSkipped();
+            return;
+        }
+
+        $item = $product->getMatchingInventoryItem($existingLocation, '');
+        if ($item === null) {
+            $this->import->recordSkipped();
+            return;
+        }
+
+        if ($this->needToMoveItem($item, $newLocation)) {
+            $this->import->updateInventoryLocation(
+                $item->inventory_item_id,
+                $storeId,
+                $item->department_id,
+                $newLocation->aisle,
+                $newLocation->section
+            );
+        } else {
+            $this->import->recordStatic();
+        }
+    }
+
+    private function needToMoveItem($item, Location $location)
+    {
+        return !($item->aisle == $location->aisle && $item->section == $location->section);
     }
 
     private function importMetricsFile($file)
@@ -150,12 +189,12 @@ class ImportDownToEarth implements ImportInterface
         $this->import->completeFile();
     }
 
-    private function parseLocation($data): Location
+    private function parseLocation($aisle, $section): Location
     {
-        $location = new Location(trim($data[3]));
+        $location = new Location(trim($aisle));
 
         if (!empty($location->aisle)) {
-            $location->section = trim($data[5]);
+            $location->section = trim($section);
 
             // Skipping seasonal
             if ($location->section === 'GHOLIDAY') {
@@ -179,11 +218,6 @@ class ImportDownToEarth implements ImportInterface
 
         if (!BarcodeFixer::isValid($upc)) {
             $upc = BarcodeFixer::fixLength($input);
-
-            if (!BarcodeFixer::isValid($upc)) {
-                echo $input . PHP_EOL;
-                echo "Not valid" . PHP_EOL;
-            }
         }
 
         return $upc;
