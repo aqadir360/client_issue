@@ -214,6 +214,11 @@ class ImportDownToEarth implements ImportInterface
 
     private function fixBarcode($input)
     {
+        if (!is_numeric($input)) {
+            $this->import->recordFileLineError('Error', "Invalid Barcode $input");
+            return false;
+        }
+
         $upc = '0' . BarcodeFixer::fixUpc($input);
 
         if (!BarcodeFixer::isValid($upc)) {
