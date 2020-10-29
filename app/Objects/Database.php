@@ -401,6 +401,46 @@ class Database
         ]);
     }
 
+    public function getOosInventory($companyId, array $excludeStores, array $excludeDepts)
+    {
+        $sql = "select i.inventory_item_id, i.close_dated_date, i.product_id from inventory_items i
+            inner join locations l on l.location_id = i.location_id
+            inner join stores s on l.store_id = s.store_id
+            where s.company_id = :company_id and i.disco = 0 and i.flag = 'OOS'";
+
+        if (!empty($excludeStores)) {
+            $sql .= " and s.store_id NOT IN (" . $this->getListParams($excludeStores) . ") ";
+        }
+
+        if (!empty($excludeDepts)) {
+            $sql .= " and i.department_id NOT IN (" . $this->getListParams($excludeDepts) . ") ";
+        }
+
+        return DB::select($sql, [
+            'company_id' => $companyId,
+        ]);
+    }
+
+    public function getOosInventoryCount(string $companyId, array $excludeStores, array $excludeDepts): int
+    {
+        $sql = "select count(i.inventory_item_id) as count from inventory_items i
+            inner join locations l on l.location_id = i.location_id
+            inner join stores s on l.store_id = s.store_id
+            where s.company_id = :company_id and i.disco = 0 and i.flag = 'OOS'";
+
+        if (!empty($excludeStores)) {
+            $sql .= " and s.store_id NOT IN (" . $this->getListParams($excludeStores) . ") ";
+        }
+
+        if (!empty($excludeDepts)) {
+            $sql .= " and i.department_id NOT IN (" . $this->getListParams($excludeDepts) . ") ";
+        }
+
+        return intval(DB::selectOne($sql, [
+            'company_id' => $companyId,
+        ])['count']);
+    }
+
     public function fetchCustomImportSettings(string $key, string $companyId)
     {
         $sql = "select s.type, s.value from {$this->adminDb}.import_settings s
@@ -439,5 +479,17 @@ class Database
         }
 
         return $list;
+    }
+
+    public function execPreparedFetchOne($stmt, array $params = [])
+    {
+        if ($stmt->execute($params)) {
+            $result = $stmt->fetchAll();
+            if ($result && count($result) > 0) {
+                return $result[0];
+            }
+        }
+
+        return false;
     }
 }

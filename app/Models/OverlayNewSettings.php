@@ -12,6 +12,7 @@ class OverlayNewSettings
     public $copyFrom = [];
     public $excludeStores = [];
     public $excludeDepts = [];
+    public $useClosestDate = false;
 
     public function __construct(array $result)
     {
@@ -25,6 +26,9 @@ class OverlayNewSettings
                     break;
                 case 'dept_exclude':
                     $this->excludeDepts[] = $row->value;
+                    break;
+                case 'useClosestDate':
+                    $this->useClosestDate = $row->value;
                     break;
             }
         }

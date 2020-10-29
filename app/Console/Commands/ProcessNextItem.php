@@ -48,7 +48,7 @@ class ProcessNextItem extends Command
 
         echo "Starting " . $pending->type . PHP_EOL;
 
-        if ($pending->type === 'overlay_new') {
+        if ($pending->type === 'overlay_new' || $pending->type === 'overlay_oos') {
             $this->runOverlay($database, $pending);
         } else {
             $this->runFileImport($database, $pending);
@@ -88,7 +88,14 @@ class ProcessNextItem extends Command
 
     private function runOverlay(Database $database, $pending)
     {
-        $import = new OverlayNewItems(new Api(), $database);
+        if ($pending->type == 'overlay_new') {
+            $import = new OverlayNewItems(new Api(), $database);
+        }
+
+        if ($pending->type == 'overlay_oos') {
+            $import = new OverlayOOS(new Api(), $database);
+        }
+
         $import->importUpdates($pending->company_id, $pending->import_schedule_id);
     }
 }
