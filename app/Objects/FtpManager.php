@@ -16,10 +16,12 @@ class FtpManager
 
     public $modifiedFiles = [];
 
-    public function __construct(string $ftpPath, int $compareDate)
+    public function __construct(?string $ftpPath, ?int $compareDate)
     {
         $this->ftpPath = $ftpPath;
-        $this->ftp = Storage::disk('sftp');
+        if ($ftpPath !== null) {
+            $this->ftp = Storage::disk('sftp');
+        }
         $this->compareDate = $compareDate;
     }
 

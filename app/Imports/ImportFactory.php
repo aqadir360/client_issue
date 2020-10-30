@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Imports\Refresh\VallartaInventory;
 use App\Objects\ImportManager;
 
 class ImportFactory
@@ -31,6 +32,8 @@ class ImportFactory
                 return new ImportSEG($importManager);
             case 'vallarta':
                 return new ImportVallarta($importManager);
+            case 'vallarta_refresh':
+                return new VallartaInventory($importManager);
             case 'websters':
                 return new ImportWebsters($importManager);
             case 'websters_metrics':
