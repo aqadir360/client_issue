@@ -5,7 +5,9 @@ It requires a connection to the DCP2 API and the DCP2 Admin database.
 
 ## Local Project Setup
 1. Copy `.env.example` to `.env` and update credentials
-2. Run `composer install`
+2. Set DB_ADMIN_DATABASE to DCP2 Admin project database
+3. Run `composer install`
+4. Run `php artisan migrate`
 
 ### Add a New Import
 1. Create app/Imports/Import___ class implementing ImportInterface
