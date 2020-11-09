@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Imports\ImportFactory;
 use App\Imports\OverlayNewItems;
+use App\Imports\OverlayOOS;
 use App\Objects\Api;
 use App\Objects\CalculateSchedule;
 use App\Objects\Database;
@@ -29,6 +30,7 @@ class ProcessNextItem extends Command
 
         $active = $database->fetchCurrentImport();
         if ($active) {
+            echo "Import already in progress\n";
             Log::info("Import already in progress");
             return;
         }
@@ -37,7 +39,9 @@ class ProcessNextItem extends Command
         $now->setTimezone(new \DateTimeZone('UTC'));
 
         $pending = $database->fetchNextUpcomingImport($now->format('Y-m-d H:i:s'));
+
         if ($pending === null) {
+            echo "No pending imports\n";
             Log::info("No pending imports");
             return;
         }

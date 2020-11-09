@@ -7,11 +7,14 @@ namespace App\Models;
 // - store_from: store_id to copy from (if empty, copy from all)
 // - store_exclude: store_id to skip copy to
 // - dept_exclude: department_id to skip copy to
-class OverlayNewSettings
+class OverlayOOSSettings
 {
     public $copyFrom = [];
     public $excludeStores = [];
     public $excludeDepts = [];
+    public $expirationDate = '';
+    public $startDate = null;
+    public $endDate = null;
 
     public function __construct(array $result)
     {
@@ -25,6 +28,15 @@ class OverlayNewSettings
                     break;
                 case 'dept_exclude':
                     $this->excludeDepts[] = $row->value;
+                    break;
+                case 'expirationDate':
+                    $this->expirationDate = $row->value;
+                    break;
+                case 'startDate':
+                    $this->startDate = $row->value;
+                    break;
+                case 'endDate':
+                    $this->endDate = $row->value;
                     break;
             }
         }
