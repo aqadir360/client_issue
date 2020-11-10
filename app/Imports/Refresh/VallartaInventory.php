@@ -21,7 +21,7 @@ class VallartaInventory implements ImportInterface
 
     public function importUpdates()
     {
-        $files = glob(storage_path('imports/Pilot_*.csv'));
+        $files = $this->import->downloadFilesByName('Pilot_');
 
         foreach ($files as $filePath) {
             $this->importActiveFile($filePath);
