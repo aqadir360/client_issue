@@ -345,12 +345,13 @@ class Database
         string $productId,
         string $companyId,
         array $copyFromStores,
-        string $orderDirection = 'asc'
+        string $orderDirection,
+        string $maxDate
     ) {
         $sql = "select i.expiration_date from inventory_items i
             inner join locations l on l.location_id = i.location_id
             inner join stores s on l.store_id = s.store_id
-            where i.product_id = :product_id and s.company_id = :company_id
+            where i.product_id = :product_id and s.company_id = :company_id and i.expiration_date < :max_date
             and i.expiration_date > NOW() and i.expiration_date is not null and i.flag is null and i.disco = 0";
 
         if (!empty($copyFromStores)) {
@@ -362,6 +363,7 @@ class Database
         return DB::selectOne($sql, [
             'product_id' => $productId,
             'company_id' => $companyId,
+            'max_date' => $maxDate,
         ]);
     }
 
@@ -401,7 +403,7 @@ class Database
         ]);
     }
 
-    public function getOosInventory($companyId, array $excludeStores, array $excludeDepts)
+    public function getOosInventory(string $companyId, array $excludeStores, array $excludeDepts)
     {
         $sql = "select i.inventory_item_id, i.close_dated_date, i.product_id, i.close_dated_date, s.store_id from inventory_items i
             inner join locations l on l.location_id = i.location_id
@@ -481,37 +483,22 @@ class Database
         return $list;
     }
 
-    public function fetchOOSClosestDate($companyId, $storeId, $productId, $date)
+    public function fetchOOSExpirationDate($companyId, $storeId, $productId, $date, $direction, $maxDate)
     {
         $sql = "select i.expiration_date from inventory_items i
             inner join locations l on l.location_id = i.location_id
             inner join stores s on s.store_id = l.store_id
             where s.company_id = :company_id and i.product_id = :product_id and l.store_id <> :store_id
             and i.disco = 0 and i.flag IS NULL and i.close_dated_date > :close_dated_date
-            order by i.expiration_date";
+            and i.expiration_date < :max_date
+            order by i.expiration_date $direction";
 
         return DB::select($sql, [
             'company_id' => $companyId,
             'store_id' => $storeId,
             'product_id' => $productId,
             'close_dated_date' => $date,
-        ]);
-    }
-
-    public function fetchOOSFurthestDate($companyId, $storeId, $productId, $date)
-    {
-        $sql = "select i.expiration_date from inventory_items i
-            inner join locations l on l.location_id = i.location_id
-            inner join stores s on s.store_id = l.store_id
-            where s.company_id = :company_id and i.product_id = :product_id and l.store_id <> :store_id
-            and i.disco = 0 and i.flag IS NULL and i.close_dated_date > :close_dated_date
-            order by i.expiration_date desc";
-
-        return DB::select($sql, [
-            'company_id' => $companyId,
-            'store_id' => $storeId,
-            'product_id' => $productId,
-            'close_dated_date' => $date,
+            'max_date' => $maxDate,
         ]);
     }
 }

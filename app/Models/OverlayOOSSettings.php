@@ -7,6 +7,9 @@ namespace App\Models;
 // - store_from: store_id to copy from (if empty, copy from all)
 // - store_exclude: store_id to skip copy to
 // - dept_exclude: department_id to skip copy to
+// - expirationDate: date copy type (closest_date, furthest_date, date_range)
+// - startDate: start date for date_range calculation
+// - endDate: end date for date_range calculation
 class OverlayOOSSettings
 {
     public $copyFrom = [];
@@ -15,9 +18,14 @@ class OverlayOOSSettings
     public $expirationDate = '';
     public $startDate = null;
     public $endDate = null;
+    public $maxDate;
 
     public function __construct(array $result)
     {
+        $maxDate = new \DateTime();
+        $maxDate->add(new \DateInterval('P2Y'));
+        $this->maxDate = $maxDate->format('Y-m-d');
+
         foreach ($result as $row) {
             switch ($row->type) {
                 case 'store_from':

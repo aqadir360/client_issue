@@ -25,7 +25,7 @@ class OverlayNewItems
 
     public function importUpdates(string $companyId, int $scheduleId)
     {
-        $importStatusId =  $this->db->startImport($scheduleId);
+        $importStatusId = $this->db->startImport($scheduleId);
         $resultId = $this->db->insertResultsRow($importStatusId, "New Item Overlay");
         $settings = $this->getImportSettings($companyId);
 
@@ -43,7 +43,8 @@ class OverlayNewItems
                 $product->product_id,
                 $companyId,
                 $settings->copyFrom,
-                'asc'
+                'asc',
+                $settings->maxDate
             );
 
             if ($closestDate && $closestDate->expiration_date) {

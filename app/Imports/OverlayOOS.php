@@ -6,7 +6,7 @@ use App\Models\OverlayOOSSettings;
 use App\Objects\Api;
 use App\Objects\Database;
 
-// Overlays dates for all new items with closest non-expired date within company
+// Overlays dates for all OOS items with closest non-expired date within company
 class OverlayOOS
 {
     /** @var Api */
@@ -27,7 +27,7 @@ class OverlayOOS
     {
         $today = new \DateTime();
 
-        $importStatusId =  $this->db->startImport($scheduleId);
+        $importStatusId = $this->db->startImport($scheduleId);
         $resultId = $this->db->insertResultsRow($importStatusId, "OOS Overlay");
         $settings = $this->getImportSettings($companyId);
 
@@ -41,22 +41,22 @@ class OverlayOOS
 
             if ($settings->expirationDate == 'date_range') {
                 $startUnix = strtotime($settings->startDate);
-                $endUnix = strtoTime($settings->endDate);
+                $endUnix = strtotime($settings->endDate);
 
                 $date = new \DateTime();
                 $date->setTimestamp($startUnix + ($endUnix - $startUnix) * ($inventoryCount / $total));
                 $date->setTime(0, 0, 0);
             } else {
-                $date = $this->getExpirationDate($item, $settings->expirationDate, $companyId, $item->store_id, $today);
+                $date = $this->getExpirationDate($item, $settings, $companyId, $item->store_id, $today);
             }
 
-            $this->proxy->writeInventoryExpiration($item->inventory_item_id, $date);
+            $this->proxy->writeInventoryExpiration($item->inventory_item_id, $date->format('Y-m-d'));
             $inventoryCount++;
         }
 
         $finalCount = $this->db->getOosInventoryCount($companyId, $settings->excludeStores, $settings->excludeDepts);
 
-        $output = "initial: " . count($inventory) . ", final: $finalCount";
+        $output = "initial: $total, final: $finalCount";
 
         $this->db->updateOverlayResultsRow($resultId, $total, $inventoryCount, 0, $output);
 
@@ -69,15 +69,11 @@ class OverlayOOS
         return new OverlayOOSSettings($result);
     }
 
-    private function getExpirationDate($item, $expirationDate, $storeId, $companyId, \DateTime $today)
+    private function getExpirationDate($item, OverlayOOSSettings $settings, $storeId, $companyId, \DateTime $today)
     {
         $closeDate = new \DateTime($item->close_dated_date);
         $compareDate = $closeDate < $today ? $closeDate->format('Y-m-d') : $today->format('Y-m-d');
-
-        if ($expirationDate == 'closest_date') {
-            return $this->db->fetchOOSClosestDate($item->product_id, $storeId, $companyId, $compareDate);
-        } else {
-            return $this->db->fetchOOSFurthestDate($item->product_id, $storeId, $companyId, $compareDate);
-        }
+        $direction = $settings->expirationDate == 'closest_date' ? 'asc' : 'desc';
+        return $this->db->fetchOOSExpirationDate($item->product_id, $storeId, $companyId, $compareDate, $direction, $settings->maxDate);
     }
 }

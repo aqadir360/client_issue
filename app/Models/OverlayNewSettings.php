@@ -12,9 +12,14 @@ class OverlayNewSettings
     public $copyFrom = [];
     public $excludeStores = [];
     public $excludeDepts = [];
+    public $maxDate;
 
     public function __construct(array $result)
     {
+        $maxDate = new \DateTime();
+        $maxDate->add(new \DateInterval('P2Y'));
+        $this->maxDate = $maxDate->format('Y-m-d');
+
         foreach ($result as $row) {
             switch ($row->type) {
                 case 'store_from':
