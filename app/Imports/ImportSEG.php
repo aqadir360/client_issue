@@ -6,13 +6,6 @@ use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 
 // TODO: Import does not yet run automatically.  Update when file uploads start.
-// Expects CSV file with format:
-// [0] UPC
-// [1] Department
-// [2] Category
-// [3] Store Num
-// [4] Description
-// [5] Size
 class ImportSEG implements ImportInterface
 {
     private $path;
@@ -32,6 +25,70 @@ class ImportSEG implements ImportInterface
 
     public function importUpdates()
     {
+        $metricsList = $this->import->downloadFilesByName('SEG_DCP_Initial_20201105');
+
+        foreach ($metricsList as $file) {
+            $this->importMetrics($file);
+        }
+
+        $this->import->completeImport();
+    }
+
+    private function importMetrics($file)
+    {
+        $this->import->startNewFile($file);
+
+        $storeNum = substr($file, -8, -4);
+        $storeId = $this->import->storeNumToStoreId($storeNum);
+        if ($storeId === false) {
+            $this->import->completeFile();
+            return;
+        }
+
+        if (($handle = fopen($file, "r")) !== false) {
+            while (($data = fgetcsv($handle, 1000, "|")) !== false) {
+                if ('Loc_Id' == trim($data[0])) {
+                    continue;
+                }
+
+                if (!$this->import->recordRow()) {
+                    continue;
+                }
+
+                $upc = BarcodeFixer::fixUpc(trim($data[2]));
+                if ($this->import->isInvalidBarcode($upc, $data[2])) {
+                    continue;
+                }
+
+                $product = $this->import->fetchProduct($upc);
+
+                if ($product->isExistingProduct) {
+                    $cost = 0; // Not sending cost
+                    $movement = $this->import->parsePositiveFloat($data[10]);
+                    $price = $this->import->parsePositiveFloat($data[8]);
+                    $priceModifier = intval($data[7]);
+
+                    $this->import->persistMetric(
+                        $storeId,
+                        $product->productId,
+                        $cost,
+                        $this->import->convertFloatToInt($price / $priceModifier),
+                        $this->import->convertFloatToInt($movement),
+                        true
+                    );
+                } else {
+                    $this->import->recordSkipped();
+                }
+            }
+
+            fclose($handle);
+        }
+
+        $this->import->completeFile();
+    }
+
+    private function importLocalFiles()
+    {
         $files = glob($this->path . '*.csv');
         foreach ($files as $file) {
             $this->import->startNewFile($file);
@@ -42,7 +99,9 @@ class ImportSEG implements ImportInterface
                         continue;
                     }
 
-                    if (!$this->import->recordRow()) { continue; }
+                    if (!$this->import->recordRow()) {
+                        continue;
+                    }
 
                     $storeId = $this->import->storeNumToStoreId($data[3]);
                     if ($storeId === false) {
@@ -78,8 +137,6 @@ class ImportSEG implements ImportInterface
 
             $this->import->completeFile();
         }
-
-        $this->import->completeImport();
     }
 }
 
