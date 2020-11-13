@@ -189,9 +189,10 @@ class Database
 
     public function fetchIncompleteJobs()
     {
-        $sql = "SELECT j.id, j.import_type_id
+        $sql = "SELECT j.id, j.import_schedule_id
                 FROM {$this->adminDb}.import_jobs j
-                WHERE started_at is not null and completed_at is null";
+                INNER JOIN {$this->adminDb}.import_schedule s ON s.id = j.import_schedule_id
+                WHERE j.started_at is not null and j.completed_at is null";
         return DB::select($sql, []);
     }
 
@@ -493,7 +494,7 @@ class Database
             and i.expiration_date < :max_date
             order by i.expiration_date $direction";
 
-        return DB::select($sql, [
+        return DB::selectOne($sql, [
             'company_id' => $companyId,
             'store_id' => $storeId,
             'product_id' => $productId,

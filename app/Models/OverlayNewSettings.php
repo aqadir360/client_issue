@@ -17,7 +17,7 @@ class OverlayNewSettings
     public function __construct(array $result)
     {
         $maxDate = new \DateTime();
-        $maxDate->add(new \DateInterval('P2Y'));
+        $maxDate->add(new \DateInterval('P5Y'));
         $this->maxDate = $maxDate->format('Y-m-d');
 
         foreach ($result as $row) {

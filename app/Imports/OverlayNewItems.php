@@ -29,6 +29,20 @@ class OverlayNewItems
         $resultId = $this->db->insertResultsRow($importStatusId, "New Item Overlay");
         $settings = $this->getImportSettings($companyId);
 
+        try {
+            $this->overlayInventory($companyId, $settings, $resultId);
+        } catch (\Exception $e) {
+            $this->db->updateOverlayResultsRow($resultId, 0, 0, 0, $e->getMessage());
+            $this->db->completeImport($importStatusId, 1, 0, $e->getMessage());
+            echo $e->getMessage() . PHP_EOL;
+            Log::error($e);
+        }
+
+        $this->db->completeImport($importStatusId, 1, 0, '');
+    }
+
+    private function overlayInventory(string $companyId, OverlayNewSettings $settings, $resultId)
+    {
         // Fetch all new inventory grouped by products
         $products = $this->db->fetchNewCompanyProducts($companyId);
 
@@ -65,8 +79,6 @@ class OverlayNewItems
         $output = "From $total total products, updated $updatedCount dates for $inventoryCount items";
 
         $this->db->updateOverlayResultsRow($resultId, $total, $updatedCount, $skipped, $output);
-
-        $this->db->completeImport($importStatusId, 1, 0, '');
     }
 
     private function getImportSettings(string $companyId): OverlayNewSettings

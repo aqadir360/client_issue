@@ -25,16 +25,30 @@ class OverlayOOS
 
     public function importUpdates(string $companyId, int $scheduleId)
     {
-        $today = new \DateTime();
-
         $importStatusId = $this->db->startImport($scheduleId);
         $resultId = $this->db->insertResultsRow($importStatusId, "OOS Overlay");
         $settings = $this->getImportSettings($companyId);
+
+        try {
+            $this->overlayInventory($companyId, $settings, $resultId);
+            $this->db->completeImport($importStatusId, 1, 0, '');
+        } catch (\Exception $e) {
+            $this->db->updateOverlayResultsRow($resultId, 0, 0, 0, $e->getMessage());
+            $this->db->completeImport($importStatusId, 1, 0, $e->getMessage());
+            echo $e->getMessage() . PHP_EOL;
+            Log::error($e);
+        }
+    }
+
+    private function overlayInventory(string $companyId, OverlayOOSSettings $settings, $resultId)
+    {
+        $today = new \DateTime();
 
         $inventory = $this->db->getOosInventory($companyId, $settings->excludeStores, $settings->excludeDepts);
 
         $total = count($inventory);
         $inventoryCount = 0;
+        $skipped = 0;
 
         foreach ($inventory as $item) {
             $date = null;
@@ -48,6 +62,11 @@ class OverlayOOS
                 $date->setTime(0, 0, 0);
             } else {
                 $date = $this->getExpirationDate($item, $settings, $companyId, $item->store_id, $today);
+
+                if ($date === null) {
+                    $skipped++;
+                    continue;
+                }
             }
 
             $this->proxy->writeInventoryExpiration($item->inventory_item_id, $date->format('Y-m-d'));
@@ -58,9 +77,7 @@ class OverlayOOS
 
         $output = "initial: $total, final: $finalCount";
 
-        $this->db->updateOverlayResultsRow($resultId, $total, $inventoryCount, 0, $output);
-
-        $this->db->completeImport($importStatusId, 1, 0, '');
+        $this->db->updateOverlayResultsRow($resultId, $total, $inventoryCount, $skipped, $output);
     }
 
     private function getImportSettings(string $companyId): OverlayOOSSettings
