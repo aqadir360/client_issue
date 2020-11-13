@@ -42,8 +42,6 @@ class OverlayOOS
 
     private function overlayInventory(string $companyId, OverlayOOSSettings $settings, $resultId)
     {
-        $today = new \DateTime();
-
         $inventory = $this->db->getOosInventory($companyId, $settings->excludeStores, $settings->excludeDepts);
 
         $total = count($inventory);
@@ -61,7 +59,7 @@ class OverlayOOS
                 $date->setTimestamp($startUnix + ($endUnix - $startUnix) * ($inventoryCount / $total));
                 $date->setTime(0, 0, 0);
             } else {
-                $date = $this->getExpirationDate($item, $settings, $companyId, $item->store_id, $today);
+                $date = $this->getExpirationDate($item, $settings, $companyId);
 
                 if ($date === null) {
                     $skipped++;
@@ -69,7 +67,7 @@ class OverlayOOS
                 }
             }
 
-            $this->proxy->writeInventoryExpiration($item->inventory_item_id, $date->format('Y-m-d'));
+            $this->proxy->writeInventoryExpiration($item->inventory_item_id, $date);
             $inventoryCount++;
         }
 
@@ -86,11 +84,15 @@ class OverlayOOS
         return new OverlayOOSSettings($result);
     }
 
-    private function getExpirationDate($item, OverlayOOSSettings $settings, $storeId, $companyId, \DateTime $today)
+    private function getExpirationDate($item, OverlayOOSSettings $settings, $companyId): ?string
     {
-        $closeDate = new \DateTime($item->close_dated_date);
-        $compareDate = $closeDate < $today ? $closeDate->format('Y-m-d') : $today->format('Y-m-d');
         $direction = $settings->expirationDate == 'closest_date' ? 'asc' : 'desc';
-        return $this->db->fetchOOSExpirationDate($item->product_id, $storeId, $companyId, $compareDate, $direction, $settings->maxDate);
+        $closestDate = $this->db->fetchClosestDate($item->product_id, $companyId, $settings->copyFrom, $direction, $settings->maxDate);
+
+        if ($closestDate && $closestDate->expiration_date) {
+            return $closestDate->expiration_date;
+        }
+
+        return null;
     }
 }

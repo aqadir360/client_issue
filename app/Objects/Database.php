@@ -457,17 +457,6 @@ class Database
         ]);
     }
 
-    public function fetchCustomImportInstances(string $key)
-    {
-        $sql = "select s.company_id, s.id from {$this->adminDb}.import_schedule s
-            inner join {$this->adminDb}.import_types t on t.id = s.import_type_id
-            where t.type = :key";
-
-        return DB::select($sql, [
-            'key' => $key,
-        ]);
-    }
-
     // Converts an array of strings to a sql list
     private function getListParams(array $elements)
     {
@@ -482,24 +471,5 @@ class Database
         }
 
         return $list;
-    }
-
-    public function fetchOOSExpirationDate($companyId, $storeId, $productId, $date, $direction, $maxDate)
-    {
-        $sql = "select i.expiration_date from inventory_items i
-            inner join locations l on l.location_id = i.location_id
-            inner join stores s on s.store_id = l.store_id
-            where s.company_id = :company_id and i.product_id = :product_id and l.store_id <> :store_id
-            and i.disco = 0 and i.flag IS NULL and i.close_dated_date > :close_dated_date
-            and i.expiration_date < :max_date
-            order by i.expiration_date $direction";
-
-        return DB::selectOne($sql, [
-            'company_id' => $companyId,
-            'store_id' => $storeId,
-            'product_id' => $productId,
-            'close_dated_date' => $date,
-            'max_date' => $maxDate,
-        ]);
     }
 }
