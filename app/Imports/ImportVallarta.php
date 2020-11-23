@@ -110,11 +110,6 @@ class ImportVallarta implements ImportInterface
             return;
         }
 
-        if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
-            $this->import->recordSkipped();
-            return;
-        }
-
         $product = $this->import->fetchProduct($barcode, $storeId);
         if ($product->isExistingProduct === false) {
             // Moves do not include product information
@@ -129,7 +124,11 @@ class ImportVallarta implements ImportInterface
                 if ($this->shouldDisco($location->aisle)) {
                     $this->import->discontinueInventory($item->inventory_item_id);
                 } else {
-                    $this->moveInventory($item, $storeId, $deptId, $location);
+                    if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
+                        $this->import->recordSkipped();
+                    } else {
+                        $this->moveInventory($item, $storeId, $deptId, $location);
+                    }
                 }
 
                 return;
