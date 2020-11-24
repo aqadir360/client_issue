@@ -84,7 +84,7 @@ class ImportVallarta implements ImportInterface
         }
 
         $location = new Location(trim($data[3]), trim($data[4]));
-        if (empty($location->aisle)) {
+        if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
             $this->import->recordSkipped();
             return;
         }
