@@ -83,6 +83,12 @@ class ImportVallarta implements ImportInterface
             return;
         }
 
+        $location = new Location(trim($data[3]), trim($data[4]));
+        if (empty($location->aisle)) {
+            $this->import->recordSkipped();
+            return;
+        }
+
         $product = $this->import->fetchProduct($barcode, $storeId);
         if ($product->hasInventory()) {
             $this->import->recordSkipped();
@@ -97,8 +103,8 @@ class ImportVallarta implements ImportInterface
         $this->import->implementationScan(
             $product,
             $storeId,
-            trim($data[3]),
-            trim($data[4]),
+            $location->aisle,
+            $location->section,
             $departmentId
         );
     }
