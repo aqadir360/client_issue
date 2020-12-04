@@ -83,9 +83,6 @@ class InventoryCompare
         // Create any items from file that were not in existing inventory
         foreach ($this->fileItemsLookup as $barcode => $items) {
             foreach ($items as $aisle => $item) {
-                if ($aisle == '999' || $aisle == '99') {
-                    continue;
-                }
                 $this->createNewItem($barcode, $item);
             }
         }
@@ -197,7 +194,7 @@ class InventoryCompare
     // Do not move to skipped or identical locations
     private function shouldMoveItem($existing, $item): bool
     {
-        if ($item['aisle'] == '999' || $item['aisle'] == '99') {
+        if ($this->import->shouldSkipLocation($item['aisle'])) {
             return false;
         }
 
@@ -208,8 +205,11 @@ class InventoryCompare
 
     private function createNewItem($barcode, $item)
     {
-        // Do not add skip list items
         if ($this->import->isInSkipList($barcode)) {
+            return;
+        }
+
+        if ($this->import->shouldSkipLocation($item['aisle'], $item['section'], $item['shelf'])) {
             return;
         }
 
