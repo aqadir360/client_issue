@@ -10,6 +10,8 @@ class ImportFactory
     public static function createImport(string $key, ImportManager $importManager): ?ImportInterface
     {
         switch ($key) {
+            case 'bristol_metrics':
+                return new ImportBristolMetrics($importManager);
             case 'buehlers':
                 return new ImportBuehlers($importManager);
             case 'downtoearth':
