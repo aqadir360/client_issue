@@ -5,6 +5,7 @@ namespace App\Imports;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 use App\Objects\InventoryCompare;
+use App\Objects\SkippedLocations;
 
 class ImportHansens implements ImportInterface
 {
@@ -15,6 +16,9 @@ class ImportHansens implements ImportInterface
     {
         $this->import = $importManager;
         $this->import->setSkipList();
+        $this->import->setSkippedLocations(
+            new SkippedLocations(['', '99', '999'], [''], ['99', '98'])
+        );
     }
 
     public function getFilesToImport()

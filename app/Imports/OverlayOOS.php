@@ -6,7 +6,7 @@ use App\Models\OverlayOOSSettings;
 use App\Objects\Api;
 use App\Objects\Database;
 
-// Overlays dates for all new items with closest non-expired date within company
+// Overlays dates for all OOS items with closest non-expired date within company
 class OverlayOOS
 {
     /** @var Api */
@@ -25,29 +25,46 @@ class OverlayOOS
 
     public function importUpdates(string $companyId, int $scheduleId)
     {
-        $today = new \DateTime();
-
-        $importStatusId =  $this->db->startImport($scheduleId);
+        $importStatusId = $this->db->startImport($scheduleId);
         $resultId = $this->db->insertResultsRow($importStatusId, "OOS Overlay");
         $settings = $this->getImportSettings($companyId);
 
+        try {
+            $this->overlayInventory($companyId, $settings, $resultId);
+            $this->db->completeImport($importStatusId, 1, 0, '');
+        } catch (\Exception $e) {
+            $this->db->updateOverlayResultsRow($resultId, 0, 0, 0, $e->getMessage());
+            $this->db->completeImport($importStatusId, 1, 0, $e->getMessage());
+            echo $e->getMessage() . PHP_EOL;
+            Log::error($e);
+        }
+    }
+
+    private function overlayInventory(string $companyId, OverlayOOSSettings $settings, $resultId)
+    {
         $inventory = $this->db->getOosInventory($companyId, $settings->excludeStores, $settings->excludeDepts);
 
         $total = count($inventory);
         $inventoryCount = 0;
+        $skipped = 0;
 
         foreach ($inventory as $item) {
             $date = null;
 
             if ($settings->expirationDate == 'date_range') {
                 $startUnix = strtotime($settings->startDate);
-                $endUnix = strtoTime($settings->endDate);
+                $endUnix = strtotime($settings->endDate);
 
                 $date = new \DateTime();
                 $date->setTimestamp($startUnix + ($endUnix - $startUnix) * ($inventoryCount / $total));
                 $date->setTime(0, 0, 0);
             } else {
-                $date = $this->getExpirationDate($item, $settings->expirationDate, $companyId, $item->store_id, $today);
+                $date = $this->getExpirationDate($item, $settings, $companyId);
+
+                if ($date === null) {
+                    $skipped++;
+                    continue;
+                }
             }
 
             $this->proxy->writeInventoryExpiration($item->inventory_item_id, $date);
@@ -56,11 +73,9 @@ class OverlayOOS
 
         $finalCount = $this->db->getOosInventoryCount($companyId, $settings->excludeStores, $settings->excludeDepts);
 
-        $output = "initial: " . count($inventory) . ", final: $finalCount";
+        $output = "initial: $total, final: $finalCount";
 
-        $this->db->updateOverlayResultsRow($resultId, $total, $inventoryCount, 0, $output);
-
-        $this->db->completeImport($importStatusId, 1, 0, '');
+        $this->db->updateOverlayResultsRow($resultId, $total, $inventoryCount, $skipped, $output);
     }
 
     private function getImportSettings(string $companyId): OverlayOOSSettings
@@ -69,15 +84,15 @@ class OverlayOOS
         return new OverlayOOSSettings($result);
     }
 
-    private function getExpirationDate($item, $expirationDate, $storeId, $companyId, \DateTime $today)
+    private function getExpirationDate($item, OverlayOOSSettings $settings, $companyId): ?string
     {
-        $closeDate = new \DateTime($item->close_dated_date);
-        $compareDate = $closeDate < $today ? $closeDate->format('Y-m-d') : $today->format('Y-m-d');
+        $direction = $settings->expirationDate == 'closest_date' ? 'asc' : 'desc';
+        $closestDate = $this->db->fetchClosestDate($item->product_id, $companyId, $settings->copyFrom, $direction, $settings->maxDate);
 
-        if ($expirationDate == 'closest_date') {
-            return $this->db->fetchOOSClosestDate($item->product_id, $storeId, $companyId, $compareDate);
-        } else {
-            return $this->db->fetchOOSFurthestDate($item->product_id, $storeId, $companyId, $compareDate);
+        if ($closestDate && $closestDate->expiration_date) {
+            return $closestDate->expiration_date;
         }
+
+        return null;
     }
 }

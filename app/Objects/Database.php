@@ -189,9 +189,10 @@ class Database
 
     public function fetchIncompleteJobs()
     {
-        $sql = "SELECT j.id, j.import_type_id
+        $sql = "SELECT j.id, j.import_schedule_id
                 FROM {$this->adminDb}.import_jobs j
-                WHERE started_at is not null and completed_at is null";
+                INNER JOIN {$this->adminDb}.import_schedule s ON s.id = j.import_schedule_id
+                WHERE j.started_at is not null and j.completed_at is null";
         return DB::select($sql, []);
     }
 
@@ -345,12 +346,13 @@ class Database
         string $productId,
         string $companyId,
         array $copyFromStores,
-        string $orderDirection = 'asc'
+        string $orderDirection,
+        string $maxDate
     ) {
         $sql = "select i.expiration_date from inventory_items i
             inner join locations l on l.location_id = i.location_id
             inner join stores s on l.store_id = s.store_id
-            where i.product_id = :product_id and s.company_id = :company_id
+            where i.product_id = :product_id and s.company_id = :company_id and i.expiration_date < :max_date
             and i.expiration_date > NOW() and i.expiration_date is not null and i.flag is null and i.disco = 0";
 
         if (!empty($copyFromStores)) {
@@ -362,6 +364,7 @@ class Database
         return DB::selectOne($sql, [
             'product_id' => $productId,
             'company_id' => $companyId,
+            'max_date' => $maxDate,
         ]);
     }
 
@@ -401,7 +404,7 @@ class Database
         ]);
     }
 
-    public function getOosInventory($companyId, array $excludeStores, array $excludeDepts)
+    public function getOosInventory(string $companyId, array $excludeStores, array $excludeDepts)
     {
         $sql = "select i.inventory_item_id, i.close_dated_date, i.product_id, i.close_dated_date, s.store_id from inventory_items i
             inner join locations l on l.location_id = i.location_id
@@ -454,17 +457,6 @@ class Database
         ]);
     }
 
-    public function fetchCustomImportInstances(string $key)
-    {
-        $sql = "select s.company_id, s.id from {$this->adminDb}.import_schedule s
-            inner join {$this->adminDb}.import_types t on t.id = s.import_type_id
-            where t.type = :key";
-
-        return DB::select($sql, [
-            'key' => $key,
-        ]);
-    }
-
     // Converts an array of strings to a sql list
     private function getListParams(array $elements)
     {
@@ -479,39 +471,5 @@ class Database
         }
 
         return $list;
-    }
-
-    public function fetchOOSClosestDate($companyId, $storeId, $productId, $date)
-    {
-        $sql = "select i.expiration_date from inventory_items i
-            inner join locations l on l.location_id = i.location_id
-            inner join stores s on s.store_id = l.store_id
-            where s.company_id = :company_id and i.product_id = :product_id and l.store_id <> :store_id
-            and i.disco = 0 and i.flag IS NULL and i.close_dated_date > :close_dated_date
-            order by i.expiration_date";
-
-        return DB::select($sql, [
-            'company_id' => $companyId,
-            'store_id' => $storeId,
-            'product_id' => $productId,
-            'close_dated_date' => $date,
-        ]);
-    }
-
-    public function fetchOOSFurthestDate($companyId, $storeId, $productId, $date)
-    {
-        $sql = "select i.expiration_date from inventory_items i
-            inner join locations l on l.location_id = i.location_id
-            inner join stores s on s.store_id = l.store_id
-            where s.company_id = :company_id and i.product_id = :product_id and l.store_id <> :store_id
-            and i.disco = 0 and i.flag IS NULL and i.close_dated_date > :close_dated_date
-            order by i.expiration_date desc";
-
-        return DB::select($sql, [
-            'company_id' => $companyId,
-            'store_id' => $storeId,
-            'product_id' => $productId,
-            'close_dated_date' => $date,
-        ]);
     }
 }

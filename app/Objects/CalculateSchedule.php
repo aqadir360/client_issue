@@ -10,20 +10,22 @@ class CalculateSchedule
     {
         $schedule = $db->fetchImportSchedule($scheduleId);
 
-        if ($schedule->once !== null) {
-            $db->archiveSchedule($scheduleId);
-        } else {
-            $nextRun = CalculateSchedule::calculateNextRun(
-                $schedule->daily,
-                $schedule->week_day,
-                $schedule->month_day,
-                $schedule->start_hour,
-                $schedule->start_minute,
-                new \DateTime()
-            );
+        if ($schedule !== null) {
+            if ($schedule->once !== null) {
+                $db->archiveSchedule($scheduleId);
+            } else {
+                $nextRun = CalculateSchedule::calculateNextRun(
+                    $schedule->daily,
+                    $schedule->week_day,
+                    $schedule->month_day,
+                    $schedule->start_hour,
+                    $schedule->start_minute,
+                    new \DateTime()
+                );
 
-            if ($nextRun !== null) {
-                $db->insertNewJob($scheduleId, $nextRun);
+                if ($nextRun !== null) {
+                    $db->insertNewJob($scheduleId, $nextRun);
+                }
             }
         }
     }

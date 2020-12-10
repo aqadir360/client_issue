@@ -83,6 +83,12 @@ class ImportVallarta implements ImportInterface
             return;
         }
 
+        $location = new Location(trim($data[3]), trim($data[4]));
+        if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
+            $this->import->recordSkipped();
+            return;
+        }
+
         $product = $this->import->fetchProduct($barcode, $storeId);
         if ($product->hasInventory()) {
             $this->import->recordSkipped();
@@ -97,8 +103,8 @@ class ImportVallarta implements ImportInterface
         $this->import->implementationScan(
             $product,
             $storeId,
-            trim($data[3]),
-            trim($data[4]),
+            $location->aisle,
+            $location->section,
             $departmentId
         );
     }
@@ -107,11 +113,6 @@ class ImportVallarta implements ImportInterface
     {
         $deptId = $this->import->getDepartmentId(trim(strtolower($department)), trim(strtolower($category)));
         if ($deptId === false) {
-            return;
-        }
-
-        if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
-            $this->import->recordSkipped();
             return;
         }
 
@@ -126,10 +127,14 @@ class ImportVallarta implements ImportInterface
             $item = $product->getMatchingInventoryItem($location, $deptId);
 
             if ($item !== null) {
-                if ($this->shouldDisco($location->aisle)) {
+                if ($this->shouldDisco(strtolower($location->aisle), strtolower($location->section))) {
                     $this->import->discontinueInventory($item->inventory_item_id);
                 } else {
-                    $this->moveInventory($item, $storeId, $deptId, $location);
+                    if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
+                        $this->import->recordSkipped();
+                    } else {
+                        $this->moveInventory($item, $storeId, $deptId, $location);
+                    }
                 }
 
                 return;
@@ -213,19 +218,29 @@ class ImportVallarta implements ImportInterface
     }
 
     // Discontinue any items that move to OUT or to no location
-    private function shouldDisco(string $aisle): bool
+    private function shouldDisco($aisle, $section): bool
     {
-        return empty($aisle) || strtolower($aisle) === 'out';
+        return empty($aisle) || $aisle == 'out' || $section == 'out';
     }
 
     private function shouldSkip($aisle, $section): bool
     {
-        if ($aisle == 'zzz' || $aisle == 'xxx' || $aisle == '*80' || $aisle == 'out') {
+        $excluded = [
+            'zzz',
+            'xxx',
+            'out',
+            '*80',
+            '000',
+        ];
+
+        if (empty($aisle) || empty($section)) {
             return true;
         }
 
-        if (($aisle == '000' || empty($aisle)) && ($section == '000' || empty($section))) {
-            return true;
+        foreach ($excluded as $item) {
+            if ($item == $aisle || $item == $section) {
+                return true;
+            }
         }
 
         return false;

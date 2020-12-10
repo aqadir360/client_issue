@@ -92,7 +92,7 @@ class Api
         );
     }
 
-    public function writeInventoryExpiration($inventoryItemId, $expirationDate)
+    public function writeInventoryExpiration(string $inventoryItemId, string $expirationDate)
     {
         return $this->writeRequest(
             'write-inventory',

@@ -22,6 +22,9 @@ class ImportManager
     /** @var DepartmentMapper */
     private $departments;
 
+    /** @var SkippedLocations */
+    private $skippedLocations = null;
+
     private $companyId;
     private $importTypeId;
     private $importId;
@@ -66,6 +69,20 @@ class ImportManager
     public function getProxy(): Api
     {
         return $this->proxy;
+    }
+
+    public function setSkippedLocations(SkippedLocations $skip)
+    {
+        $this->skippedLocations = $skip;
+    }
+
+    public function shouldSkipLocation($aisle, $section = '', $shelf = ''): bool
+    {
+        if ($this->skippedLocations === null) {
+            return false;
+        }
+
+        return $this->skippedLocations->shouldSkip($aisle, $section, $shelf);
     }
 
     public function startNewFile($filePath)
