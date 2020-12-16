@@ -47,6 +47,11 @@ class ImportWebsters implements ImportInterface
                 $barcode = $upc . BarcodeFixer::calculateMod10Checksum($upc);
                 $product = $this->import->fetchProduct($barcode, $this->storeId);
 
+                if ($product->hasInventory()) {
+                    $this->import->recordSkipped();
+                    continue;
+                }
+
                 if (!$product->isExistingProduct) {
                     $product->setDescription($data[1]);
                 }
