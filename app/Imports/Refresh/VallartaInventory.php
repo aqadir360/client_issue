@@ -17,6 +17,7 @@ class VallartaInventory implements ImportInterface
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
+        $this->import->setSkipList();
     }
 
     public function importUpdates()
@@ -51,14 +52,17 @@ class VallartaInventory implements ImportInterface
                     continue;
                 }
 
+                if ($this->import->isInSkipList($barcode)) {
+                    continue;
+                }
+
                 $deptId = $this->import->getDepartmentId(trim(strtolower($data[4])), trim(strtolower($data[10])));
                 if ($deptId === false) {
                     continue;
                 }
 
                 $location = new Location(trim($data[1]), trim($data[3]));
-
-                if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
+                if ($this->shouldSkipLocation(strtolower($location->aisle), strtolower($location->section))) {
                     $this->import->recordSkipped();
                     continue;
                 }
@@ -69,7 +73,7 @@ class VallartaInventory implements ImportInterface
                         $item = $product->getMatchingInventoryItem($location, $deptId);
 
                         if ($item !== null) {
-                            if ($this->shouldDisco($location->aisle)) {
+                            if ($this->shouldDisco($location->aisle, $location->section)) {
                                 $this->import->discontinueInventory($item->inventory_item_id);
                             } else {
                                 $this->moveInventory($item, $storeId, $deptId, $location);
@@ -124,12 +128,12 @@ class VallartaInventory implements ImportInterface
     }
 
     // Discontinue any items that move to OUT or to no location
-    private function shouldDisco(string $aisle): bool
+    private function shouldDisco(string $aisle, string $section): bool
     {
-        return empty($aisle) || strtolower($aisle) === 'out';
+        return empty(trim($aisle)) || strtolower($aisle) === 'out' || strtolower($section) === 'out';
     }
 
-    private function shouldSkip($aisle, $section): bool
+    private function shouldSkipLocation($aisle, $section): bool
     {
         if ($aisle == 'zzz' || $aisle == 'xxx' || $aisle == '*80' || $aisle == 'out') {
             return true;

@@ -151,6 +151,7 @@ class ImportManager
         );
     }
 
+    // Populates company barcode skip list
     public function setSkipList()
     {
         $rows = $this->db->fetchSkipItems($this->companyId);
@@ -159,6 +160,8 @@ class ImportManager
         }
     }
 
+    // Checks for barcode in skip list
+    // Increments skipList and returns true if found
     public function isInSkipList($barcode): bool
     {
         if (isset($this->skipList[intval($barcode)])) {
@@ -171,6 +174,7 @@ class ImportManager
         return false;
     }
 
+    // Inserts barcode to skip list table if not found in array
     public function addToSkipList($barcode): bool
     {
         if ($barcode === '' || intval($barcode) === 0) {
@@ -197,6 +201,8 @@ class ImportManager
         return true;
     }
 
+    // Finds matching department id by company department mappings
+    // Increments skipped or skipDepts and returns false if invalid
     public function getDepartmentId(string $department, string $category = '')
     {
         $dept = $this->departments->getMatchingDepartment($department, $category);
@@ -225,6 +231,8 @@ class ImportManager
         return $dept->departmentId;
     }
 
+    // Finds store id by store number mapping
+    // Increments skipStores and returns false if invalid
     public function storeNumToStoreId($storeNum)
     {
         if (isset($this->stores[$storeNum])) {
@@ -236,18 +244,22 @@ class ImportManager
         return false;
     }
 
+    // Adds invalid department to list
     public function addInvalidDepartment($department)
     {
         $this->invalidDepts[$department] = $department;
         $this->currentFile->invalidDepts[$department] = $department;
     }
 
+    // Adds invalid barcode to list
     public function addInvalidBarcode($barcode)
     {
         $this->invalidBarcodes[intval($barcode)] = utf8_encode($barcode);
         $this->currentFile->invalidBarcodes[intval($barcode)] = utf8_encode($barcode);
     }
 
+    // Checks for invalid barcode, returns false if valid
+    // Increments invalidBarcodeErrors and records barcode to list if invalid
     public function isInvalidBarcode($barcode, $original): bool
     {
         if (isset($this->invalidBarcodes[intval($original)]) || isset($this->invalidBarcodes[intval($barcode)])) {
@@ -265,6 +277,8 @@ class ImportManager
         return true;
     }
 
+    // Populates product object by barcode, setting isExistingProduct = true if found
+    // Sets store inventory if storeId is not null
     public function fetchProduct(string $upc, ?string $storeId = null): Product
     {
         $product = new Product($upc);
