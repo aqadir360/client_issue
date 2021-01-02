@@ -353,6 +353,20 @@ class ImportManager
         return true;
     }
 
+    // Returns null or product ID
+    public function createProduct(Product $product): ?string
+    {
+        $response = $this->proxy->persistProduct($product->barcode, $product->description, $product->size);
+
+        if (!$this->proxy->validResponse($response)) {
+            $this->addInvalidBarcode($product->barcode);
+            $this->currentFile->invalidBarcodeErrors++;
+            return null;
+        }
+
+        return $response->message;
+    }
+
     public function implementationScan(Product $product, string $storeId, string $aisle, string $section, string $deptId, string $shelf = '')
     {
         $response = $this->proxy->implementationScan(

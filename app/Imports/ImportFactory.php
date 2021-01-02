@@ -22,6 +22,8 @@ class ImportFactory
                 return new ImportHansens($importManager);
             case 'hansens_metrics':
                 return new ImportHansensMetrics($importManager);
+            case 'karns':
+                return new ImportKarns($importManager);
             case 'leprekon':
                 return new ImportLePreKon($importManager);
             case 'lunds':

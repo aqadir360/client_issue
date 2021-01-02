@@ -27,6 +27,11 @@ class Product
         $this->description = ucwords(strtolower(trim($input)));
     }
 
+    public function setProductId(string $input)
+    {
+        $this->productId = $input;
+    }
+
     public function setSize($input)
     {
         $this->size = strtolower(trim($input));

@@ -124,7 +124,7 @@ class Api
             'persist-product',
             [
                 'barcode' => $barcode,
-                'name' => $description,
+                'description' => $description,
                 'size' => $size,
                 'createOnly' => $createOnly,
             ]
