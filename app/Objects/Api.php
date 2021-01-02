@@ -21,18 +21,6 @@ class Api
         $this->token = $this->setCommandApiToken();
     }
 
-    public function fetchProduct($barcode, $companyId, $storeId = null)
-    {
-        return $this->request(
-            'fetch-product',
-            [
-                'barcode' => $barcode,
-                'storeId' => $storeId,
-                'companyId' => $companyId,
-            ]
-        );
-    }
-
     public function fetchAllInventory($companyId, $storeId, $notificationsOnly = false)
     {
         return $this->request(
@@ -142,20 +130,6 @@ class Api
                 'aisle' => $aisle,
                 'section' => $section,
                 'shelf' => $shelf,
-            ]
-        );
-    }
-
-    public function updateInventoryDisco($itemId, $expiration, $prevStatus)
-    {
-        return $this->writeRequest(
-            'update-inventory',
-            [
-                'inventoryItemId' => $itemId,
-                'expiration' => $expiration,
-                'prevStatus' => $prevStatus,
-                'action' => 'ONSHELF',
-                'flag' => 'DISCO',
             ]
         );
     }

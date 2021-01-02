@@ -252,12 +252,7 @@ class InventoryCompare
 
     private function discontinue($item)
     {
-        $response = $this->proxy->updateInventoryDisco(
-            $item['id'],
-            $item['expiration'],
-            $item['status']
-        );
-
+        $response = $this->proxy->writeInventoryDisco($item['id']);
         $this->import->recordResponse($response, 'disco');
     }
 
