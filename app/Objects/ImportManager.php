@@ -208,14 +208,14 @@ class ImportManager
         $dept = $this->departments->getMatchingDepartment($department, $category);
 
         if ($dept === null) {
-            $this->addInvalidDepartment($department . trim(' ' . $category));
+            $this->addInvalidDepartment(trim($department . ' ' . $category));
             $this->currentFile->skipDepts++;
             return false;
         }
 
         if ($dept->wildcardDeptMatch) {
             // Record unmatched departments
-            $this->addInvalidDepartment($department . trim(' ' . $category));
+            $this->addInvalidDepartment(trim($department . ' ' . $category));
         }
 
         if ($dept->skip) {
@@ -367,6 +367,7 @@ class ImportManager
         return $response->message;
     }
 
+    // Returns product id or null
     public function implementationScan(Product $product, string $storeId, string $aisle, string $section, string $deptId, string $shelf = '')
     {
         $response = $this->proxy->implementationScan(
@@ -382,6 +383,12 @@ class ImportManager
         if ($success && $product->isExistingProduct === false) {
             $this->currentFile->newproducts++;
         }
+
+        if ($success && $response->product) {
+            return $response->product->productId;
+        }
+
+        return null;
     }
 
     public function updateInventoryLocation(string $itemId, string $storeId, string $deptId, string $aisle, string $section, string $shelf = '')

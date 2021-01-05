@@ -95,6 +95,30 @@ class Database
         return DB::select($sql, []);
     }
 
+    public function insertRaleysSku($sku, $barcode)
+    {
+        $sql = "INSERT INTO {$this->db}.raleys_products (sku_num, barcode) VALUES (:sku_num, :barcode)";
+        DB::insert($sql, [
+            'sku_num' => $sku,
+            'barcode' => $barcode,
+        ]);
+    }
+
+    public function fetchSegSkus()
+    {
+        $sql = "SELECT sku, barcode FROM {$this->db}.seg_products";
+        return DB::select($sql, []);
+    }
+
+    public function insertSegSku($sku, $barcode)
+    {
+        $sql = "INSERT INTO {$this->db}.seg_products (sku, barcode) VALUES (:sku, :barcode)";
+        DB::insert($sql, [
+            'sku' => $sku,
+            'barcode' => $barcode,
+        ]);
+    }
+
     public function insertSkipItem(string $companyId, string $barcode)
     {
         $sql = "INSERT INTO {$this->adminDb}.import_skip_list (company_id, barcode, created_at) VALUES (:company_id, :barcode, NOW())";
