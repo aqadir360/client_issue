@@ -384,7 +384,7 @@ class ImportManager
             $this->currentFile->newproducts++;
         }
 
-        if ($success && $response->product) {
+        if ($success && isset($response->product)) {
             return $response->product->productId;
         }
 

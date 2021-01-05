@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Imports\Refresh\RaleysInventory;
 use App\Imports\Refresh\VallartaInventory;
 use App\Objects\ImportManager;
 
@@ -30,6 +31,8 @@ class ImportFactory
                 return new ImportLunds($importManager);
             case 'raleys':
                 return new ImportRaleys($importManager);
+            case 'raleys_refresh':
+                return new RaleysInventory($importManager);
             case 'raleys_metrics':
                 return new ImportRaleysMetrics($importManager);
             case 'seg':
