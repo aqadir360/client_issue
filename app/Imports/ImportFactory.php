@@ -29,6 +29,8 @@ class ImportFactory
                 return new ImportLePreKon($importManager);
             case 'lunds':
                 return new ImportLunds($importManager);
+            case 'metcalfes_metrics':
+                return new ImportMetcalfesMetrics($importManager);
             case 'raleys':
                 return new ImportRaleys($importManager);
             case 'raleys_refresh':
