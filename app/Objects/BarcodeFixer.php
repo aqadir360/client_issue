@@ -43,6 +43,10 @@ class BarcodeFixer
             return $upc;
         }
 
+        if (!is_numeric($upc)) {
+            return '0';
+        }
+
         $check = BarcodeFixer::calculateMod10Checksum(substr($upc, 0, 11));
         return '0' . $upc . $check;
     }
