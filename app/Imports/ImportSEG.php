@@ -159,7 +159,7 @@ class ImportSEG implements ImportInterface
 
     private function shouldSkipLocation(Location $location): bool
     {
-        return (empty($location->aisle) || intval($location->aisle) === 999 || intval($location->aisle) === 0);
+        return !(empty($location->aisle) || intval($location->aisle) === 999 || intval($location->aisle) === 0);
     }
 
     private function recordSku($sku, $barcode)
