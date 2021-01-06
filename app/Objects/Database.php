@@ -97,11 +97,15 @@ class Database
 
     public function insertRaleysSku($sku, $barcode)
     {
-        $sql = "INSERT INTO {$this->db}.raleys_products (sku_num, barcode) VALUES (:sku_num, :barcode)";
-        DB::insert($sql, [
-            'sku_num' => $sku,
-            'barcode' => $barcode,
-        ]);
+        try {
+            $sql = "INSERT INTO {$this->db}.raleys_products (sku_num, barcode) VALUES (:sku_num, :barcode)";
+            DB::insert($sql, [
+                'sku_num' => $sku,
+                'barcode' => $barcode,
+            ]);
+        } catch (\Exception $e) {
+            var_dump($e);
+        }
     }
 
     public function fetchSegSkus()
