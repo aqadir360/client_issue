@@ -116,11 +116,15 @@ class Database
 
     public function insertSegSku($sku, $barcode)
     {
-        $sql = "INSERT INTO {$this->db}.seg_products (sku, barcode) VALUES (:sku, :barcode)";
-        DB::insert($sql, [
-            'sku' => $sku,
-            'barcode' => $barcode,
-        ]);
+        try {
+            $sql = "INSERT INTO {$this->db}.seg_products (sku, barcode) VALUES (:sku, :barcode)";
+            DB::insert($sql, [
+                'sku' => $sku,
+                'barcode' => $barcode,
+            ]);
+        } catch (\Exception $e) {
+            var_dump($e);
+        }
     }
 
     public function insertSkipItem(string $companyId, string $barcode)
