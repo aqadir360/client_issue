@@ -74,6 +74,10 @@ class RaleysInventory implements ImportInterface
                     continue;
                 }
 
+                if ($this->import->isInSkipList($barcode)) {
+                    continue;
+                }
+
                 $storeId = $this->import->storeNumToStoreId(trim($data[2]));
                 if ($storeId === false) {
                     continue;
