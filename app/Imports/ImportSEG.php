@@ -18,23 +18,23 @@ class ImportSEG implements ImportInterface
 
     // Expected File Columns:
     // [0] Loc_Id
-    // [1] WDCode
-    // [2] UPC
-    // [3] Prod_Desc
-    // [4] Size_Desc
-    // [5] Dept_Id
-    // [6] Dept_Desc
-    // [7] Price_Mult
-    // [8] Price
-    // [9] Pck_Num
-    // [10] Avg_Dly_Units
-    // [11] Avg_Dly_Lbs
-    // [12] Aisle_Num
-    // [13] Aisle_Side_Desc
-    // [14] Planogram_Position_Ind
-    // [15] Shelf
-    // [16] Product_Position
-    // [17] Section_Desc
+    // [1] Asl_Num
+    // [2] Asl_Side
+    // [3] Plnogm_Pstn_Ind
+    // [4] Shelf
+    // [5] Prod_Pos
+    // [6] Sctn_Desc
+    // [7] WDCode
+    // [8] UPC
+    // [9] Prod_Desc
+    // [10] Size_Desc
+    // [11] Dept_Id
+    // [12] Dept_Desc
+    // [13] Price_Mult
+    // [14] Price
+    // [15] Pck_Num
+    // [16] Avg_Dly_Units
+    // [17] Avg_Dly_Lbs
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
@@ -62,8 +62,7 @@ class ImportSEG implements ImportInterface
     {
         $this->import->startNewFile($file);
 
-        $storeNum = substr($file, -8, -4);
-        $storeId = $this->import->storeNumToStoreId($storeNum);
+        $storeId = $this->import->storeNumToStoreId($this->getStoreNum($file));
         if ($storeId === false) {
             $this->import->completeFile();
             return;
@@ -79,10 +78,10 @@ class ImportSEG implements ImportInterface
                     continue;
                 }
 
-                $this->recordSku(trim($data[1]), trim($data[2]));
+                $this->recordSku(trim($data[7]), trim($data[8]));
 
-                $upc = BarcodeFixer::fixUpc(trim($data[2]));
-                if ($this->import->isInvalidBarcode($upc, $data[2])) {
+                $upc = BarcodeFixer::fixUpc(trim($data[8]));
+                if ($this->import->isInvalidBarcode($upc, $data[8])) {
                     continue;
                 }
 
@@ -92,7 +91,7 @@ class ImportSEG implements ImportInterface
                     continue;
                 }
 
-                $departmentId = $this->import->getDepartmentId($data[6], $data[17]);
+                $departmentId = $this->import->getDepartmentId($data[12], $data[6]);
                 if ($departmentId === false) {
                     continue;
                 }
@@ -100,8 +99,8 @@ class ImportSEG implements ImportInterface
                 $product = $this->import->fetchProduct($upc, $storeId);
 
                 if (!$product->isExistingProduct) {
-                    $product->setDescription($data[3]);
-                    $product->setSize($data[4]);
+                    $product->setDescription($data[9]);
+                    $product->setSize($data[10]);
 
                     if (empty($product->description)) {
                         $this->import->recordFileLineError('ERROR', 'Missing Product Description');
@@ -125,9 +124,9 @@ class ImportSEG implements ImportInterface
 
                 if ($productId) {
                     $cost = 0; // Not sending cost
-                    $movement = $this->import->parsePositiveFloat($data[10]);
-                    $price = $this->import->parsePositiveFloat($data[8]);
-                    $priceModifier = intval($data[7]);
+                    $movement = $this->import->parsePositiveFloat($data[16]);
+                    $price = $this->import->parsePositiveFloat($data[14]);
+                    $priceModifier = intval($data[13]);
 
                     $this->import->persistMetric(
                         $storeId,
@@ -148,9 +147,9 @@ class ImportSEG implements ImportInterface
     private function normalizeLocation(array $data): Location
     {
         $location = new Location();
-        $location->aisle = trim($data[12]);
-        $location->section = trim($data[13]) . trim($data[14]);
-        $location->shelf = trim($data[15]);
+        $location->aisle = trim($data[1]);
+        $location->section = trim($data[2]) . trim($data[3]);
+        $location->shelf = trim($data[4]);
 
         $location->valid = $this->shouldSkipLocation($location);
 
@@ -160,6 +159,13 @@ class ImportSEG implements ImportInterface
     private function shouldSkipLocation(Location $location): bool
     {
         return !(empty($location->aisle) || intval($location->aisle) === 0);
+    }
+
+    private function getStoreNum(string $filename)
+    {
+        $start = strrpos($filename, '_');
+        $end = strrpos($filename, '.');
+        return substr($filename, $start + 1, $end - $start - 1);
     }
 
     private function recordSku($sku, $barcode)

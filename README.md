@@ -14,6 +14,7 @@ It requires a connection to the DCP2 API and the DCP2 Admin database.
 2. Add row to import_types table mapping key to company_id
 3. Add key to ImportFactory class mapping
 4. Import will now be available for scheduling in the Admin
+5. An import_schedule row is required for the import to run
 
 ### Manually Run Import
 php artisan dcp:do-import key
@@ -21,5 +22,12 @@ php artisan dcp:do-import key
 ### Automatically Run Imports
 add laravel cron job
 
-### Clear Failed Import (in case of runtime error)
-php artisan dcp:clear
+### Debug Mode
+To turn on debug mode, set .env SCRAPER_DEBUG_MODE = 'debug'
+
+While in debug mode:
+- Reads a maximum of 1000 lines from each file
+- No write calls are made to the API
+- No metrics are written to the local database
+- Downloaded files are not deleted
+- Skips writing updated lastRun value to allow multiple runs
