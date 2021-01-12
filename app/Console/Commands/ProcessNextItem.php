@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Imports\ImportFactory;
-use App\Imports\OverlayNewItems;
-use App\Imports\OverlayOOS;
+use App\Imports\Overlay\OverlayNew;
+use App\Imports\Overlay\OverlayOos;
 use App\Objects\Api;
 use App\Objects\CalculateSchedule;
 use App\Objects\Database;
@@ -93,11 +93,11 @@ class ProcessNextItem extends Command
     private function runOverlay(Database $database, $pending)
     {
         if ($pending->type == 'overlay_new') {
-            $import = new OverlayNewItems(new Api(), $database);
+            $import = new OverlayNew(new Api(), $database);
         }
 
         if ($pending->type == 'overlay_oos') {
-            $import = new OverlayOOS(new Api(), $database);
+            $import = new OverlayOos(new Api(), $database);
         }
 
         $import->importUpdates($pending->company_id, $pending->import_schedule_id);

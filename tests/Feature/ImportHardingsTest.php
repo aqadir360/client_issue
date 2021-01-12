@@ -34,19 +34,19 @@ class ImportHardingsTest extends TestCase
             ->expects($this->exactly(3))
             ->method('outputContent')
             ->withConsecutive(
-                array('10 inventory items in file'),
-                array('0 existing inventory items'),
-                array('Disco percent: 0%'));
+                ['10 inventory items in file'],
+                ['0 existing inventory items'],
+                ['Disco percent: 0%']);
 
         $importHardings = $this->getMockBuilder(ImportHardings::class)
-            ->setConstructorArgs(array($importManager))
-            ->setMethods(array('getFilesToImport'))
+            ->setConstructorArgs([$importManager])
+            ->setMethods(['getFilesToImport'])
             ->getMock();
 
         $importHardings
             ->expects($this->once())
             ->method('getFilesToImport')
-            ->willReturn(array(__DIR__ . "/PLU421HGM20200918_test.txt"));
+            ->willReturn([__DIR__ . "/ImportHardings/PLU421HGM20200918_test.txt"]);
 
         $importHardings->importUpdates();
     }
@@ -76,18 +76,18 @@ class ImportHardingsTest extends TestCase
             ->expects($this->exactly(2))
             ->method('outputContent')
             ->withConsecutive(
-                array('0 inventory items in file'),
-                array('Skipping 421 - Import file was empty'));
+                ['0 inventory items in file'],
+                ['Skipping 421 - Import file was empty']);
 
         $importHardings = $this->getMockBuilder(ImportHardings::class)
-            ->setConstructorArgs(array($importManager))
-            ->setMethods(array('getFilesToImport'))
+            ->setConstructorArgs([$importManager])
+            ->setMethods(['getFilesToImport'])
             ->getMock();
 
         $importHardings
             ->expects($this->once())
             ->method('getFilesToImport')
-            ->willReturn(array(__DIR__ . "/PLU421HGM20200918_empty_test.txt"));
+            ->willReturn([__DIR__ . "/ImportHardings/PLU421HGM20200918_empty_test.txt"]);
 
         $importHardings->importUpdates();
     }
@@ -119,14 +119,14 @@ class ImportHardingsTest extends TestCase
             ->with('Invalid Store 421');
 
         $importHardings = $this->getMockBuilder(ImportHardings::class)
-            ->setConstructorArgs(array($importManager))
-            ->setMethods(array('getFilesToImport'))
+            ->setConstructorArgs([$importManager])
+            ->setMethods(['getFilesToImport'])
             ->getMock();
 
         $importHardings
             ->expects($this->once())
             ->method('getFilesToImport')
-            ->willReturn(array(__DIR__ . "/PLU421HGM20200918_test.txt"));
+            ->willReturn([__DIR__ . "/ImportHardings/PLU421HGM20200918_test.txt"]);
 
         $importHardings->importUpdates();
     }

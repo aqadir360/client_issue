@@ -1,13 +1,14 @@
 <?php
 
-namespace App\Imports;
+namespace App\Imports\Overlay;
 
-use App\Models\OverlayOOSSettings;
+use App\Imports\Overlay\Settings\OosMapper as Settings;
 use App\Objects\Api;
 use App\Objects\Database;
+use Log;
 
 // Overlays dates for all OOS items with closest non-expired date within company
-class OverlayOOS
+class OverlayOos
 {
     /** @var Api */
     private $proxy;
@@ -40,7 +41,7 @@ class OverlayOOS
         }
     }
 
-    private function overlayInventory(string $companyId, OverlayOOSSettings $settings, $resultId)
+    private function overlayInventory(string $companyId, Settings $settings, $resultId)
     {
         $inventory = $this->db->getOosInventory($companyId, $settings->excludeStores, $settings->excludeDepts);
 
@@ -78,13 +79,13 @@ class OverlayOOS
         $this->db->updateOverlayResultsRow($resultId, $total, $inventoryCount, $skipped, $output);
     }
 
-    private function getImportSettings(string $companyId): OverlayOOSSettings
+    private function getImportSettings(string $companyId): Settings
     {
         $result = $this->db->fetchCustomImportSettings($this->key, $companyId);
-        return new OverlayOOSSettings($result);
+        return new Settings($result);
     }
 
-    private function getExpirationDate($item, OverlayOOSSettings $settings, $companyId): ?string
+    private function getExpirationDate($item, Settings $settings, $companyId): ?string
     {
         $direction = $settings->expirationDate == 'closest_date' ? 'asc' : 'desc';
         $closestDate = $this->db->fetchClosestDate($item->product_id, $companyId, $settings->copyFrom, $direction, $settings->maxDate);

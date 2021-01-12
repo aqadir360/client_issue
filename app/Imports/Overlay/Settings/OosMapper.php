@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Models;
+namespace App\Imports\Overlay\Settings;
 
 // Custom settings:
 // - store_from: store_id to copy from (if empty, copy from all)
@@ -10,7 +10,7 @@ namespace App\Models;
 // - expirationDate: date copy type (closest_date, furthest_date, date_range)
 // - startDate: start date for date_range calculation
 // - endDate: end date for date_range calculation
-class OverlayOOSSettings
+class OosMapper
 {
     public $copyFrom = [];
     public $excludeStores = [];

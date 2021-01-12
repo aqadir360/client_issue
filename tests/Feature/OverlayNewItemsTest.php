@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Imports\OverlayNewItems;
+use App\Imports\Overlay\OverlayNew;
 use App\Objects\Api;
 use App\Objects\Database;
 use Tests\TestCase;
@@ -70,7 +70,7 @@ class OverlayNewItemsTest extends TestCase
             ->method('completeImport')
             ->with(2, 1, 0, '');
 
-        $overlay = new OverlayNewItems($api, $database);
+        $overlay = new OverlayNew($api, $database);
         $overlay->importUpdates('companyId', 1);
     }
 
@@ -141,7 +141,7 @@ class OverlayNewItemsTest extends TestCase
             ->method('completeImport')
             ->with(2, 1, 0, '');
 
-        $overlay = new OverlayNewItems($api, $database);
+        $overlay = new OverlayNew($api, $database);
         $overlay->importUpdates('companyId', 1);
     }
 
@@ -198,7 +198,7 @@ class OverlayNewItemsTest extends TestCase
             ->method('completeImport')
             ->with(2, 1, 0, '');
 
-        $overlay = new OverlayNewItems($api, $database);
+        $overlay = new OverlayNew($api, $database);
         $overlay->importUpdates('companyId', 1);
     }
 

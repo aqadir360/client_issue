@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Models;
+namespace App\Imports\Overlay\Settings;
 
 // Custom settings:
 // - store_from: store_id to copy from (if empty, copy from all)
 // - store_exclude: store_id to skip copy to
 // - dept_exclude: department_id to skip copy to
-class OverlayNewSettings
+class NewMapper
 {
     public $copyFrom = [];
     public $excludeStores = [];

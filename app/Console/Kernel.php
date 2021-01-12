@@ -2,7 +2,6 @@
 
 namespace App\Console;
 
-use App\Console\Commands\ClearRunning;
 use App\Console\Commands\DoImport;
 use App\Console\Commands\PopulateSkipList;
 use App\Console\Commands\ProcessNextItem;
@@ -19,7 +18,6 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         DoImport::class,
         ProcessNextItem::class,
-        ClearRunning::class,
         PopulateSkipList::class,
     ];
 

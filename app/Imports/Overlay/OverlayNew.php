@@ -1,13 +1,14 @@
 <?php
 
-namespace App\Imports;
+namespace App\Imports\Overlay;
 
-use App\Models\OverlayNewSettings;
+use App\Imports\Overlay\Settings\NewMapper as Settings;
 use App\Objects\Api;
 use App\Objects\Database;
+use Log;
 
 // Overlays dates for all new items with closest non-expired date within company
-class OverlayNewItems
+class OverlayNew
 {
     /** @var Api */
     private $proxy;
@@ -41,7 +42,7 @@ class OverlayNewItems
         $this->db->completeImport($importStatusId, 1, 0, '');
     }
 
-    private function overlayInventory(string $companyId, OverlayNewSettings $settings, $resultId)
+    private function overlayInventory(string $companyId, Settings $settings, $resultId)
     {
         // Fetch all new inventory grouped by products
         $products = $this->db->fetchNewCompanyProducts($companyId);
@@ -81,9 +82,9 @@ class OverlayNewItems
         $this->db->updateOverlayResultsRow($resultId, $total, $updatedCount, $skipped, $output);
     }
 
-    private function getImportSettings(string $companyId): OverlayNewSettings
+    private function getImportSettings(string $companyId): Settings
     {
         $result = $this->db->fetchCustomImportSettings($this->key, $companyId);
-        return new OverlayNewSettings($result);
+        return new Settings($result);
     }
 }
