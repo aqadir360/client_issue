@@ -54,30 +54,33 @@ class ImportLePreKon implements ImportInterface
         }
 
         if (($handle = fopen($file, "r")) !== false) {
-            $departmentId = $this->import->getDepartmentId('grocery');
 
-            while (($data = fgetcsv($handle, 1000, " ")) !== false) {
+            while (($data = fgetcsv($handle, 1000, "|")) !== false) {
                 if (!$this->import->recordRow()) {
                     break;
                 }
 
-                if (trim($data[0]) !== 'PROD-ADD') {
+                $departmentId = $this->import->getDepartmentId(trim($data[5]));
+                if (!$departmentId) {
+                    $departmentId = $this->import->getDepartmentId('grocery');
+                }
+
+                if (trim($data[0]) !== 'ADD') {
                     $this->import->recordSkipped();
                     continue;
                 }
 
-                $upc = BarcodeFixer::fixUpc(trim($data[10]));
-                if ($this->import->isInvalidBarcode($upc, $data[10])) {
+                $upc = BarcodeFixer::fixUpc(trim($data[1]));
+                if ($this->import->isInvalidBarcode($upc, $data[1])) {
                     continue;
                 }
 
                 $product = $this->import->fetchProduct($upc, $storeId);
-                $location = new Location(trim($data[13]), trim($data[14]));
+                $location = new Location('UNKN', '');
 
                 if ($product->isExistingProduct) {
-                    $item = $product->getMatchingInventoryItem($location, $departmentId);
-
-                    if ($item === null) {
+                    $productId = $product->productId;
+                    if ($product->hasInventory()) {
                         $this->import->implementationScan(
                             $product,
                             $storeId,
@@ -86,29 +89,23 @@ class ImportLePreKon implements ImportInterface
                             $departmentId
                         );
                     } else {
-                        if ($this->needToMoveItem($item, $location)) {
-                            $this->import->updateInventoryLocation(
-                                $item->inventory_item_id,
-                                $storeId,
-                                $departmentId,
-                                $location->aisle,
-                                $location->section
-                            );
-                        } else {
-                            $this->import->recordStatic();
-                        }
+                        $this->import->recordStatic();
                     }
                 } else {
-                    $product->setDescription($data[3]);
-                    $product->setSize($this->parseSize(trim($data[18]), trim($data[19])));
+                    $product->setDescription($data[2]);
+                    $product->setSize($this->parseSize(trim($data[3]), trim($data[4])));
 
-                    $this->import->implementationScan(
+                    $productId = $this->import->implementationScan(
                         $product,
                         $storeId,
                         $location->aisle,
                         $location->section,
                         $departmentId
                     );
+                }
+
+                if ($productId) {
+                    $this->import->persistMetric($storeId, $productId, 0, $this->parseRetail($data), 0);
                 }
             }
 
@@ -211,11 +208,6 @@ class ImportLePreKon implements ImportInterface
         $this->import->completeFile();
     }
 
-    private function needToMoveItem($item, Location $location)
-    {
-        return !($item->aisle == $location->aisle && $item->section == $location->section);
-    }
-
     private function parseSize($value, $measure)
     {
         switch ($measure) {
@@ -235,5 +227,18 @@ class ImportLePreKon implements ImportInterface
                 echo "$measure Measure not mapped" . PHP_EOL;
                 return $value . strtolower($measure);
         }
+    }
+
+    private function parseRetail($data): int
+    {
+        if ($data[6] === '1.00') {
+            return $this->import->convertFloatToInt(floatval($data[7]));
+        }
+
+        if (floatval($data[6]) == 0) {
+            return 0;
+        }
+
+        return $this->import->convertFloatToInt(floatval($data[7]) / floatval($data[6]));
     }
 }
