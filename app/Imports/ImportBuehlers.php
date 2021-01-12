@@ -133,8 +133,13 @@ class ImportBuehlers implements ImportInterface
 
     private function handleNewProduct(Product $product, string $storeId, string $departmentId, array $data)
     {
-        $product->setDescription($data[4]);
-        $product->setSize($data[5]);
+        $product->setDescription(trim($data[4]));
+        $product->setSize(trim($data[5]));
+
+        if (empty($product->description)) {
+            $this->import->recordFileLineError('ERROR', 'Missing product description for ' . $product->barcode);
+            return;
+        }
 
         $this->import->implementationScan(
             $product,
