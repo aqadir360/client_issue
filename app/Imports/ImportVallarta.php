@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Imports\Settings\VallartaSettings;
 use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
@@ -14,9 +15,13 @@ class ImportVallarta implements ImportInterface
     /** @var ImportManager */
     private $import;
 
+    /** @var VallartaSettings */
+    private $settings;
+
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
+        $this->settings = new VallartaSettings();
     }
 
     public function importUpdates()
@@ -84,7 +89,7 @@ class ImportVallarta implements ImportInterface
         }
 
         $location = new Location(trim($data[3]), trim($data[4]));
-        if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
+        if ($this->settings->shouldSkipLocation($location)) {
             $this->import->recordSkipped();
             return;
         }
@@ -127,10 +132,10 @@ class ImportVallarta implements ImportInterface
             $item = $product->getMatchingInventoryItem($location, $deptId);
 
             if ($item !== null) {
-                if ($this->shouldDisco(strtolower($location->aisle), strtolower($location->section))) {
+                if ($this->settings->shouldDisco($location)) {
                     $this->import->discontinueInventory($item->inventory_item_id);
                 } else {
-                    if ($this->shouldSkip(strtolower($location->aisle), strtolower($location->section))) {
+                    if ($this->settings->shouldSkipLocation($location)) {
                         $this->import->recordSkipped();
                     } else {
                         $this->moveInventory($item, $storeId, $deptId, $location);
@@ -215,35 +220,6 @@ class ImportVallarta implements ImportInterface
         }
 
         $this->import->completeFile();
-    }
-
-    // Discontinue any items that move to OUT or to no location
-    private function shouldDisco($aisle, $section): bool
-    {
-        return empty($aisle) || $aisle == 'out' || $section == 'out';
-    }
-
-    private function shouldSkip($aisle, $section): bool
-    {
-        $excluded = [
-            'zzz',
-            'xxx',
-            'out',
-            '*80',
-            '000',
-        ];
-
-        if (empty($aisle) || empty($section)) {
-            return true;
-        }
-
-        foreach ($excluded as $item) {
-            if ($item == $aisle || $item == $section) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private function fixBarcode(string $upc)

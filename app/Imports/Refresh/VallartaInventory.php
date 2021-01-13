@@ -3,6 +3,7 @@
 namespace App\Imports\Refresh;
 
 use App\Imports\ImportInterface;
+use App\Imports\Settings\VallartaSettings;
 use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
@@ -14,10 +15,14 @@ class VallartaInventory implements ImportInterface
     /** @var ImportManager */
     private $import;
 
+    /** @var VallartaSettings */
+    private $settings;
+
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
         $this->import->setSkipList();
+        $this->settings = new VallartaSettings();
     }
 
     public function importUpdates()
@@ -56,35 +61,36 @@ class VallartaInventory implements ImportInterface
                     continue;
                 }
 
-                $deptId = $this->import->getDepartmentId(trim(strtolower($data[4])), trim(strtolower($data[10])));
+                $deptId = $this->import->getDepartmentId(trim(strtolower($data[4])), trim(strtolower($data[11])));
                 if ($deptId === false) {
                     continue;
                 }
 
                 $location = new Location(trim($data[1]), trim($data[3]));
-                if ($this->shouldSkipLocation(strtolower($location->aisle), strtolower($location->section))) {
-                    $this->import->recordSkipped();
-                    continue;
-                }
 
                 $product = $this->import->fetchProduct($barcode, $storeId);
                 if ($product->isExistingProduct && $product->hasInventory()) {
-                    if ($product->hasInventory()) {
-                        $item = $product->getMatchingInventoryItem($location, $deptId);
+                    $item = $product->getMatchingInventoryItem($location, $deptId);
 
-                        if ($item !== null) {
-                            if ($this->shouldDisco($location->aisle, $location->section)) {
-                                $this->import->discontinueInventory($item->inventory_item_id);
-                            } else {
-                                $this->moveInventory($item, $storeId, $deptId, $location);
-                            }
-
+                    if ($item !== null) {
+                        if ($this->settings->shouldDisco($location)) {
+                            $this->import->discontinueInventory($item->inventory_item_id);
                             continue;
+                        } elseif ($this->settings->shouldSkipLocation($location)) {
+                            $this->import->recordSkipped();
+                            continue;
+                        } else {
+                            $this->moveInventory($item, $storeId, $deptId, $location);
                         }
                     }
                 } else {
                     $product->setDescription($data[5]);
                     $product->setSize($data[6]);
+                }
+
+                if ($this->settings->shouldSkipLocation($location)) {
+                    $this->import->recordSkipped();
+                    continue;
                 }
 
                 // Adding as new any moves that do not exist in inventory
@@ -127,33 +133,18 @@ class VallartaInventory implements ImportInterface
         );
     }
 
-    // Discontinue any items that move to OUT or to no location
-    private function shouldDisco(string $aisle, string $section): bool
-    {
-        return empty(trim($aisle)) || strtolower($aisle) === 'out' || strtolower($section) === 'out';
-    }
-
-    private function shouldSkipLocation($aisle, $section): bool
-    {
-        if ($aisle == 'zzz' || $aisle == 'xxx' || $aisle == '*80' || $aisle == 'out') {
-            return true;
-        }
-
-        if (($aisle == '000' || empty($aisle)) && ($section == '000' || empty($section))) {
-            return true;
-        }
-
-        return false;
-    }
-
     private function fixBarcode(string $upc)
     {
-        while (strlen($upc) > 0 && $upc[0] === '0') {
-            $upc = substr($upc, 1);
+        try {
+            while (strlen($upc) > 0 && $upc[0] === '0') {
+                $upc = substr($upc, 1);
+            }
+
+            $output = str_pad(ltrim($upc, '0'), 12, '0', STR_PAD_LEFT);
+
+            return $output . BarcodeFixer::calculateMod10Checksum($output);
+        } catch (\Exception $e) {
+            return '0';
         }
-
-        $output = str_pad(ltrim($upc, '0'), 12, '0', STR_PAD_LEFT);
-
-        return $output . BarcodeFixer::calculateMod10Checksum($output);
     }
 }
