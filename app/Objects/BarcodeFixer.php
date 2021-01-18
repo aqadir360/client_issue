@@ -47,7 +47,12 @@ class BarcodeFixer
             return '0';
         }
 
-        $check = BarcodeFixer::calculateMod10Checksum(substr($upc, 0, 11));
+        try {
+            $check = BarcodeFixer::calculateMod10Checksum(substr($upc, 0, 11));
+        } catch (\Exception $e) {
+            return '0';
+        }
+
         return '0' . $upc . $check;
     }
 
