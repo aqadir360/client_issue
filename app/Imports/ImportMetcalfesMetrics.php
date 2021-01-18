@@ -65,7 +65,7 @@ class ImportMetcalfesMetrics implements ImportInterface
                     continue;
                 }
 
-                $movement = $this->import->parsePositiveFloat($data[4] / 90);
+                $movement = $this->import->parsePositiveFloat(floatval($data[4]) / 90);
 
                 $product = $this->import->fetchProduct($barcode);
                 if ($product->isExistingProduct === false) {
