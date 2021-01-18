@@ -140,12 +140,6 @@ class ImportLunds implements ImportInterface
                     break;
                 }
 
-                // skip items with zero or empty tag quantity
-                if (intval($data[5]) <= 0) {
-                    $this->import->recordSkipped();
-                    continue;
-                }
-
                 $storeId = $this->import->storeNumToStoreId($data[0]);
                 if ($storeId === false) {
                     continue;
@@ -157,44 +151,51 @@ class ImportLunds implements ImportInterface
                     continue;
                 }
 
+                $action = trim($data[9]);
+                if ($action === 'To Discontinue' || $action === 'Discontinued') {
+                    $this->import->discontinueProductByBarcode($storeId, $upc);
+                    continue;
+                }
+
                 if ($this->import->isInSkipList($upc) || $this->import->isInSkipList($inputUpc)) {
                     continue;
                 }
 
-                $action = trim($data[9]);
-                if ($action === 'To Discontinue' || $action === 'Discontinued') {
-                    $this->import->discontinueProductByBarcode($storeId, $upc);
-                } else {
-                    $departmentId = $this->import->getDepartmentId($data[7]);
-                    if ($departmentId === false) {
-                        continue;
-                    }
-
-                    $expires = (string)date('Y-m-d 00:00:00', strtotime($data[6]));
-                    if (empty($expires)) {
-                        $this->import->recordFileLineError('Invalid Expiration Date', $data[6]);
-                        continue;
-                    }
-
-                    $location = $this->parseLocation($data[4]);
-                    if (intval($location->aisle) === 127) {
-                        // move these items to the pet department
-                        $departmentId = $this->import->getDepartmentId('pet');
-                    }
-
-                    $product = $this->import->fetchProduct($upc, $storeId);
-                    if ($product->isExistingProduct) {
-                        $this->handleExistingProduct($product, $storeId, $departmentId, $location);
-                    } else {
-                        $product->setDescription(($data[2]));
-                        $product->setSize(($data[3]));
-                        $this->createNewProductAndItem($product, $storeId, $departmentId, $location);
-                    }
-
-                    $this->import->createVendor($upc, trim($data[8]));
-
-                    $this->persistMetric($product->barcode, $storeId, $data);
+                // skip items with zero or empty tag quantity
+                if (intval($data[5]) <= 0) {
+                    $this->import->recordSkipped();
+                    continue;
                 }
+
+                $departmentId = $this->import->getDepartmentId($data[7]);
+                if ($departmentId === false) {
+                    continue;
+                }
+
+                $expires = (string)date('Y-m-d 00:00:00', strtotime($data[6]));
+                if (empty($expires)) {
+                    $this->import->recordFileLineError('Invalid Expiration Date', $data[6]);
+                    continue;
+                }
+
+                $location = $this->parseLocation($data[4]);
+                if (intval($location->aisle) === 127) {
+                    // move these items to the pet department
+                    $departmentId = $this->import->getDepartmentId('pet');
+                }
+
+                $product = $this->import->fetchProduct($upc, $storeId);
+                if ($product->isExistingProduct) {
+                    $this->handleExistingProduct($product, $storeId, $departmentId, $location);
+                } else {
+                    $product->setDescription(($data[2]));
+                    $product->setSize(($data[3]));
+                    $this->createNewProductAndItem($product, $storeId, $departmentId, $location);
+                }
+
+                $this->import->createVendor($upc, trim($data[8]));
+
+                $this->persistMetric($product->barcode, $storeId, $data);
             }
 
             fclose($handle);
