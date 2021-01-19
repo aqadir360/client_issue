@@ -3,7 +3,6 @@
 namespace App\Objects;
 
 use App\Models\Product;
-use Exception;
 
 class ImportManager
 {
@@ -185,20 +184,28 @@ class ImportManager
             return false;
         }
 
-        $this->db->insertSkipItem($this->companyId, $barcode);
-        $this->skipList[intval($barcode)] = true;
+        $this->insertSkipItem($barcode);
 
-        try {
-            $parsed = BarcodeFixer::fixUpc($barcode);
-            if (intval($parsed) !== intval($barcode) && !(isset($this->skipList[intval($parsed)]))) {
-                $this->db->insertSkipItem($this->companyId, $parsed);
-                $this->skipList[intval($parsed)] = true;
-            }
-        } catch (Exception $e) {
-            // Ignore invalid
+        // Use barcode as-is
+        $upcOne = str_pad(ltrim($barcode, '0'), 13, '0', STR_PAD_LEFT);
+        if (BarcodeFixer::isValid($upcOne) && !(isset($this->skipList[intval($upcOne)]))) {
+            $this->insertSkipItem($upcOne);
+        }
+
+        // Add a check digit
+        $upcTwo = str_pad(ltrim($barcode, '0'), 11, '0', STR_PAD_LEFT);
+        $upcTwo = '0' . $upcTwo . BarcodeFixer::calculateMod10Checksum($upcTwo);
+        if (BarcodeFixer::isValid($upcTwo) && !(isset($this->skipList[intval($upcTwo)]))) {
+            $this->insertSkipItem($upcTwo);
         }
 
         return true;
+    }
+
+    private function insertSkipItem(string $barcode)
+    {
+        $this->db->insertSkipItem($this->companyId, $barcode);
+        $this->skipList[intval($barcode)] = true;
     }
 
     // Finds matching department id by company department mappings
