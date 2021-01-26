@@ -32,6 +32,7 @@ class OverlayOos
 
         try {
             $this->overlayInventory($companyId, $settings, $resultId);
+            $this->proxy->triggerUpdateCounts($companyId);
             $this->db->completeImport($importStatusId, 1, 0, '');
         } catch (\Exception $e) {
             $this->db->updateOverlayResultsRow($resultId, 0, 0, 0, $e->getMessage());

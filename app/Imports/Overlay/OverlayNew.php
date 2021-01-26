@@ -32,6 +32,7 @@ class OverlayNew
 
         try {
             $this->overlayInventory($companyId, $settings, $resultId);
+            $this->proxy->triggerUpdateCounts($companyId);
         } catch (\Exception $e) {
             $this->db->updateOverlayResultsRow($resultId, 0, 0, 0, $e->getMessage());
             $this->db->completeImport($importStatusId, 1, 0, $e->getMessage());
