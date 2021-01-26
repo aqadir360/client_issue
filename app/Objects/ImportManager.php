@@ -28,6 +28,7 @@ class ImportManager
     private $importTypeId;
     private $importId;
     private $filesProcessed = 0;
+    private $outputFile;
 
     private $debugMode;
 
@@ -91,11 +92,20 @@ class ImportManager
         $this->currentFile = new FileStatus($filePath);
         $this->currentFile->insertFileRow($this->importId);
         $this->outputContent("---- Importing $file");
+
+        $this->outputFile = fopen(storage_path('output/' . $file . time() . '-output.csv'), 'w');
     }
 
     public function recordFileLineError($status, $message)
     {
         $this->currentFile->recordError($status, $message);
+    }
+
+    public function writeFileOutput(array $data, string $message)
+    {
+        $output[] = $message;
+        array_merge($output, $data);
+        fputcsv($this->outputFile, $output);
     }
 
     public function completeFile()
@@ -106,6 +116,8 @@ class ImportManager
         if (!$this->debugMode) {
             $this->currentFile->deleteFile();
         }
+
+        fclose($this->outputFile);
     }
 
     public function downloadFilesByName(string $name, bool $matching = true): array

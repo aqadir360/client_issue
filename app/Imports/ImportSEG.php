@@ -78,21 +78,30 @@ class ImportSEG implements ImportInterface
                     continue;
                 }
 
+                if (count($data) < 8) {
+                    $this->import->writeFileOutput($data, "Skip: Parsing Error");
+                    $this->import->recordFileLineError('ERROR', 'Unable to parse row: ' . json_encode($data));
+                    continue;
+                }
+
                 $this->recordSku(trim($data[7]), trim($data[8]));
 
                 $upc = BarcodeFixer::fixUpc(trim($data[8]));
                 if ($this->import->isInvalidBarcode($upc, $data[8])) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
                 }
 
                 $location = $this->normalizeLocation($data);
                 if ($location->valid === false) {
                     $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
                     continue;
                 }
 
                 $departmentId = $this->import->getDepartmentId($data[12], $data[6]);
                 if ($departmentId === false) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
                 }
 
@@ -103,6 +112,7 @@ class ImportSEG implements ImportInterface
                     $product->setSize($data[10]);
 
                     if (empty($product->description)) {
+                        $this->import->writeFileOutput($data, "Skip: Missing Description for New Product");
                         $this->import->recordFileLineError('ERROR', 'Missing Product Description');
                         continue;
                     }
@@ -111,6 +121,7 @@ class ImportSEG implements ImportInterface
                 if ($product->hasInventory()) {
                     $productId = $product->productId;
                     $this->import->recordStatic();
+                    $this->import->writeFileOutput($data, "Success: Inventory Exists");
                 } else {
                     $productId = $this->import->implementationScan(
                         $product,
@@ -120,6 +131,7 @@ class ImportSEG implements ImportInterface
                         $departmentId,
                         $location->shelf
                     );
+                    $this->import->writeFileOutput($data, "Success: Created Inventory");
                 }
 
                 if ($productId) {
