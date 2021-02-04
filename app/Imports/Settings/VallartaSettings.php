@@ -8,8 +8,16 @@ class VallartaSettings
 {
     public function shouldSkipLocation(Location $location): bool
     {
-        $aisle = strtolower($location->aisle);
-        $section = strtolower($location->section);
+        $aisle = trim(strtolower($location->aisle));
+        $section = trim(strtolower($location->section));
+
+        if (empty($aisle) || empty($section)) {
+            return true;
+        }
+
+        if (strpos($aisle, '*') || strpos($location->aisle, 'X') || strpos($location->aisle, 'O')) {
+            return true;
+        }
 
         $excluded = [
             'zzz',
@@ -17,12 +25,9 @@ class VallartaSettings
             'out',
             '*80',
             '000',
+            '998',
             '999',
         ];
-
-        if (empty($aisle) || empty($section)) {
-            return true;
-        }
 
         foreach ($excluded as $item) {
             if ($item == $aisle || $item == $section) {

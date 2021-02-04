@@ -103,9 +103,7 @@ class ImportManager
 
     public function writeFileOutput(array $data, string $message)
     {
-        $output[] = $message;
-        array_merge($output, $data);
-        fputcsv($this->outputFile, $output);
+        fputcsv($this->outputFile, [$message] + $data);
     }
 
     public function completeFile()

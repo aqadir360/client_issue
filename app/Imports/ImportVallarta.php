@@ -52,11 +52,13 @@ class ImportVallarta implements ImportInterface
 
                 $storeId = $this->import->storeNumToStoreId(intval($data[1]));
                 if ($storeId === false) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Store");
                     continue;
                 }
 
                 $barcode = $this->fixBarcode(trim($data[2]));
                 if ($this->import->isInvalidBarcode($barcode, $data[2])) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
                 }
 
@@ -64,10 +66,11 @@ class ImportVallarta implements ImportInterface
                     case 'disco':
                         // Skipping discontinues due to incorrect timing
                         $this->import->recordSkipped();
+                        $this->import->writeFileOutput($data, "Skip: disco");
                         break;
                     case 'move':
                         $location = new Location(trim($data[5]), trim($data[6]));
-                        $this->handleMove($barcode, $storeId, trim($data[7]), trim($data[9]), $location);
+                        $this->handleMove($data, $barcode, $storeId, trim($data[7]), trim($data[9]), $location);
                         break;
                     case 'add':
                         $this->handleAdd($data, $barcode, $storeId);
@@ -85,11 +88,13 @@ class ImportVallarta implements ImportInterface
     {
         $departmentId = $this->import->getDepartmentId(trim(strtolower($data[5])), trim(strtolower($data[9])));
         if ($departmentId === false) {
+            $this->import->writeFileOutput($data, "Skip: Invalid Department");
             return;
         }
 
         $location = new Location(trim($data[3]), trim($data[4]));
         if ($this->settings->shouldSkipLocation($location)) {
+            $this->import->writeFileOutput($data, "Skip: Invalid Location");
             $this->import->recordSkipped();
             return;
         }
@@ -97,6 +102,7 @@ class ImportVallarta implements ImportInterface
         $product = $this->import->fetchProduct($barcode, $storeId);
         if ($product->hasInventory()) {
             $this->import->recordSkipped();
+            $this->import->writeFileOutput($data, "Static");
             return;
         }
 
@@ -105,6 +111,7 @@ class ImportVallarta implements ImportInterface
             $product->setSize($data[7]);
         }
 
+        $this->import->writeFileOutput($data, "Success: Creating Inventory");
         $this->import->implementationScan(
             $product,
             $storeId,
@@ -114,10 +121,11 @@ class ImportVallarta implements ImportInterface
         );
     }
 
-    private function handleMove($barcode, $storeId, $department, $category, Location $location)
+    private function handleMove($data, $barcode, $storeId, $department, $category, Location $location)
     {
         $deptId = $this->import->getDepartmentId(trim(strtolower($department)), trim(strtolower($category)));
         if ($deptId === false) {
+            $this->import->writeFileOutput($data, "Skip: Invalid Department");
             return;
         }
 
@@ -125,6 +133,7 @@ class ImportVallarta implements ImportInterface
         if ($product->isExistingProduct === false) {
             // Moves do not include product information
             $this->import->recordSkipped();
+            $this->import->writeFileOutput($data, "Skip: New Product");
             return;
         }
 
@@ -134,11 +143,13 @@ class ImportVallarta implements ImportInterface
             if ($item !== null) {
                 if ($this->settings->shouldDisco($location)) {
                     $this->import->discontinueInventory($item->inventory_item_id);
+                    $this->import->writeFileOutput($data, "Success: Discontinued");
                 } else {
                     if ($this->settings->shouldSkipLocation($location)) {
                         $this->import->recordSkipped();
+                        $this->import->writeFileOutput($data, "Skip: Invalid Location");
                     } else {
-                        $this->moveInventory($item, $storeId, $deptId, $location);
+                        $this->moveInventory($data, $item, $storeId, $deptId, $location);
                     }
                 }
 
@@ -156,21 +167,24 @@ class ImportVallarta implements ImportInterface
         );
     }
 
-    private function moveInventory($item, string $storeId, string $deptId, Location $location)
+    private function moveInventory($data, $item, string $storeId, string $deptId, Location $location)
     {
         if ($item->aisle == $location->aisle) {
             if ($item->section == $location->section) {
                 $this->import->recordStatic();
+                $this->import->writeFileOutput($data, "Static");
                 return;
             }
 
             if (empty($location->section) && !empty($item->section)) {
                 // Do not clear existing section information
                 $this->import->recordStatic();
+                $this->import->writeFileOutput($data, "Static: Clearing location");
                 return;
             }
         }
 
+        $this->import->writeFileOutput($data, "Success: Updated Location");
         $this->import->updateInventoryLocation(
             $item->inventory_item_id,
             $storeId,
@@ -197,11 +211,13 @@ class ImportVallarta implements ImportInterface
 
                 $barcode = $this->fixBarcode(trim($data[1]));
                 if ($this->import->isInvalidBarcode($barcode, $data[1])) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
                 }
 
                 $product = $this->import->fetchProduct($barcode);
                 if ($product->isExistingProduct === false) {
+                    $this->import->writeFileOutput($data, "Skip: New Product");
                     $this->import->recordSkipped();
                     continue;
                 }
