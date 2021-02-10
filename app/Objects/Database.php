@@ -311,6 +311,19 @@ class Database
         ]);
     }
 
+    public function insertProduct(string $productId, string $barcode, string $name, string $size)
+    {
+        $sql = "INSERT INTO {$this->db}.products
+        (product_id, barcode, description, size, created_at, updated_at)
+        VALUES (:product_id, :barcode, :description, :size, NOW(), NOW())";
+        return DB::insert($sql, [
+            'product_id' => $productId,
+            'barcode' => $barcode,
+            'description' => $name,
+            'size' => $size,
+        ]);
+    }
+
     public function insertMetric(string $storeId, string $productId, int $cost, int $retail, int $movement)
     {
         $sql = "INSERT INTO {$this->db}.metrics

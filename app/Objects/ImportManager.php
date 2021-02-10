@@ -381,7 +381,9 @@ class ImportManager
             return null;
         }
 
-        return $response->message;
+        $productId = $response->message;
+        // $this->db->insertProduct($productId, $product->barcode, $product->description, $product->size);
+        return $productId;
     }
 
     // Returns product id or null
