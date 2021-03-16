@@ -135,7 +135,7 @@ class VallartaInventory implements ImportInterface
 
     private function fixBarcode(string $upc)
     {
-        try {
+//        try {
             while (strlen($upc) > 0 && $upc[0] === '0') {
                 $upc = substr($upc, 1);
             }
@@ -143,8 +143,8 @@ class VallartaInventory implements ImportInterface
             $output = str_pad(ltrim($upc, '0'), 12, '0', STR_PAD_LEFT);
 
             return $output . BarcodeFixer::calculateMod10Checksum($output);
-        } catch (\Exception $e) {
-            return '0';
-        }
+//        } catch (\Exception $e) {
+//            return '0';
+//        }
     }
 }

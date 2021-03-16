@@ -3,6 +3,10 @@
 namespace App\Objects;
 
 // Any changes should be replicated in Admin project
+use DateInterval;
+use DateTime;
+use DateTimeZone;
+
 class CalculateSchedule
 {
     // Chooses the next pending run from available schedules and inserts job
@@ -20,7 +24,7 @@ class CalculateSchedule
                     $schedule->month_day,
                     $schedule->start_hour,
                     $schedule->start_minute,
-                    new \DateTime()
+                    new DateTime()
                 );
 
                 if ($nextRun !== null) {
@@ -36,7 +40,7 @@ class CalculateSchedule
         $monthDay,
         $startHour,
         $startMinute,
-        \DateTime $date,
+        DateTime $date,
         $archivedAt = null
     ): ?string {
         if ($archivedAt !== null) {
@@ -44,23 +48,23 @@ class CalculateSchedule
             return null;
         }
 
-        $localDate = new \DateTime($date->format('Y-m-d'), new \DateTimeZone('America/Chicago'));
+        $localDate = new DateTime($date->format('Y-m-d'), new DateTimeZone('America/Chicago'));
         $localDate->setTime($startHour, $startMinute);
 
         if (intval($daily) === 1) {
-            $localDate->add(new \DateInterval('P1D'));
+            $localDate->add(new DateInterval('P1D'));
         } else {
             if ($weekDay !== null) {
                 $weekDate = clone $localDate;
                 $weekDate->modify(CalculateSchedule::getWeekDay($weekDay) . ' next week');
                 $localDate->setDate($weekDate->format('Y'), $weekDate->format('m'), $weekDate->format('d'));
             } elseif ($monthDay !== null) {
-                $localDate->add(new \DateInterval('P1M'));
+                $localDate->add(new DateInterval('P1M'));
                 $localDate->setDate($localDate->format('Y'), $localDate->format('m'), $monthDay);
             }
         }
 
-        $localDate->setTimezone(new \DateTimeZone('UTC'));
+        $localDate->setTimezone(new DateTimeZone('UTC'));
         return $localDate->format('Y-m-d H:i:s');
     }
 

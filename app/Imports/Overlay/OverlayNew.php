@@ -24,14 +24,14 @@ class OverlayNew
         $this->db = $db;
     }
 
-    public function importUpdates(string $companyId, int $scheduleId)
+    public function importUpdates(string $dbName, string $importTypeId, string $companyId, int $scheduleId)
     {
-        $importStatusId = $this->db->startImport($scheduleId);
+        $importStatusId = $this->db->startImport($importTypeId, $scheduleId);
         $resultId = $this->db->insertResultsRow($importStatusId, "New Item Overlay");
-        $settings = $this->getImportSettings($companyId);
+        $settings = $this->getImportSettings($scheduleId);
 
         try {
-            $this->overlayInventory($companyId, $settings, $resultId);
+            $this->overlayInventory($dbName, $companyId, $settings, $resultId);
             $this->proxy->triggerUpdateCounts($companyId);
         } catch (\Exception $e) {
             $this->db->updateOverlayResultsRow($resultId, 0, 0, 0, $e->getMessage());
@@ -43,8 +43,10 @@ class OverlayNew
         $this->db->completeImport($importStatusId, 1, 0, '');
     }
 
-    private function overlayInventory(string $companyId, Settings $settings, $resultId)
+    private function overlayInventory(string $dbName, string $companyId, Settings $settings, $resultId)
     {
+        $this->db->setDbName($dbName);
+
         // Fetch all new inventory grouped by products
         $products = $this->db->fetchNewCompanyProducts($companyId);
 
@@ -70,7 +72,7 @@ class OverlayNew
                 $inventory = $this->db->fetchNewCompanyInventory($product->product_id, $companyId, $settings->excludeStores, $settings->excludeDepts);
 
                 foreach ($inventory as $item) {
-                    $this->proxy->writeInventoryExpiration($item->inventory_item_id, $closestDate->expiration_date);
+                    $this->proxy->writeInventoryExpiration($companyId, $item->inventory_item_id, $closestDate->expiration_date);
                     $inventoryCount++;
                 }
             } else {
@@ -83,9 +85,9 @@ class OverlayNew
         $this->db->updateOverlayResultsRow($resultId, $total, $updatedCount, $skipped, $output);
     }
 
-    private function getImportSettings(string $companyId): Settings
+    private function getImportSettings(string $scheduleId): Settings
     {
-        $result = $this->db->fetchCustomImportSettings($this->key, $companyId);
+        $result = $this->db->fetchCustomImportSettings($scheduleId);
         return new Settings($result);
     }
 }

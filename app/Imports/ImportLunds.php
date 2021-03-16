@@ -7,8 +7,8 @@ use App\Models\Product;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 
-// Lunds Inventory and Metrics Import
-// Expects Aisle Change, Discontinued, All Items (metrics), and Exclude (skip) files twice weekly
+// Lunds Inventory Import
+// Expects Aisle Change, Discontinued, and Exclude (skip) files twice weekly
 class ImportLunds implements ImportInterface
 {
     /** @var ImportManager */
@@ -24,7 +24,6 @@ class ImportLunds implements ImportInterface
     {
         $importList = $this->import->downloadFilesByName('Aisle_Changes');
         $discoList = $this->import->downloadFilesByName('Discontinued');
-        $metricsList = $this->import->downloadFilesByName('All_Items');
         $skipList = $this->import->downloadFilesByName('Exclude');
 
         foreach ($skipList as $filePath) {
@@ -37,10 +36,6 @@ class ImportLunds implements ImportInterface
 
         foreach ($discoList as $filePath) {
             $this->importDiscoFile($filePath);
-        }
-
-        foreach ($metricsList as $filePath) {
-            $this->importMetricsFile($filePath);
         }
 
         $this->import->completeImport();
@@ -76,54 +71,6 @@ class ImportLunds implements ImportInterface
 
         $this->import->completeFile();
         fclose($handle);
-    }
-
-    // Expects File Format:
-    // [0] STORE_ID
-    // [1] UPC_EAN
-    // [2] DESCRIPTION
-    // [3] SELL_SIZE
-    // [4] LOCATION
-    // [5] Tag Quantity
-    // [6] DateSTR
-    // [7] Department
-    // [8] Vendor_Name
-    // [9] Item_Status
-    // [10] Unit_Cost
-    // [11] Retail
-    // [12] AVERAGE_MOVEMENT
-    private function importMetricsFile($file)
-    {
-        $this->import->startNewFile($file);
-
-        if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-                if (trim($data[0]) === 'STORE_ID') {
-                    continue;
-                }
-
-                if (!$this->import->recordRow()) {
-                    break;
-                }
-
-                $storeId = $this->import->storeNumToStoreId($data[0]);
-                if ($storeId === false) {
-                    continue;
-                }
-
-                $upc = BarcodeFixer::fixLength($data[1]);
-                if ($this->import->isInvalidBarcode($upc, $data[1])) {
-                    continue;
-                }
-
-                $this->persistMetric($upc, $storeId, $data);
-                $this->import->createVendor($upc, trim($data[8]));
-            }
-
-            fclose($handle);
-        }
-
-        $this->import->completeFile();
     }
 
     private function importActiveFile($file)

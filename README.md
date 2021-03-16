@@ -13,8 +13,8 @@ It requires a connection to the DCP2 API and the DCP2 Admin database.
 1. Create app/Imports/Import___ class implementing ImportInterface
 2. Add row to import_types table mapping key to company_id
 3. Add key to ImportFactory class mapping
-4. Import will now be available for scheduling in the Admin
-5. An import_schedule row is required for the import to run
+4. Copy insert row into the DatabaseSeeder class
+5. Import will now be available for scheduling in the Admin
 
 ### Manually Run Import
 php artisan dcp:do-import key

@@ -126,8 +126,9 @@ class InventoryCompare
 
     public function fileInventoryCount(): int
     {
-        $this->import->outputContent(count($this->fileItemsLookup) . " inventory items in file");
-        return count($this->fileItemsLookup);
+        $count = count($this->fileItemsLookup);
+        $this->import->outputContent("$count inventory items in file");
+        return $count;
     }
 
     private function handleOneToOneMatch($barcode, $items)
@@ -216,13 +217,9 @@ class InventoryCompare
         $locKey = $this->getLocKey($item['aisle'], $item['section']);
 
         // Do not add items in untracked locations
-        if (!isset($this->trackedLocations[$locKey])) {
+        if (!isset($this->trackedLocations[$locKey]) || ($this->trackedLocations[$locKey]['count'] <= $this->minItemsForTrackedLoc)) {
             $this->import->recordSkipped();
             return;
-        }
-
-        if ($this->trackedLocations[$locKey] <= $this->minItemsForTrackedLoc) {
-            $this->import->outputContent("$barcode added at low inventory location");
         }
 
         $item['departmentId'] = $this->trackedLocations[$locKey]['deptId'];
@@ -233,7 +230,7 @@ class InventoryCompare
 
     private function implementationScan($item)
     {
-        $product = $this->import->fetchProduct($item['barcode']);
+        $product = $this->import->fetchProduct(BarcodeFixer::fixLength($item['barcode']));
 
         if (!$product->isExistingProduct) {
             $product->setDescription($this->parseDescription($item['description']));
@@ -252,7 +249,7 @@ class InventoryCompare
 
     private function discontinue($item)
     {
-        $response = $this->proxy->writeInventoryDisco($item['id']);
+        $response = $this->proxy->writeInventoryDisco($this->companyId, $item['id']);
         $this->import->recordResponse($response, 'disco');
     }
 

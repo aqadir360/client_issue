@@ -2,6 +2,7 @@
 
 namespace App\Objects;
 
+use Archive7z\Archive7z;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Facades\Storage;
 use Log;
@@ -62,6 +63,7 @@ class FtpManager
     // Writes from FTP to local storage/imports/
     public function downloadFile(string $file)
     {
+        echo "Downloading $file" . PHP_EOL;
         try {
             if (!file_exists(storage_path('imports/' . basename($file)))) {
                 Storage::disk('imports')->put(basename($file), $this->ftp->get($file));
@@ -93,6 +95,24 @@ class FtpManager
 
         Log::error("Unzip Error $zipSuccess in $zipFile");
         return false;
+    }
+
+    public function unzipSevenZipFile(string $zipFile, $unzipPath)
+    {
+        $path = storage_path("imports/$unzipPath/");
+        if (!file_exists($path)) {
+            mkdir($path);
+        }
+
+        $zip = new Archive7z($zipFile);
+        if (!$zip->isValid()) {
+            return false;
+        }
+
+        $zip->setOutputDirectory($path);
+        $zip->extract();
+        unlink($zipFile);
+        return true;
     }
 
     // Populates list of files modified since last date

@@ -15,7 +15,11 @@ class VallartaSettings
             return true;
         }
 
-        if (strpos($aisle, '*') || strpos($location->aisle, 'X') || strpos($location->aisle, 'O')) {
+        if (strpos($location->aisle, 'O') !== false || strpos($location->aisle, 'X') !== false) {
+            return true;
+        }
+
+        if (strpos($aisle, '*') !== false) {
             return true;
         }
 

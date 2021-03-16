@@ -26,7 +26,7 @@ class ImportManager
 
     private $companyId;
     private $importTypeId;
-    private $importId;
+    private $importStatusId;
     private $filesProcessed = 0;
     private $outputFile;
 
@@ -44,16 +44,23 @@ class ImportManager
         Database $database,
         FtpManager $ftpManager,
         string $companyId,
+        string $dbName,
         int $importTypeId,
-        int $scheduleId,
-        bool $debugMode = false
+        ?int $importJobId,
+        bool $debugMode
     ) {
-        $this->proxy = $api;
-        $this->db = $database;
         $this->companyId = $companyId;
         $this->importTypeId = $importTypeId;
-        $this->importId = $this->db->startImport($scheduleId);
 
+        $this->db = $database;
+        $this->db->setDbName($dbName);
+
+        $this->proxy = $api;
+        $this->proxy->setAdminToken(
+            $this->db->setProxyLoginToken($companyId)
+        );
+
+        $this->importStatusId = $this->db->startImport($importTypeId, $importJobId);
         $this->setStores();
         $this->setDepartments();
 
@@ -78,11 +85,22 @@ class ImportManager
 
     public function shouldSkipLocation($aisle, $section = '', $shelf = ''): bool
     {
+        if (empty($aisle) && empty($section)) {
+            if ($this->currentFile) {
+                $this->currentFile->skipped++;
+            }
+            return true;
+        }
+
         if ($this->skippedLocations === null) {
             return false;
         }
 
-        return $this->skippedLocations->shouldSkip($aisle, $section, $shelf);
+        $skip = $this->skippedLocations->shouldSkip($aisle, $section, $shelf);
+        if ($skip === true && $this->currentFile) {
+            $this->currentFile->skipped++;
+        }
+        return $skip;
     }
 
     public function startNewFile($filePath)
@@ -90,7 +108,7 @@ class ImportManager
         $this->filesProcessed++;
         $file = basename($filePath);
         $this->currentFile = new FileStatus($filePath);
-        $this->currentFile->insertFileRow($this->importId);
+        $this->currentFile->insertFileRow($this->importStatusId);
         $this->outputContent("---- Importing $file");
 
         $this->outputFile = fopen(storage_path('output/' . $file . time() . '-output.csv'), 'w');
@@ -290,7 +308,6 @@ class ImportManager
 
         $this->currentFile->invalidBarcodeErrors++;
         $this->addInvalidBarcode($original);
-//        echo "Invalid Barcode " . $original . " " . $barcode . PHP_EOL;
         return true;
     }
 
@@ -305,6 +322,8 @@ class ImportManager
         if ($existing !== false) {
             $product->isExistingProduct = true;
             $product->productId = $existing->product_id;
+            $product->description = $existing->description;
+            $product->size = $existing->size;
 
             if ($storeId !== null) {
                 $product->inventory = $this->db->fetchProductInventory($product->productId, $storeId);
@@ -341,25 +360,25 @@ class ImportManager
 
     public function discontinueInventory(string $itemId)
     {
-        $response = $this->proxy->writeInventoryDisco($itemId);
+        $response = $this->proxy->writeInventoryDisco($this->companyId, $itemId);
         $this->recordResponse($response, 'disco');
     }
 
     public function discontinueProduct(string $storeId, string $productId)
     {
-        $response = $this->proxy->discontinueProduct($storeId, $productId);
+        $response = $this->proxy->discontinueProduct($this->companyId, $storeId, $productId);
         $this->recordResponse($response, 'disco');
     }
 
     public function discontinueProductByBarcode(string $storeId, string $barcode)
     {
-        $response = $this->proxy->discontinueProductByBarcode($storeId, $barcode);
+        $response = $this->proxy->discontinueProductByBarcode($this->companyId, $storeId, $barcode);
         $this->recordResponse($response, 'disco');
     }
 
     public function persistProduct($barcode, $name, $size): bool
     {
-        $response = $this->proxy->persistProduct($barcode, $name, $size);
+        $response = $this->proxy->persistProduct($this->companyId, $barcode, $name, $size);
 
         if (!$this->proxy->validResponse($response)) {
             $this->addInvalidBarcode($barcode);
@@ -373,7 +392,7 @@ class ImportManager
     // Returns null or product ID
     public function createProduct(Product $product): ?string
     {
-        $response = $this->proxy->persistProduct($product->barcode, $product->description, $product->size);
+        $response = $this->proxy->persistProduct($this->companyId, $product->barcode, $product->description, $product->size);
 
         if (!$this->proxy->validResponse($response)) {
             $this->addInvalidBarcode($product->barcode);
@@ -391,6 +410,7 @@ class ImportManager
     {
         $response = $this->proxy->implementationScan(
             $product,
+            $this->companyId,
             $storeId,
             $aisle,
             $section,
@@ -456,6 +476,13 @@ class ImportManager
         return ($response && ($response === true || $response->status === 'ACCEPTED' || $response->status === 'FOUND'));
     }
 
+    public function setTotalCount(int $total)
+    {
+        if ($this->currentFile) {
+            $this->currentFile->total = $total;
+        }
+    }
+
     public function outputContent($msg)
     {
         echo $msg . PHP_EOL;
@@ -474,7 +501,7 @@ class ImportManager
     {
         $this->proxy->triggerUpdateCounts($this->companyId);
         $this->db->completeImport(
-            $this->importId,
+            $this->importStatusId,
             $this->filesProcessed,
             $this->debugMode ? 0 : $this->ftpManager->getNewDate(),
             $errorMsg

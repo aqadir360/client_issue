@@ -15,7 +15,8 @@ class CreateImportStatusTable extends Migration
     {
         Schema::create('import_status', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('import_schedule_id');
+            $table->foreignId('import_type_id');
+            $table->foreignId('import_job_id')->nullable();
             $table->text('error_message')->nullable();
             $table->integer('files_processed')->nullable();
             $table->integer('compare_date')->default(0);

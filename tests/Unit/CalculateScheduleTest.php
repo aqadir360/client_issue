@@ -4,7 +4,9 @@ namespace Tests\Unit;
 
 use App\Objects\CalculateSchedule;
 use App\Objects\Database;
+use DateTime;
 use PHPUnit\Framework\TestCase;
+use StdClass;
 
 class CalculateScheduleTest extends TestCase
 {
@@ -12,7 +14,7 @@ class CalculateScheduleTest extends TestCase
     {
         $database = $this->createMock(Database::class);
 
-        $schedule = new \StdClass;
+        $schedule = new StdClass;
         $schedule->once = null;
         $schedule->daily = true;
         $schedule->week_day = null;
@@ -39,7 +41,7 @@ class CalculateScheduleTest extends TestCase
     {
         $database = $this->createMock(Database::class);
 
-        $schedule = new \StdClass;
+        $schedule = new StdClass;
         $schedule->once = '2020-01-01';
 
         $database->expects($this->once())
@@ -65,7 +67,7 @@ class CalculateScheduleTest extends TestCase
             null,
             4,
             5,
-            new \DateTime('2020-01-10'),
+            new DateTime('2020-01-10'),
             '2020-01-01'
         );
 
@@ -81,7 +83,7 @@ class CalculateScheduleTest extends TestCase
             null,
             0,
             0,
-            new \DateTime('2020-09-16 05:13:00')
+            new DateTime('2020-09-16 05:13:00')
         );
 
         $this->assertEquals('2020-09-17 05:00:00', $output);
@@ -96,7 +98,7 @@ class CalculateScheduleTest extends TestCase
             null,
             0,
             0,
-            new \DateTime('2020-12-16 01:01:22')
+            new DateTime('2020-12-16 01:01:22')
         );
 
         $this->assertEquals('2020-12-17 06:00:00', $output);
@@ -111,7 +113,7 @@ class CalculateScheduleTest extends TestCase
             null,
             0,
             0,
-            new \DateTime('2020-07-16 23:13:46')
+            new DateTime('2020-07-16 23:13:46')
         );
 
         $this->assertEquals('2020-07-17 05:00:00', $output);
@@ -126,7 +128,7 @@ class CalculateScheduleTest extends TestCase
             null,
             0,
             0,
-            new \DateTime('2020-02-29 23:13:46')
+            new DateTime('2020-02-29 23:13:46')
         );
 
         $this->assertEquals('2020-03-01 06:00:00', $output);
@@ -141,7 +143,7 @@ class CalculateScheduleTest extends TestCase
             null,
             2,
             30,
-            new \DateTime('2020-12-31 23:13:46')
+            new DateTime('2020-12-31 23:13:46')
         );
 
         $this->assertEquals('2021-01-01 08:30:00', $output);
@@ -156,7 +158,7 @@ class CalculateScheduleTest extends TestCase
             null,
             0,
             15,
-            new \DateTime('2020-09-07 05:15:03')
+            new DateTime('2020-09-07 05:15:03')
         );
 
         $this->assertEquals('2020-09-15 05:15:00', $output);
@@ -171,7 +173,7 @@ class CalculateScheduleTest extends TestCase
             null,
             0,
             15,
-            new \DateTime('2020-01-06 06:23:01')
+            new DateTime('2020-01-06 06:23:01')
         );
 
         $this->assertEquals('2020-01-14 06:15:00', $output);
@@ -186,7 +188,7 @@ class CalculateScheduleTest extends TestCase
             null,
             0,
             13,
-            new \DateTime('2020-09-09 05:28:03')
+            new DateTime('2020-09-09 05:28:03')
         );
 
         $this->assertEquals('2020-09-16 05:13:00', $output);
@@ -201,7 +203,7 @@ class CalculateScheduleTest extends TestCase
             null,
             4,
             30,
-            new \DateTime('2020-07-31 11:28:03')
+            new DateTime('2020-07-31 11:28:03')
         );
 
         $this->assertEquals('2020-08-07 09:30:00', $output);
@@ -215,7 +217,7 @@ class CalculateScheduleTest extends TestCase
             22,
             8,
             15,
-            new \DateTime('2020-01-22 15:10:22')
+            new DateTime('2020-01-22 15:10:22')
         );
 
         $this->assertEquals('2020-02-22 14:15:00', $output);
@@ -229,7 +231,7 @@ class CalculateScheduleTest extends TestCase
             2,
             23,
             50,
-            new \DateTime('2020-08-03 05:11:33')
+            new DateTime('2020-08-03 05:11:33')
         );
 
         $this->assertEquals('2020-09-03 04:50:00', $output);
@@ -243,7 +245,7 @@ class CalculateScheduleTest extends TestCase
             16,
             11,
             0,
-            new \DateTime('2020-12-16 20:11:33')
+            new DateTime('2020-12-16 20:11:33')
         );
 
         $this->assertEquals('2021-01-16 17:00:00', $output);

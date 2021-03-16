@@ -37,15 +37,16 @@ class DoImport extends Command
             return;
         }
 
-        $lastRun = $database->fetchLastRun($import->schedule_id);
+        $lastRun = $database->fetchLastRun($import->type_id);
 
         $importManager = new ImportManager(
             new Api(),
             $database,
             new FtpManager($import->ftp_path, $lastRun),
             $import->company_id,
-            intval($import->id),
-            intval($import->schedule_id),
+            $import->db_name,
+            intval($import->type_id),
+            null,
             config('scraper.debug_mode') === 'debug'
         );
 
@@ -55,9 +56,9 @@ class DoImport extends Command
             try {
                 $import->importUpdates();
             } catch (Exception $e) {
+                var_dump($e);
                 $importManager->completeImport($e->getMessage());
-                echo $e->getMessage() . PHP_EOL;
-                Log::error($e);
+                Log::error($e->getTraceAsString());
             }
         }
     }

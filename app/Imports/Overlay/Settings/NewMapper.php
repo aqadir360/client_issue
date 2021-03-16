@@ -7,6 +7,7 @@ namespace App\Imports\Overlay\Settings;
 // - store_from: store_id to copy from (if empty, copy from all)
 // - store_exclude: store_id to skip copy to
 // - dept_exclude: department_id to skip copy to
+
 class NewMapper
 {
     public $copyFrom = [];

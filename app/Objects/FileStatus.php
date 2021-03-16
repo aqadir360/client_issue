@@ -119,7 +119,7 @@ class FileStatus
 
     public function insertFileRow($importStatusId)
     {
-        $sql = "INSERT INTO dcp2admin.import_results (import_status_id, filename, created_at) VALUES (:import_status_id, :filename, NOW())";
+        $sql = "INSERT INTO import_results (import_status_id, filename, created_at) VALUES (:import_status_id, :filename, NOW())";
 
         DB::insert($sql, [
             'import_status_id' => $importStatusId,
@@ -131,7 +131,7 @@ class FileStatus
 
     public function updateCompletedRow()
     {
-        $sql = "UPDATE dcp2admin.import_results
+        $sql = "UPDATE import_results
                 SET completed_at = NOW(), adds = :adds, moves = :moves, discos = :discos, skipped = :skipped,
                     metrics = :metrics, errors = :errors, total = :total, static = :static, output = :output,
                     skip_invalid_stores = :skip_invalid_stores, skip_invalid_barcodes = :skip_invalid_barcodes,
@@ -191,7 +191,8 @@ class FileStatus
 
     private function insertErrorMessage($status, $message)
     {
-        $sql = "INSERT INTO dcp2admin.import_errors (import_id, row, status, message) VALUES (:import_id, :row, :status, :message)";
+        $sql = "INSERT INTO import_errors (import_id, row, status, message, created_at)
+            VALUES (:import_id, :row, :status, :message, NOW())";
 
         DB::insert($sql, [
             'import_id' => $this->fileRowId,

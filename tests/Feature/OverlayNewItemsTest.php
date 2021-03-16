@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Imports\Overlay\OverlayNew;
 use App\Objects\Api;
 use App\Objects\Database;
+use StdClass;
 use Tests\TestCase;
 
 class OverlayNewItemsTest extends TestCase
@@ -29,7 +30,7 @@ class OverlayNewItemsTest extends TestCase
             ->with('overlay_new', 'companyId')
             ->willReturn([]);
 
-        $companyProductsResult = new \StdClass;
+        $companyProductsResult = new StdClass;
         $companyProductsResult->product_id = 'productId';
 
         $database->expects($this->once())
@@ -39,7 +40,7 @@ class OverlayNewItemsTest extends TestCase
                 $companyProductsResult,
             ]);
 
-        $closestDateResult = new \StdClass;
+        $closestDateResult = new StdClass;
         $closestDateResult->expiration_date = '2020-01-01';
 
         $database->expects($this->once())
@@ -47,7 +48,7 @@ class OverlayNewItemsTest extends TestCase
             ->with('productId', 'companyId', [], 'asc')
             ->willReturn($closestDateResult);
 
-        $companyInventoryResult = new \StdClass;
+        $companyInventoryResult = new StdClass;
         $companyInventoryResult->inventory_item_id = 'itemId';
 
         $database->expects($this->once())
@@ -100,7 +101,7 @@ class OverlayNewItemsTest extends TestCase
                 $this->getSettingObject('dept_exclude', 'deptIdTwo'),
             ]);
 
-        $companyProductsResult = new \StdClass;
+        $companyProductsResult = new StdClass;
         $companyProductsResult->product_id = 'productId';
 
         $database->expects($this->once())
@@ -110,7 +111,7 @@ class OverlayNewItemsTest extends TestCase
                 $companyProductsResult,
             ]);
 
-        $closestDateResult = new \StdClass;
+        $closestDateResult = new StdClass;
         $closestDateResult->expiration_date = '2020-01-01';
 
         $database->expects($this->once())
@@ -118,7 +119,7 @@ class OverlayNewItemsTest extends TestCase
             ->with('productId', 'companyId', ['storeIdOne'], 'asc')
             ->willReturn($closestDateResult);
 
-        $companyInventoryResult = new \StdClass;
+        $companyInventoryResult = new StdClass;
         $companyInventoryResult->inventory_item_id = 'itemId';
 
         $database->expects($this->once())
@@ -168,7 +169,7 @@ class OverlayNewItemsTest extends TestCase
                 $this->getSettingObject('dept_exclude', 'deptIdOne'),
             ]);
 
-        $companyProductsResult = new \StdClass;
+        $companyProductsResult = new StdClass;
         $companyProductsResult->product_id = 'productId';
 
         $database->expects($this->once())
@@ -204,7 +205,7 @@ class OverlayNewItemsTest extends TestCase
 
     private function getSettingObject($type, $value)
     {
-        $result = new \StdClass;
+        $result = new StdClass;
         $result->type = $type;
         $result->value = $value;
         return $result;

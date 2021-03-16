@@ -4,24 +4,28 @@ declare(strict_types=1);
 namespace App\Objects;
 
 use App\Models\Product;
-use Exception;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Http;
 use Log;
 
 class Api
 {
     private $url;
+    private $adminToken = null;
+    private $token = null;
     private $debugMode;
-    private $token;
 
     public function __construct()
     {
         $this->url = config('scraper.url');
         $this->debugMode = config('scraper.debug_mode') === 'debug';
-        $this->token = $this->setCommandApiToken();
     }
 
-    public function fetchAllInventory($companyId, $storeId, $notificationsOnly = false)
+    public function setAdminToken(string $token)
+    {
+        $this->adminToken = $token;
+    }
+
+    public function fetchAllInventory(string $companyId, string $storeId, bool $notificationsOnly = false)
     {
         return $this->request(
             'fetch-all-inventory',
@@ -35,6 +39,7 @@ class Api
 
     public function implementationScan(
         Product $product,
+        string $companyId,
         string $storeId,
         string $aisle,
         string $section,
@@ -44,6 +49,7 @@ class Api
         return $this->writeRequest(
             'implementation-scan',
             [
+                'companyId' => $companyId,
                 'barcode' => $product->barcode,
                 'name' => $product->description,
                 'size' => $product->size,
@@ -58,11 +64,12 @@ class Api
         );
     }
 
-    public function writeInventoryDisco($inventoryItemId)
+    public function writeInventoryDisco(string $companyId, string $inventoryItemId)
     {
         return $this->writeRequest(
             'write-inventory',
             [
+                'companyId' => $companyId,
                 'inventoryItemId' => $inventoryItemId,
                 'productId' => null,
                 'locationId' => null,
@@ -80,11 +87,12 @@ class Api
         );
     }
 
-    public function writeInventoryExpiration(string $inventoryItemId, string $expirationDate)
+    public function writeInventoryExpiration(string $companyId, string $inventoryItemId, string $expirationDate)
     {
         return $this->writeRequest(
             'write-inventory',
             [
+                'companyId' => $companyId,
                 'inventoryItemId' => $inventoryItemId,
                 'productId' => null,
                 'locationId' => null,
@@ -103,6 +111,7 @@ class Api
     }
 
     public function persistProduct(
+        $companyId,
         $barcode,
         $description,
         $size,
@@ -111,6 +120,7 @@ class Api
         return $this->writeRequest(
             'persist-product',
             [
+                'companyId' => $companyId,
                 'barcode' => $barcode,
                 'description' => $description,
                 'size' => $size,
@@ -119,11 +129,46 @@ class Api
         );
     }
 
-    public function updateInventoryLocation($itemId, $storeId, $deptId, $aisle, $section, $shelf = '')
+    public function createUser(
+        $companyId,
+        $userId,
+        $username,
+        $email,
+        $password,
+        $first,
+        $last,
+        $role,
+        $stores
+    ) {
+        return $this->writeRequest(
+            'persist-user',
+            [
+                'companyId' => $companyId,
+                'userId' => $userId,
+                'username' => $username,
+                'email' => $email,
+                'password' => $password,
+                'firstName' => $first,
+                'lastName' => $last,
+                'role' => $role,
+                'stores' => $stores,
+                'timezoneSetting' => 'America/Chicago',
+                'dateChecker' => true,
+                'requireReset' => true,
+                'implementationScan' => 0,
+                'resetScan' => 0,
+                'overlayScan' => 0,
+                'title' => '',
+            ]
+        );
+    }
+
+    public function updateInventoryLocation($companyId, $itemId, $storeId, $deptId, $aisle, $section, $shelf = '')
     {
         return $this->writeRequest(
             'update-inventory-location',
             [
+                'companyId' => $companyId,
                 'inventoryItemId' => $itemId,
                 'storeId' => $storeId,
                 'departmentId' => $deptId,
@@ -132,6 +177,13 @@ class Api
                 'shelf' => $shelf,
             ]
         );
+    }
+
+    public function copyMetrics(string $companyId)
+    {
+        return $this->writeRequest('copy-metrics', [
+            'company_id' => $companyId,
+        ]);
     }
 
     public function createVendor(
@@ -149,22 +201,24 @@ class Api
         );
     }
 
-    public function discontinueProduct($storeId, $productId)
+    public function discontinueProduct($companyId, $storeId, $productId)
     {
         return $this->writeRequest(
             'discontinue-product',
             [
+                'companyId' => $companyId,
                 'storeId' => $storeId,
                 'productId' => $productId,
             ]
         );
     }
 
-    public function discontinueProductByBarcode($storeId, $barcode)
+    public function discontinueProductByBarcode($companyId, $storeId, $barcode)
     {
         return $this->writeRequest(
             'discontinue-product',
             [
+                'companyId' => $companyId,
                 'storeId' => $storeId,
                 'barcode' => $barcode,
             ]
@@ -197,47 +251,42 @@ class Api
         }
     }
 
-    private function request($service, $data)
+    private function request($service, $data, $timestamps = null)
     {
         if ($this->token === null) {
-            $this->token = $this->getApiToken();
+            $this->setToken();
         }
 
         $url = $this->url . 'api/' . $service;
-        $data['createdTimestamp'] = $data['sentTimestamp'] = date('Y-m-d');
+        if ($timestamps == null) {
+            $data['createdTimestamp'] = $data['sentTimestamp'] = date('Y-m-d');
+        } else {
+            $data['createdTimestamp'] = $data['sentTimestamp'] = $timestamps;
+        }
 
-        $params = json_encode($data);
+        // Must be set for the API to use the correct database
+        $data['admin_token'] = $this->adminToken;
 
         try {
-            $ch = curl_init($url);
+            $response = Http::asJson()->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])->post($url, $data);
 
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $this->token]);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-            $result = curl_exec($ch);
-            curl_close($ch);
-
-            if ($result === false) {
-                Log::error('API Error', ['url' => $url, 'msg' => "No Response"]);
-                return false;
+            if ($response->status() == 200) {
+                return json_decode($response->body());
+            } else {
+                Log::error("API request $service");
             }
-
-            return json_decode($result);
-        } catch (Exception $e) {
-            Log::error('API Error', ['url' => $url, 'msg' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            Log::error("API request $service");
+            Log::error($e);
         }
+
+        return null;
     }
 
-    private function setCommandApiToken()
+    private function setToken()
     {
-        $token = Session::get('access_token');
-
-        if ($token !== null) {
-            return $token;
-        }
-
-        $ch = curl_init($this->url . 'oauth/token');
         $params = [
             'grant_type' => 'password',
             'client_id' => config('scraper.client_id'),
@@ -246,25 +295,21 @@ class Api
             'password' => config('scraper.pass'),
         ];
 
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        $result = curl_exec($ch);
-        curl_close($ch);
+        $response = Http::withoutRedirecting()->post(config('scraper.url') . "oauth/token", $params);
 
         try {
-            $output = json_decode($result);
-            Session::put('access_token', $output->access_token);
-            Session::save();
-            return $output->access_token;
-        } catch (Exception $e) {
-            return null;
+            if ($response->status() == 200) {
+                $body = json_decode($response->body());
+                $this->token = $body->access_token;
+            } else {
+                Log::error("API token request failed");
+                Log::error(json_encode($response));
+                die();
+            }
+        } catch (\Exception $e) {
+            Log::error("API token request failed");
+            Log::error($e);
+            die();
         }
-    }
-
-    // Uses logged in user token or gets scraper user token
-    private function getApiToken()
-    {
-        return Session::get('access_token');
     }
 }

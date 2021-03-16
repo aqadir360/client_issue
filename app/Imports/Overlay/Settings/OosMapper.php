@@ -10,6 +10,7 @@ namespace App\Imports\Overlay\Settings;
 // - expirationDate: date copy type (closest_date, furthest_date, date_range)
 // - startDate: start date for date_range calculation
 // - endDate: end date for date_range calculation
+
 class OosMapper
 {
     public $copyFrom = [];

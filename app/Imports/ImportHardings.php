@@ -21,11 +21,11 @@ class ImportHardings implements ImportInterface
     {
         $files = $this->import->ftpManager->getRecentlyModifiedFiles();
         foreach ($files as $file) {
-            if (strpos($file, 'zip') === false) {
+            if (strpos($file, '7z') === false) {
                 continue;
             }
             $zipFile = $this->import->ftpManager->downloadFile($file);
-            $this->import->ftpManager->unzipFile($zipFile, 'hardings_unzipped');
+            $this->import->ftpManager->unzipSevenZipFile($zipFile, 'hardings_unzipped');
         }
 
         return glob(storage_path('imports/hardings_unzipped/*'));
@@ -37,27 +37,29 @@ class ImportHardings implements ImportInterface
 
         foreach ($filesToImport as $file) {
             $this->import->startNewFile($file);
-            $this->importStoreInventory($file);
+
+            $storeNum = substr(basename($file), 3, 3);
+            $storeId = $this->import->storeNumToStoreId($storeNum);
+            if ($storeId === false) {
+                $this->import->outputContent("Invalid Store $storeNum");
+                continue;
+            }
+
+            $this->importStoreInventory($file, $storeId);
+//            $this->importMetrics($file, $storeId);
             $this->import->completeFile();
         }
 
         $this->import->completeImport();
     }
 
-    private function importStoreInventory($file)
+    private function importStoreInventory($file, $storeId)
     {
-        $storeNum = substr(basename($file), 3, 3);
-        $storeId = $this->import->storeNumToStoreId($storeNum);
-        if ($storeId === false) {
-            $this->import->outputContent("Invalid Store $storeNum");
-            return;
-        }
-
         $compare = new InventoryCompare($this->import, $storeId);
 
         $exists = $this->setFileInventory($compare, $file);
         if (!$exists) {
-            $this->import->outputContent("Skipping $storeNum - Import file was empty");
+            $this->import->outputContent("Skipping $storeId - Import file was empty");
             return;
         }
 
@@ -78,14 +80,16 @@ class ImportHardings implements ImportInterface
                     $loc['section'],
                     $loc['shelf'],
                     trim($data[35]),
-                    trim($data[36]." ".$data[37])
+                    trim($data[36] . " " . $data[37])
                 );
             }
 
             fclose($handle);
         }
 
-        return $compare->fileInventoryCount() > 0;
+        $total = $compare->fileInventoryCount();
+        $this->import->setTotalCount($total);
+        return $total > 0;
     }
 
     private function parseLocation(string $location)
@@ -95,5 +99,33 @@ class ImportHardings implements ImportInterface
             'section' => str_replace('_', '', substr($location, 3, 5)),
             'shelf' => substr($location, 9, 2),
         ];
+    }
+
+    private function importMetrics($file, $storeId)
+    {
+        if (($handle = fopen($file, "r")) !== false) {
+            while (($data = fgetcsv($handle, 1000, "|")) !== false) {
+                $upc = '0' . BarcodeFixer::fixUpc(trim($data[3]));
+
+                if ($this->import->isInvalidBarcode($upc, $data[3])) {
+                    continue;
+                }
+
+                $product = $this->import->fetchProduct($upc);
+
+                if ($product->isExistingProduct) {
+                    $this->import->persistMetric(
+                        $storeId,
+                        $product->productId,
+                        $this->import->convertFloatToInt(floatval($data[4])),
+                        $this->import->convertFloatToInt(floatval($data[3])),
+                        $this->import->convertFloatToInt(floatval($data[2])),
+                        true
+                    );
+                }
+            }
+
+            fclose($handle);
+        }
     }
 }

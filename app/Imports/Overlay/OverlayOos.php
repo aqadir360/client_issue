@@ -5,6 +5,7 @@ namespace App\Imports\Overlay;
 use App\Imports\Overlay\Settings\OosMapper as Settings;
 use App\Objects\Api;
 use App\Objects\Database;
+use DateTime;
 use Log;
 
 // Overlays dates for all OOS items with closest non-expired date within company
@@ -24,11 +25,12 @@ class OverlayOos
         $this->db = $db;
     }
 
-    public function importUpdates(string $companyId, int $scheduleId)
+    public function importUpdates(string $dbName, string $importTypeId, string $companyId, int $scheduleId)
     {
-        $importStatusId = $this->db->startImport($scheduleId);
+        $this->db->setDbName($dbName);
+        $importStatusId = $this->db->startImport($importTypeId, $scheduleId);
         $resultId = $this->db->insertResultsRow($importStatusId, "OOS Overlay");
-        $settings = $this->getImportSettings($companyId);
+        $settings = $this->getImportSettings($scheduleId);
 
         try {
             $this->overlayInventory($companyId, $settings, $resultId);
@@ -57,7 +59,7 @@ class OverlayOos
                 $startUnix = strtotime($settings->startDate);
                 $endUnix = strtotime($settings->endDate);
 
-                $date = new \DateTime();
+                $date = new DateTime();
                 $date->setTimestamp($startUnix + ($endUnix - $startUnix) * ($inventoryCount / $total));
                 $date->setTime(0, 0, 0);
             } else {
@@ -69,7 +71,7 @@ class OverlayOos
                 }
             }
 
-            $this->proxy->writeInventoryExpiration($item->inventory_item_id, $date);
+            $this->proxy->writeInventoryExpiration($companyId, $item->inventory_item_id, $date);
             $inventoryCount++;
         }
 
@@ -80,9 +82,9 @@ class OverlayOos
         $this->db->updateOverlayResultsRow($resultId, $total, $inventoryCount, $skipped, $output);
     }
 
-    private function getImportSettings(string $companyId): Settings
+    private function getImportSettings($scheduleId): Settings
     {
-        $result = $this->db->fetchCustomImportSettings($this->key, $companyId);
+        $result = $this->db->fetchCustomImportSettings($scheduleId);
         return new Settings($result);
     }
 

@@ -4,9 +4,9 @@ namespace App\Objects;
 
 class SkippedLocations
 {
-    private $aisles = [];
-    private $sections = [];
-    private $shelves = [];
+    private $aisles;
+    private $sections;
+    private $shelves;
 
     public function __construct(array $aisles, array $sections, array $shelves)
     {

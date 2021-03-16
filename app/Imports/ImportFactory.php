@@ -25,12 +25,14 @@ class ImportFactory
                 return new ImportHansens($importManager);
             case 'hansens_metrics':
                 return new ImportHansensMetrics($importManager);
-            case 'karns':
-                return new ImportKarns($importManager);
+            case 'hardings':
+                return new ImportHardings($importManager);
             case 'leprekon':
                 return new ImportLePreKon($importManager);
             case 'lunds':
                 return new ImportLunds($importManager);
+            case 'lunds_metrics':
+                return new ImportLundsMetrics($importManager);
             case 'metcalfes_metrics':
                 return new ImportMetcalfesMetrics($importManager);
             case 'raleys':
@@ -41,6 +43,8 @@ class ImportFactory
                 return new ImportRaleysMetrics($importManager);
             case 'seg':
                 return new ImportSEG($importManager);
+            case 'seg_users':
+                return new ImportSEGUsers($importManager);
             case 'vallarta':
                 return new ImportVallarta($importManager);
             case 'vallarta_refresh':

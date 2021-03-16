@@ -88,13 +88,13 @@ class ImportVallarta implements ImportInterface
     {
         $departmentId = $this->import->getDepartmentId(trim(strtolower($data[5])), trim(strtolower($data[9])));
         if ($departmentId === false) {
-            $this->import->writeFileOutput($data, "Skip: Invalid Department");
+            $this->import->writeFileOutput($data, "Skip Add: Invalid Department");
             return;
         }
 
         $location = new Location(trim($data[3]), trim($data[4]));
         if ($this->settings->shouldSkipLocation($location)) {
-            $this->import->writeFileOutput($data, "Skip: Invalid Location");
+            $this->import->writeFileOutput($data, "Skip Add: Invalid Location");
             $this->import->recordSkipped();
             return;
         }
@@ -102,7 +102,7 @@ class ImportVallarta implements ImportInterface
         $product = $this->import->fetchProduct($barcode, $storeId);
         if ($product->hasInventory()) {
             $this->import->recordSkipped();
-            $this->import->writeFileOutput($data, "Static");
+            $this->import->writeFileOutput($data, "Static Add: Existing Inventory");
             return;
         }
 
@@ -125,15 +125,15 @@ class ImportVallarta implements ImportInterface
     {
         $deptId = $this->import->getDepartmentId(trim(strtolower($department)), trim(strtolower($category)));
         if ($deptId === false) {
-            $this->import->writeFileOutput($data, "Skip: Invalid Department");
+            $this->import->writeFileOutput($data, "Skip Move: Invalid Department");
             return;
         }
 
         $product = $this->import->fetchProduct($barcode, $storeId);
-        if ($product->isExistingProduct === false) {
+        if (!$product->isExistingProduct) {
             // Moves do not include product information
             $this->import->recordSkipped();
-            $this->import->writeFileOutput($data, "Skip: New Product");
+            $this->import->writeFileOutput($data, "Skip Move: New Product");
             return;
         }
 
@@ -144,17 +144,24 @@ class ImportVallarta implements ImportInterface
                 if ($this->settings->shouldDisco($location)) {
                     $this->import->discontinueInventory($item->inventory_item_id);
                     $this->import->writeFileOutput($data, "Success: Discontinued");
-                } else {
-                    if ($this->settings->shouldSkipLocation($location)) {
-                        $this->import->recordSkipped();
-                        $this->import->writeFileOutput($data, "Skip: Invalid Location");
-                    } else {
-                        $this->moveInventory($data, $item, $storeId, $deptId, $location);
-                    }
+                    return;
                 }
 
+                if ($this->settings->shouldSkipLocation($location)) {
+                    $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, "Skip Move: Invalid Location");
+                    return;
+                }
+
+                $this->moveInventory($data, $item, $storeId, $deptId, $location);
                 return;
             }
+        }
+
+        if ($this->settings->shouldSkipLocation($location)) {
+            $this->import->recordSkipped();
+            $this->import->writeFileOutput($data, "Skip Move: Invalid Location");
+            return;
         }
 
         // Adding as new any moves that do not exist in inventory
@@ -172,14 +179,14 @@ class ImportVallarta implements ImportInterface
         if ($item->aisle == $location->aisle) {
             if ($item->section == $location->section) {
                 $this->import->recordStatic();
-                $this->import->writeFileOutput($data, "Static");
+                $this->import->writeFileOutput($data, "Static Move");
                 return;
             }
 
             if (empty($location->section) && !empty($item->section)) {
                 // Do not clear existing section information
                 $this->import->recordStatic();
-                $this->import->writeFileOutput($data, "Static: Clearing location");
+                $this->import->writeFileOutput($data, "Static Move: Clearing location");
                 return;
             }
         }

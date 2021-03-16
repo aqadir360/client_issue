@@ -47,11 +47,11 @@ class BarcodeFixer
             return '0';
         }
 
-        try {
-            $check = BarcodeFixer::calculateMod10Checksum(substr($upc, 0, 11));
-        } catch (\Exception $e) {
-            return '0';
-        }
+        //        try {
+        $check = BarcodeFixer::calculateMod10Checksum(substr($upc, 0, 11));
+        //        } catch (\Exception $e) {
+        //            return '0';
+        //        }
 
         return '0' . $upc . $check;
     }
@@ -72,9 +72,9 @@ class BarcodeFixer
         for ($i = 0; $i < $len; $i++) {
             $x = $len - $i;
             if (0 == ($x % 2)) {
-                $even += $barcode[$i];
+                $even += intval($barcode[$i]);
             } else {
-                $odd += $barcode[$i];
+                $odd += intval($barcode[$i]);
             }
         }
 

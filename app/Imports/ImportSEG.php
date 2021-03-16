@@ -15,6 +15,7 @@ class ImportSEG implements ImportInterface
     private $import;
 
     private $skus;
+    private $reclaim;
 
     // Expected File Columns:
     // [0] Loc_Id
@@ -45,11 +46,12 @@ class ImportSEG implements ImportInterface
         }
 
         $this->setSkus();
+        $this->setReclaimSkus();
     }
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_Initial_');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_initial_20210315_');
 
         foreach ($fileList as $file) {
             $this->importInventory($file);
@@ -60,9 +62,14 @@ class ImportSEG implements ImportInterface
 
     private function importInventory($file)
     {
+        $storeNum = $this->getStoreNum($file);
+        if ($storeNum === null) {
+            return;
+        }
+
         $this->import->startNewFile($file);
 
-        $storeId = $this->import->storeNumToStoreId($this->getStoreNum($file));
+        $storeId = $this->import->storeNumToStoreId($storeNum);
         if ($storeId === false) {
             $this->import->completeFile();
             return;
@@ -84,12 +91,16 @@ class ImportSEG implements ImportInterface
                     continue;
                 }
 
-                $this->recordSku(trim($data[7]), trim($data[8]));
 
-                $upc = BarcodeFixer::fixUpc(trim($data[8]));
-                if ($this->import->isInvalidBarcode($upc, $data[8])) {
+                $sku = trim($data[7]);
+                $inputBarcode = intval(trim($data[8]));
+                $upc = BarcodeFixer::fixUpc($inputBarcode);
+                if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
+                    $this->recordSku(trim($data[7]), $inputBarcode);
                     $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
+                } else {
+                    $this->recordSku($sku, $inputBarcode, $upc);
                 }
 
                 $location = $this->normalizeLocation($data);
@@ -103,6 +114,10 @@ class ImportSEG implements ImportInterface
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
+                }
+
+                if (isset($this->reclaim[intval($sku)])) {
+                    $departmentId = $this->getReclaimDepartment($departmentId);
                 }
 
                 $product = $this->import->fetchProduct($upc, $storeId);
@@ -175,16 +190,17 @@ class ImportSEG implements ImportInterface
 
     private function getStoreNum(string $filename)
     {
+        $filename = str_replace('_updated', '', $filename);
         $start = strrpos($filename, '_');
         $end = strrpos($filename, '.');
         return substr($filename, $start + 1, $end - $start - 1);
     }
 
-    private function recordSku($sku, $barcode)
+    private function recordSku($sku, $inputBarcode, $barcode = null)
     {
         if (!isset($this->skus[intval($sku)])) {
-            $this->skus[intval($sku)] = $barcode;
-            $this->import->db->insertSegSku($sku, $barcode);
+            $this->skus[intval($sku)] = $inputBarcode;
+            $this->import->db->insertSegSku($sku, $inputBarcode, $barcode);
         }
     }
 
@@ -195,5 +211,33 @@ class ImportSEG implements ImportInterface
         foreach ($rows as $row) {
             $this->skus[intval($row->sku)] = $row->barcode;
         }
+    }
+
+    private function setReclaimSkus()
+    {
+        $rows = $this->import->db->fetchSegReclaimSkus();
+
+        foreach ($rows as $row) {
+            $this->reclaim[intval($row->sku)] = $row->sku;
+        }
+    }
+
+    private function getReclaimDepartment(string $departmentId): ?string
+    {
+        switch ($departmentId) {
+            case '2178be72-a05e-b7a0-06d6-2840b1c1c4a9': // Dairy
+            case 'a93ece5d-b3be-31ed-9bec-0d7f70cab852': // Yogurt
+            case 'b04d4e3e-f189-3fda-2cca-ba074e70bf6f': // Yogurt (Mkdn)
+            case 'ba39d8bf-be93-3857-ddd2-2aec9d06302b': // Yogurt (Rotate)
+                return '1430f863-5f2b-eaed-e235-588bd3d2246a';
+            case '3b31ed22-5c5e-4c27-591a-9891f0e696ed': // Grocery
+            case '82d915ec-b904-66bf-c0b0-fcc29df22101': // Short Life
+            case '5ee880ee-ac21-fcf0-9833-6cb64117f5ea': // Baby Food
+                return '45da886a-a062-d47e-16cd-185a257c858c';
+            case 'd2135ea7-3891-d428-71b5-4af3283a5e8e': // Meat
+                return '7bafcd3c-0879-6864-c134-97ec182f58e3';
+        }
+
+        return null;
     }
 }

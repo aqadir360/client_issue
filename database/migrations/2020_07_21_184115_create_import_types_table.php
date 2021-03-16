@@ -19,7 +19,7 @@ class CreateImportTypesTable extends Migration
             $table->string('type');
             $table->string('name');
             $table->string('description');
-            $table->string('ftp_path');
+            $table->string('ftp_path')->nullable(true);
             $table->timestamp('created_at');
         });
     }
