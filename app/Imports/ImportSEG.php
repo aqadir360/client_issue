@@ -9,8 +9,6 @@ use App\Objects\ImportManager;
 // Imports SEG pilot files
 class ImportSEG implements ImportInterface
 {
-    private $path;
-
     /** @var ImportManager */
     private $import;
 
@@ -39,19 +37,13 @@ class ImportSEG implements ImportInterface
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
-        $this->path = storage_path('imports/seg/');
-
-        if (!file_exists($this->path)) {
-            mkdir($this->path);
-        }
-
         $this->setSkus();
         $this->setReclaimSkus();
     }
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_initial_20210315_');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_initial_20210304_');
 
         foreach ($fileList as $file) {
             $this->importInventory($file);
@@ -90,7 +82,6 @@ class ImportSEG implements ImportInterface
                     $this->import->recordFileLineError('ERROR', 'Unable to parse row: ' . json_encode($data));
                     continue;
                 }
-
 
                 $sku = trim($data[7]);
                 $inputBarcode = intval(trim($data[8]));
