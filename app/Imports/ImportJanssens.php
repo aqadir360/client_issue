@@ -2,7 +2,6 @@
 
 namespace App\Imports;
 
-use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 
@@ -73,7 +72,12 @@ class ImportJanssens implements ImportInterface
 
                 if ($productId) {
                     $retail = $this->import->parsePositiveFloat($data[9]);
-                    $movement = $this->import->parsePositiveFloat($data[30] / 45);
+                    if (isset($data[30])) {
+                        $movement = $this->import->parsePositiveFloat($data[30] / 45);
+                    } else {
+                        $movement = 0;
+                        $this->import->writeFileOutput($data, "Error: Movement Value");
+                    }
                     $cost = $this->import->parsePositiveFloat($this->parseCost($data[11]));
 
                     $this->import->persistMetric(
