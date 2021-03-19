@@ -78,26 +78,23 @@ class ImportRaleys implements ImportInterface
             fclose($handle);
         }
 
-        foreach ($productsToImport as $product) {
+        foreach ($productsToImport as $productData) {
             if (!$this->import->recordRow()) {
                 continue;
             }
 
-            $upc = BarcodeFixer::fixLength($product[0]);
-            if ($this->import->isInvalidBarcode($upc, $product[0])) {
+            $upc = BarcodeFixer::fixLength($productData[0]);
+            if ($this->import->isInvalidBarcode($upc, $productData[0])) {
                 continue;
             }
 
-            $existingProduct = $this->import->fetchProduct($upc);
+            $product = $this->import->fetchProduct($upc);
 
-            if ($existingProduct === false) {
-                $response = $this->import->persistProduct(
-                    $upc,
-                    $product[1],
-                    $product[2]
-                );
-
-                $this->import->recordResponse($response, 'add');
+            if (!$product->isExistingProduct) {
+                $product->setDescription($productData[1]);
+                $product->setSize($productData[2]);
+                $response = $this->import->createProduct($product);
+                $this->import->recordResponse(!empty($response), 'add');
             } else {
                 $this->import->recordSkipped();
             }

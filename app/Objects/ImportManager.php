@@ -3,6 +3,7 @@
 namespace App\Objects;
 
 use App\Models\Product;
+use Ramsey\Uuid\Uuid;
 
 class ImportManager
 {
@@ -392,7 +393,10 @@ class ImportManager
     // Returns null or product ID
     public function createProduct(Product $product): ?string
     {
-        $response = $this->proxy->persistProduct($this->companyId, $product->barcode, $product->description, $product->size);
+        if (!$product->isExistingProduct) {
+            $product->setProductId((string)Uuid::uuid1());
+        }
+        $response = $this->proxy->persistProduct($this->companyId, $product->productId, $product->barcode, $product->description, $product->size);
 
         if (!$this->proxy->validResponse($response)) {
             $this->addInvalidBarcode($product->barcode);

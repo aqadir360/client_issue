@@ -112,6 +112,7 @@ class Api
 
     public function persistProduct(
         $companyId,
+        $productId,
         $barcode,
         $description,
         $size,
@@ -121,6 +122,7 @@ class Api
             'persist-product',
             [
                 'companyId' => $companyId,
+                'productId' => $productId,
                 'barcode' => $barcode,
                 'description' => $description,
                 'size' => $size,
