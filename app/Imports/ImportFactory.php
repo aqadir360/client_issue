@@ -27,6 +27,8 @@ class ImportFactory
                 return new ImportHansensMetrics($importManager);
             case 'hardings':
                 return new ImportHardings($importManager);
+            case 'janssens':
+                return new ImportJanssens($importManager);
             case 'leprekon':
                 return new ImportLePreKon($importManager);
             case 'lunds':

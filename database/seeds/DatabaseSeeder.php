@@ -35,7 +35,8 @@ class DatabaseSeeder extends Seeder
         (20, 'd48c3be4-5102-1977-4c3c-2de77742dc1e', 'raleys_refresh', 'Raley\'s Refresh', 'Updates Locations and Missing Inventory', 'raleys/imports', '2021-01-05 00:52:24'),
         (21, 'fc42b9dc-6d83-11e7-9139-f23c917b0c87', 'metcalfes_metrics', 'Metcalfe\'s Metrics', 'Imports Metrics', 'metcalfes/imports', '2021-01-06 19:10:40'),
 	    (22, '96bec4fe-098f-0e87-2563-11a36e6447ae', 'seg_users', 'SEG User Create', 'Creates and updates users accounts', 'southeastern/imports', '2021-02-22 17:35:33'),
-	    (23, '0ba8c4a0-9e50-11e7-b25f-f23c917b0c87', 'lunds_metrics', 'Lunds Metrics', 'Imports Metrics files', 'lunds/imports', '2021-03-02 22:45:23');
+	    (23, '0ba8c4a0-9e50-11e7-b25f-f23c917b0c87', 'lunds_metrics', 'Lunds Metrics', 'Imports Metrics files', 'lunds/imports', '2021-03-02 22:45:23'),
+	    (24, '3fb5b141-dd03-0555-39c5-0c0e37461825', 'janssens', 'Janssen\'s Pilot', 'Imports products and metrics', 'janssens/imports', '2021-03-19 18:50:59');
         */
     }
 }
