@@ -5,6 +5,7 @@ namespace App\Objects;
 
 use Illuminate\Support\Facades\DB;
 use Ramsey\Uuid\Uuid;
+use Log;
 
 class Database
 {
