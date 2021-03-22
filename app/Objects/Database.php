@@ -128,7 +128,7 @@ class Database
                 ]
             );
             return true;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             var_dump($e);
             var_dump($product);
         }
