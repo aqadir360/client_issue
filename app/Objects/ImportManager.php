@@ -334,6 +334,28 @@ class ImportManager
         return $product;
     }
 
+    public function fetchAndCreateCompanyProduct(string $upc): Product
+    {
+        $product = new Product($upc);
+
+        $existing = $this->db->fetchProductByBarcode($product->barcode);
+
+        if ($existing !== false) {
+            $product->isExistingProduct = true;
+            $product->productId = $existing->product_id;
+            $product->description = $existing->description;
+            $product->size = $existing->size;
+
+            $companyProduct = $this->db->fetchProductFromCompany($product->productId);
+
+            if (!$companyProduct) {
+                $this->db->insertCompanyProduct($existing);
+            }
+        }
+
+        return $product;
+    }
+
     public function recordRow(): bool
     {
         if ($this->debugMode && $this->currentFile->total + 1 > 1000) {

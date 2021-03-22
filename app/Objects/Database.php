@@ -85,6 +85,15 @@ class Database
         return false;
     }
 
+    public function fetchProductFromCompany(string $productId)
+    {
+        $sql = "SELECT * FROM #t#.products p WHERE p.product_id = :product_id";
+
+        return $this->fetchFromCompanyDb($sql, [
+            'product_id' => $productId,
+        ]);
+    }
+
     public function fetchProductInventory(string $productId, string $storeId)
     {
         $sql = "SELECT * FROM #t#.inventory_items i
@@ -96,6 +105,27 @@ class Database
             'product_id' => $productId,
             'store_id' => $storeId,
         ]);
+    }
+
+    public function insertCompanyProduct($product)
+    {
+        $sql = "INSERT INTO #t#.products
+            (id, product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
+            VALUES (:id, :product_id, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
+
+        DB::connection('db_companies')->insert(
+            $this->companyPdoConvert($sql, $this->dbName), [
+                'id' => $product->id,
+                'product_id' => $product->product_id,
+                'barcode' => $product->barcode,
+                'description' => $product->description,
+                'size' => $product->size,
+                'photo' => $product->photo,
+                'no_expiration' => $product->no_expiration,
+                'created_at' => $product->created_at,
+                'updated_at' => $product->updated_at
+            ]
+        );
     }
 
     public function hasDiscoInventory(string $productId, string $storeId)
@@ -446,7 +476,8 @@ class Database
         array $copyFromStores,
         string $orderDirection,
         string $maxDate
-    ) {
+    )
+    {
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on l.store_id = s.store_id

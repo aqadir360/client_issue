@@ -54,7 +54,7 @@ class ImportJanssens implements ImportInterface
                     continue;
                 }
 
-                $product = $this->import->fetchProduct($upc);
+                $product = $this->import->fetchAndCreateCompanyProduct($upc);
 
                 if (!$product->isExistingProduct) {
 //                    $product->setDescription($data[2]);
