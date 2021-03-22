@@ -532,9 +532,7 @@ class Database
         if (!empty($excludeDepts)) {
             $sql .= " and i.department_id NOT IN (" . $this->getListParams($excludeDepts) . ") ";
         }
-
-        var_dump($sql);
-
+        
         return $this->fetchFromCompanyDb($sql, [
             'company_id' => $companyId,
             'product_id' => $productId,
