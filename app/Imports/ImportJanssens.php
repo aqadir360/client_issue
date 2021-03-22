@@ -57,20 +57,18 @@ class ImportJanssens implements ImportInterface
                 $product = $this->import->fetchProduct($upc);
 
                 if (!$product->isExistingProduct) {
-                    $product->setDescription($data[2]);
-                    $product->setSize($this->parseSize(trim($data[2]), trim($data[3])));
+//                    $product->setDescription($data[2]);
+//                    $product->setSize($this->parseSize(trim($data[2]), trim($data[3])));
 
-                    if (empty($product->description)) {
-                        $this->import->writeFileOutput($data, "Skip: Missing Description for New Product");
-                        $this->import->recordFileLineError('ERROR', 'Missing Product Description');
-                        continue;
-                    }
+                    $this->import->writeFileOutput($data, "Skip: New Product");
+                    $this->import->recordFileLineError('ERROR', 'Missing Product Description');
+                    continue;
                 }
 
-                $productId = $this->import->createProduct($product);
+//                $productId = $this->import->createProduct($product);
                 $this->import->writeFileOutput($data, "Success: Created Product");
 
-                if ($productId) {
+//                if ($productId) {
                     $retail = $this->import->parsePositiveFloat($data[9]);
                     if (isset($data[30])) {
                         $movement = $this->import->parsePositiveFloat($data[30] / 45);
@@ -82,12 +80,12 @@ class ImportJanssens implements ImportInterface
 
                     $this->import->persistMetric(
                         $storeId,
-                        $productId,
+                        $product->productId,
                         $this->import->convertFloatToInt($cost),
                         $this->import->convertFloatToInt($retail),
                         $this->import->convertFloatToInt($movement)
                     );
-                }
+//                }
             }
 
             fclose($handle);
