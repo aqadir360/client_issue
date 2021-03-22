@@ -334,7 +334,7 @@ class ImportManager
         return $product;
     }
 
-    public function fetchAndCreateCompanyProduct(string $upc): Product
+    public function fetchAndCreateCompanyProduct(string $upc): ?Product
     {
         $product = new Product($upc);
 
@@ -349,7 +349,9 @@ class ImportManager
             $companyProduct = $this->db->fetchProductFromCompany($product->productId);
 
             if (!$companyProduct) {
-                $this->db->insertCompanyProduct($existing);
+                if ($this->db->insertCompanyProduct($existing) === false) {
+                    return null;
+                }
             }
         }
 

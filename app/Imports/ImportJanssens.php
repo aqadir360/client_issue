@@ -56,7 +56,7 @@ class ImportJanssens implements ImportInterface
 
                 $product = $this->import->fetchAndCreateCompanyProduct($upc);
 
-                if (!$product->isExistingProduct) {
+                if ($product === null || !$product->isExistingProduct) {
 //                    $product->setDescription($data[2]);
 //                    $product->setSize($this->parseSize(trim($data[2]), trim($data[3])));
 

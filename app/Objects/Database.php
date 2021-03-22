@@ -113,19 +113,26 @@ class Database
             (id, product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
             VALUES (:id, :product_id, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
 
-        DB::connection('db_companies')->insert(
-            $this->companyPdoConvert($sql, $this->dbName), [
-                'id' => $product->id,
-                'product_id' => $product->product_id,
-                'barcode' => $product->barcode,
-                'description' => $product->description,
-                'size' => $product->size,
-                'photo' => $product->photo,
-                'no_expiration' => $product->no_expiration,
-                'created_at' => $product->created_at,
-                'updated_at' => $product->updated_at
-            ]
-        );
+        try {
+            DB::connection('db_companies')->insert(
+                $this->companyPdoConvert($sql, $this->dbName), [
+                    'id' => $product->id,
+                    'product_id' => $product->product_id,
+                    'barcode' => $product->barcode,
+                    'description' => $product->description,
+                    'size' => $product->size,
+                    'photo' => $product->photo,
+                    'no_expiration' => $product->no_expiration,
+                    'created_at' => $product->created_at,
+                    'updated_at' => $product->updated_at
+                ]
+            );
+            return true;
+        } catch (Exception $e) {
+            var_dump($e);
+            var_dump($product);
+        }
+        return false;
     }
 
     public function hasDiscoInventory(string $productId, string $storeId)
