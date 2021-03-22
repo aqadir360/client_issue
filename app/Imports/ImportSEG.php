@@ -111,7 +111,7 @@ class ImportSEG implements ImportInterface
                     $departmentId = $this->getReclaimDepartment($departmentId);
                 }
 
-                $product = $this->import->fetchProduct($upc, $storeId);
+                $product = $this->import->fetchProduct($upc);
 
                 if (!$product->isExistingProduct) {
                     $product->setDescription($data[9]);
