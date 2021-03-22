@@ -60,6 +60,7 @@ class ImportSEGUsers implements ImportInterface
                 if ($existing) {
                     // TODO: Make sure has all stores access
                 } else {
+                    echo $username . PHP_EOL;
                     $result = $this->import->getProxy()->createUser(
                         $this->import->companyId(),
                         (string)Uuid::uuid1(),
