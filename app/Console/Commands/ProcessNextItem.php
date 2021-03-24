@@ -63,7 +63,7 @@ class ProcessNextItem extends Command
 
     private function runFileImport(Database $database, $pending)
     {
-        $lastRun = $database->fetchLastRun($pending->import_schedule_id);
+        $lastRun = $database->fetchLastRun($pending->import_type_id);
 
         $importManager = new ImportManager(
             new Api(),
