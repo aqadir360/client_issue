@@ -159,8 +159,10 @@ class ImportSEG implements ImportInterface
 
                     if ($productId === null) {
                         $this->import->writeFileOutput($data, "Error: Unable to Create Inventory");
+                        continue;
                     } else {
                         $this->import->writeFileOutput($data, "Success: Created Inventory");
+                        $product->setProductId($productId);
                     }
                 }
 
@@ -171,7 +173,7 @@ class ImportSEG implements ImportInterface
 
                     $this->import->persistMetric(
                         $storeId,
-                        $productId,
+                        $product,
                         0,
                         $this->import->convertFloatToInt($price / $priceModifier),
                         $this->import->convertFloatToInt($movement)
