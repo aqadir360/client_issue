@@ -67,7 +67,7 @@ class ImportAlaska implements ImportInterface
                 if ($productId) {
                     $this->import->persistMetric(
                         $storeId,
-                        $productId,
+                        $product,
                         $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[12])),
                         $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[11])),
                         $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[10]))

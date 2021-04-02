@@ -84,7 +84,7 @@ class ImportLundsMetrics implements ImportInterface
 
                     $this->import->persistMetric(
                         $storeId,
-                        $product->productId,
+                        $product,
                         $this->import->convertFloatToInt(floatval($data[10])),
                         $this->import->convertFloatToInt(floatval($data[11])),
                         $this->import->convertFloatToInt($movement)

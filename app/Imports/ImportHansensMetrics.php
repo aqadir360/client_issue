@@ -48,7 +48,7 @@ class ImportHansensMetrics implements ImportInterface
                     break;
                 }
 
-                $barcode = '0' . BarcodeFixer::fixUpc(trim($data[1]));
+                $barcode = BarcodeFixer::fixUpc(trim($data[1]));
                 if ($this->import->isInvalidBarcode($barcode, $data[1])) {
                     continue;
                 }
@@ -77,7 +77,7 @@ class ImportHansensMetrics implements ImportInterface
 
                 $this->import->persistMetric(
                     $storeId,
-                    $product->productId,
+                    $product,
                     $this->import->convertFloatToInt($cost),
                     $this->import->convertFloatToInt($retail),
                     $this->import->convertFloatToInt($movement)

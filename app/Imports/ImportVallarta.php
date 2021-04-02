@@ -231,7 +231,7 @@ class ImportVallarta implements ImportInterface
 
                 $this->import->persistMetric(
                     $storeId,
-                    $product->productId,
+                    $product,
                     $this->import->convertFloatToInt(floatval($data[4])),
                     $this->import->convertFloatToInt(floatval($data[3])),
                     $this->import->convertFloatToInt(floatval($data[2])),

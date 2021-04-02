@@ -160,7 +160,7 @@ class ImportBuehlers implements ImportInterface
     {
         $this->import->persistMetric(
             $storeId,
-            $product->productId,
+            $product,
             $this->import->convertFloatToInt(floatval($row[7])),
             $this->import->convertFloatToInt(floatval($row[6])),
             $this->import->convertFloatToInt(floatval($row[8]))

@@ -48,7 +48,7 @@ class ImportBristolMetrics implements ImportInterface
                 if ($product->isExistingProduct) {
                     $this->import->persistMetric(
                         $storeId,
-                        $product->productId,
+                        $product,
                         $this->import->convertFloatToInt(floatval($data[3])),
                         $this->import->convertFloatToInt(floatval($data[2])),
                         $this->import->convertFloatToInt(floatval($data[1]))

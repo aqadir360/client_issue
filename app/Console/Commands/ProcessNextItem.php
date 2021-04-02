@@ -33,7 +33,7 @@ class ProcessNextItem extends Command
 
         $active = $database->fetchCurrentImport();
         if ($active) {
-            echo "Import already in progress\n";
+            $this->log("Import already in progress");
             return;
         }
 
@@ -43,13 +43,13 @@ class ProcessNextItem extends Command
         $pending = $database->fetchNextUpcomingImport($now->format('Y-m-d H:i:s'));
 
         if ($pending === null) {
-            echo "No pending imports\n";
+            $this->log("No pending imports");
             return;
         }
 
         $database->setImportJobInProgress($pending->import_job_id);
 
-        echo "Starting " . $pending->type . PHP_EOL;
+        $this->log("Starting " . $pending->type);
 
         if ($pending->type === 'overlay_new' || $pending->type === 'overlay_oos') {
             $this->runOverlay($database, $pending);
@@ -82,9 +82,8 @@ class ProcessNextItem extends Command
             try {
                 $import->importUpdates();
             } catch (Exception $e) {
+                $this->log($e->getMessage());
                 $importManager->completeImport($e->getMessage());
-                echo $e->getMessage() . PHP_EOL;
-                Log::error($e->getTraceAsString());
             }
         }
     }
@@ -99,10 +98,16 @@ class ProcessNextItem extends Command
                 $import = new OverlayOos(new Api(), $database);
                 break;
             default:
-                echo "Invalid Overlay Type " . $pending->type;
+                $this->log("Invalid Overlay Type " . $pending->type);
                 return;
         }
 
         $import->importUpdates($pending->db_name, $pending->import_type_id, $pending->company_id, $pending->import_schedule_id);
+    }
+
+    private function log($output)
+    {
+        Log::error($output);
+        echo $output . PHP_EOL;
     }
 }

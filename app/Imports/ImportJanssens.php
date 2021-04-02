@@ -80,7 +80,7 @@ class ImportJanssens implements ImportInterface
 
                     $this->import->persistMetric(
                         $storeId,
-                        $product->productId,
+                        $product,
                         $this->import->convertFloatToInt($cost),
                         $this->import->convertFloatToInt($retail),
                         $this->import->convertFloatToInt($movement)

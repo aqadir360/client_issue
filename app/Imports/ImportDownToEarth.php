@@ -176,7 +176,7 @@ class ImportDownToEarth implements ImportInterface
 
                 $this->import->persistMetric(
                     $storeId,
-                    $product->productId,
+                    $product,
                     $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[10])),
                     $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[9])),
                     $this->import->convertFloatToInt($this->import->parsePositiveFloat($data[8]))

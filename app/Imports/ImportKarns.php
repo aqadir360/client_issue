@@ -60,7 +60,7 @@ class ImportKarns implements ImportInterface
 
                 $this->import->persistMetric(
                     $storeId,
-                    $product->productId,
+                    $product,
                     $this->import->convertFloatToInt(floatval($data[5])),
                     $this->import->convertFloatToInt(floatval($data[4])),
                     $this->import->convertFloatToInt(floatval($data[3]))

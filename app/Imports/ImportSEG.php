@@ -43,7 +43,9 @@ class ImportSEG implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_Initial_20210304_');
+//        $fileList = $this->import->downloadFilesByName('SEG_DCP_Initial_20210304_');
+
+        $fileList = glob(storage_path('/imports/seg/*'));
 
         foreach ($fileList as $file) {
             $this->importInventory($file);
@@ -77,9 +79,15 @@ class ImportSEG implements ImportInterface
                     continue;
                 }
 
-                if (count($data) < 8) {
+                if (count($data) < 12) {
                     $this->import->writeFileOutput($data, "Skip: Parsing Error");
                     $this->import->recordFileLineError('ERROR', 'Unable to parse row: ' . json_encode($data));
+                    continue;
+                }
+
+                $departmentId = $this->import->getDepartmentId($data[12], $data[6]);
+                if ($departmentId !== '5ee880ee-ac21-fcf0-9833-6cb64117f5ea') {
+//                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
                 }
 
@@ -94,66 +102,64 @@ class ImportSEG implements ImportInterface
                     $this->recordSku($sku, $inputBarcode, $upc);
                 }
 
-                $location = $this->normalizeLocation($data);
-                if ($location->valid === false) {
-                    $this->import->recordSkipped();
-                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
-                    continue;
-                }
-
-                $departmentId = $this->import->getDepartmentId($data[12], $data[6]);
-                if ($departmentId === false) {
-                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
-                    continue;
-                }
-
                 if (isset($this->reclaim[intval($sku)])) {
                     $departmentId = $this->getReclaimDepartment($departmentId);
+                } else {
+                    continue;
                 }
 
-                $product = $this->import->fetchProduct($upc);
+//                $location = $this->normalizeLocation($data);
+//                if ($location->valid === false) {
+//                    $this->import->recordSkipped();
+//                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
+//                    continue;
+//                }
 
+                $product = $this->import->fetchProduct($upc, $storeId);
                 if (!$product->isExistingProduct) {
-                    $product->setDescription($data[9]);
-                    $product->setSize($data[10]);
-
-                    if (empty($product->description)) {
-                        $this->import->writeFileOutput($data, "Skip: Missing Description for New Product");
-                        $this->import->recordFileLineError('ERROR', 'Missing Product Description');
-                        continue;
-                    }
+                    continue;
                 }
 
                 if ($product->hasInventory()) {
-                    $productId = $product->productId;
-                    $this->import->recordStatic();
-                    $this->import->writeFileOutput($data, "Success: Inventory Exists");
-                } else {
-                    $productId = $this->import->implementationScan(
-                        $product,
+                    echo $product->barcode . PHP_EOL;
+                    $item = $product->inventory[0];
+                    $this->import->updateInventoryLocation(
+                        $item->inventory_item_id,
                         $storeId,
-                        $location->aisle,
-                        $location->section,
                         $departmentId,
-                        $location->shelf
+                        $item->aisle,
+                        $item->section,
+                        $item->shelf
                     );
-                    $this->import->writeFileOutput($data, "Success: Created Inventory");
+                    $this->import->writeFileOutput($data, "Success: Updated Department");
                 }
 
-                if ($productId) {
-                    $cost = 0; // Not sending cost
-                    $movement = $this->import->parsePositiveFloat($data[16]);
-                    $price = $this->import->parsePositiveFloat($data[14]);
-                    $priceModifier = intval($data[13]);
+//                else {
+//                    $productId = $this->import->implementationScan(
+//                        $product,
+//                        $storeId,
+//                        $location->aisle,
+//                        $location->section,
+//                        $departmentId,
+//                        $location->shelf
+//                    );
+//                    $this->import->writeFileOutput($data, "Success: Created Inventory");
+//                }
 
-                    $this->import->persistMetric(
-                        $storeId,
-                        $productId,
-                        $cost,
-                        $this->import->convertFloatToInt($price / $priceModifier),
-                        $this->import->convertFloatToInt($movement)
-                    );
-                }
+//                if ($productId) {
+//                    $cost = 0; // Not sending cost
+//                    $movement = $this->import->parsePositiveFloat($data[16]);
+//                    $price = $this->import->parsePositiveFloat($data[14]);
+//                    $priceModifier = intval($data[13]);
+//
+//                    $this->import->persistMetric(
+//                        $storeId,
+//                        $productId,
+//                        $cost,
+//                        $this->import->convertFloatToInt($price / $priceModifier),
+//                        $this->import->convertFloatToInt($movement)
+//                    );
+//                }
             }
 
             fclose($handle);
@@ -166,7 +172,15 @@ class ImportSEG implements ImportInterface
     {
         $location = new Location();
         $location->aisle = trim($data[1]);
-        $location->section = trim($data[2]) . trim($data[3]);
+
+        $section = trim($data[2]) . trim($data[3]);
+
+        if (strpos($section, "NO AISLE") !== false) {
+
+        }
+
+        $location->section =
+
         $location->shelf = trim($data[4]);
 
         $location->valid = $this->shouldSkipLocation($location);
@@ -223,8 +237,9 @@ class ImportSEG implements ImportInterface
                 return '1430f863-5f2b-eaed-e235-588bd3d2246a';
             case '3b31ed22-5c5e-4c27-591a-9891f0e696ed': // Grocery
             case '82d915ec-b904-66bf-c0b0-fcc29df22101': // Short Life
-            case '5ee880ee-ac21-fcf0-9833-6cb64117f5ea': // Baby Food
                 return '45da886a-a062-d47e-16cd-185a257c858c';
+            case '5ee880ee-ac21-fcf0-9833-6cb64117f5ea': // Baby Food
+                return '88ee85c9-bb73-f818-d79f-2625e8de5089';
             case 'd2135ea7-3891-d428-71b5-4af3283a5e8e': // Meat
                 return '7bafcd3c-0879-6864-c134-97ec182f58e3';
         }

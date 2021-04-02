@@ -227,12 +227,13 @@ class Api
         );
     }
 
-    public function triggerUpdateCounts(string $companyId)
+    public function triggerUpdateCounts(string $companyId, ?string $storeId = null)
     {
         $this->writeRequest(
             'trigger-calc-store-counts',
             [
                 'companyId' => $companyId,
+                'storeId' => $storeId,
             ]
         );
     }

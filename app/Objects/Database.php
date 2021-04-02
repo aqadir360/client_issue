@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Objects;
 
+use App\Models\Product;
 use Illuminate\Support\Facades\DB;
 use Ramsey\Uuid\Uuid;
 use Log;
@@ -107,24 +108,21 @@ class Database
         ]);
     }
 
-    public function insertCompanyProduct($product)
+    public function insertCompanyProduct(Product $product)
     {
         $sql = "INSERT INTO #t#.products
-            (id, product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
-            VALUES (:id, :product_id, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
+            (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
+            VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, NOW(), NOW())";
 
         try {
             DB::connection('db_companies')->insert(
                 $this->companyPdoConvert($sql, $this->dbName), [
-                    'id' => $product->id,
-                    'product_id' => $product->product_id,
+                    'product_id' => $product->productId,
                     'barcode' => $product->barcode,
                     'description' => $product->description,
                     'size' => $product->size,
                     'photo' => $product->photo,
-                    'no_expiration' => $product->no_expiration,
-                    'created_at' => $product->created_at,
-                    'updated_at' => $product->updated_at
+                    'no_expiration' => $product->noExp,
                 ]
             );
             return true;
@@ -199,6 +197,22 @@ class Database
                     'sku' => $sku,
                     'input_barcode' => $inputBarcode,
                     'barcode' => $barcode,
+                ]
+            );
+        } catch (\Exception $e) {
+            Log::error($e);
+        }
+    }
+
+    public function insertSegDsd($sku, $storeNum)
+    {
+        try {
+            $sql = "INSERT INTO #t#.seg_dsd (sku, store_num)
+                VALUES (:sku, :store_num)";
+            DB::connection('db_companies')->insert(
+                $this->companyPdoConvert($sql, $this->dbName), [
+                    'sku' => $sku,
+                    'store_num' => $storeNum,
                 ]
             );
         } catch (\Exception $e) {
@@ -413,6 +427,35 @@ class Database
         );
     }
 
+    public function getOrInsertProduct(Product $product): bool
+    {
+        $sql = "SELECT product_id FROM #t#.products WHERE product_id = :product_id";
+        $existing = DB::connection('db_companies')->selectOne(
+            $this->companyPdoConvert($sql, $this->dbName), [
+                'product_id' => $product->productId,
+            ]
+        );
+
+        if ($existing) {
+            return true;
+        }
+
+        $sql = "INSERT INTO #t#.products
+            (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
+            VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, NOW(), NOW())";
+        DB::connection('db_companies')->insert(
+            $this->companyPdoConvert($sql, $this->dbName), [
+            'product_id' => $product->productId,
+            'barcode' => $product->barcode,
+            'description' => $product->description,
+            'photo' => $product->photo,
+            'no_expiration' => $product->noExp,
+            'size' => $product->size,
+        ]);
+
+        return true;
+    }
+
     public function fetchSkipListItems()
     {
         $sql = "SELECT l.id, l.barcode FROM import_skip_list l
@@ -504,6 +547,66 @@ class Database
         ]);
     }
 
+    public function fetchProductsWithoutDates()
+    {
+        $sql = "select product_id from #t#.product_dates where closest_date is null";
+        return $this->fetchFromCompanyDb($sql, []);
+    }
+
+    public function fetchNextClosestDate(
+        string $productId,
+        string $companyId,
+        string $minDate
+    )
+    {
+//        $sql = "select i.expiration_date from #t#.inventory_items i
+//            inner join #t#.locations l on l.location_id = i.location_id
+//            where l.store_id IN ($fromStores)
+//            and i.product_id = :product_id
+//            and i.expiration_date > :min_date and i.flag is null and i.disco = 0
+//            order by i.expiration_date asc ";
+        $sql = "select i.expiration_date from #t#.inventory_items i
+            inner join #t#.locations l on l.location_id = i.location_id
+            inner join #t#.stores s on s.store_id = l.store_id
+            where s.company_id = :company_id
+            and i.product_id = :product_id
+            and i.close_dated_date > :min_date and i.flag is null and i.disco = 0
+            order by i.expiration_date asc ";
+
+        return $this->fetchOneFromCompanyDb($sql, [
+            'product_id' => $productId,
+            'company_id' => $companyId,
+            'min_date' => $minDate,
+        ]);
+    }
+
+    public function fetchCloseDatedInventory($storeId)
+    {
+        $sql = "select inventory_item_id, product_id from #t#.inventory_items i
+                inner join #t#.locations l on l.location_id = i.location_id
+                where l.store_id = :store_id and i.close_dated_date < :close_dated and i.status = 'ONSHELF'";
+        return $this->fetchFromCompanyDb($sql, [
+            'store_id' => $storeId,
+            'close_dated' => '2021-03-30',
+        ]);
+    }
+
+    public function addNextClosestDate(
+        string $productId,
+        string $expiration
+    )
+    {
+        $sql = "update #t#.product_dates set closest_date = :expiration_date where product_id = :product_id";
+
+        return DB::connection('db_companies')->update(
+            $this->companyPdoConvert($sql, $this->dbName),
+            [
+                'product_id' => $productId,
+                'expiration_date' => $expiration,
+            ]
+        );
+    }
+
     public function fetchNewCompanyProducts(string $companyId)
     {
         $sql = "select distinct p.product_id from #t#.products p
@@ -532,7 +635,7 @@ class Database
         if (!empty($excludeDepts)) {
             $sql .= " and i.department_id NOT IN (" . $this->getListParams($excludeDepts) . ") ";
         }
-        
+
         return $this->fetchFromCompanyDb($sql, [
             'company_id' => $companyId,
             'product_id' => $productId,
@@ -591,7 +694,7 @@ class Database
     }
 
     // Converts an array of strings to a sql list
-    private function getListParams(array $elements)
+    public function getListParams(array $elements)
     {
         $list = "";
 

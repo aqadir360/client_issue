@@ -105,7 +105,7 @@ class ImportLePreKon implements ImportInterface
                 }
 
                 if ($productId) {
-                    $this->import->persistMetric($storeId, $productId, 0, $this->parseRetail($data), 0);
+                    $this->import->persistMetric($storeId, $product, 0, $this->parseRetail($data), 0);
                 }
             }
 
@@ -195,7 +195,7 @@ class ImportLePreKon implements ImportInterface
 
                 $this->import->persistMetric(
                     $storeId,
-                    $product->productId,
+                    $product,
                     $this->import->convertFloatToInt($cost),
                     $this->import->convertFloatToInt($retail),
                     $this->import->convertFloatToInt($movement)

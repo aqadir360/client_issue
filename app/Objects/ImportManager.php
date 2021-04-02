@@ -49,7 +49,8 @@ class ImportManager
         int $importTypeId,
         ?int $importJobId,
         bool $debugMode
-    ) {
+    )
+    {
         $this->companyId = $companyId;
         $this->importTypeId = $importTypeId;
 
@@ -321,10 +322,14 @@ class ImportManager
         $existing = $this->db->fetchProductByBarcode($product->barcode);
 
         if ($existing !== false) {
-            $product->isExistingProduct = true;
-            $product->productId = $existing->product_id;
-            $product->description = $existing->description;
-            $product->size = $existing->size;
+            $product->setExistingProduct(
+                $existing->product_id,
+                $existing->barcode,
+                $existing->description,
+                $existing->size,
+                $existing->photo,
+                $existing->no_expiration
+            );
 
             if ($storeId !== null) {
                 $product->inventory = $this->db->fetchProductInventory($product->productId, $storeId);
@@ -336,20 +341,13 @@ class ImportManager
 
     public function fetchAndCreateCompanyProduct(string $upc): ?Product
     {
-        $product = new Product($upc);
+        $product = $this->fetchProduct($upc);
 
-        $existing = $this->db->fetchProductByBarcode($product->barcode);
-
-        if ($existing !== false) {
-            $product->isExistingProduct = true;
-            $product->productId = $existing->product_id;
-            $product->description = $existing->description;
-            $product->size = $existing->size;
-
+        if ($product->isExistingProduct) {
             $companyProduct = $this->db->fetchProductFromCompany($product->productId);
 
             if (!$companyProduct) {
-                if ($this->db->insertCompanyProduct($existing) === false) {
+                if ($this->db->insertCompanyProduct($product) === false) {
                     return null;
                 }
             }
@@ -461,6 +459,7 @@ class ImportManager
     public function updateInventoryLocation(string $itemId, string $storeId, string $deptId, string $aisle, string $section, string $shelf = '')
     {
         $response = $this->proxy->updateInventoryLocation(
+            $this->companyId,
             $itemId,
             $storeId,
             $deptId,
@@ -562,7 +561,7 @@ class ImportManager
         return intval($value * 1000);
     }
 
-    public function persistMetric(string $storeId, string $productId, int $cost, int $retail, int $movement, bool $recordSkipped = false)
+    public function persistMetric(string $storeId, Product $product, int $cost, int $retail, int $movement, bool $recordSkipped = false)
     {
         if ($cost === 0 && $retail === 0 && $movement === 0) {
             if ($recordSkipped) {
@@ -576,8 +575,7 @@ class ImportManager
             return;
         }
 
-        $existing = $this->db->fetchExistingMetric($storeId, $productId);
-
+        $existing = $this->db->fetchExistingMetric($storeId, $product->productId);
         if (count($existing) > 0) {
             $existingCost = intval($existing[0]->cost);
             $existingRetail = intval($existing[0]->retail);
@@ -589,13 +587,14 @@ class ImportManager
             $movement = ($movement > 0) ? $movement : $existingMovement;
 
             if ($cost !== $existingCost || $retail !== $existingRetail || $movement !== $existingMovement) {
-                $this->db->updateMetric($storeId, $productId, $cost, $retail, $movement);
+                $this->db->updateMetric($storeId, $product->productId, $cost, $retail, $movement);
                 $this->currentFile->metrics++;
             } elseif ($recordSkipped) {
                 $this->currentFile->skipped++;
             }
         } else {
-            $this->db->insertMetric($storeId, $productId, $cost, $retail, $movement);
+            $this->db->getOrInsertProduct($product);
+            $this->db->insertMetric($storeId, $product->productId, $cost, $retail, $movement);
             $this->currentFile->metrics++;
         }
     }

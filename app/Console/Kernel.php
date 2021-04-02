@@ -3,7 +3,9 @@
 namespace App\Console;
 
 use App\Console\Commands\CopyMetrics;
+use App\Console\Commands\CopyOverlayDates;
 use App\Console\Commands\DoImport;
+use App\Console\Commands\ImportDsdSkip;
 use App\Console\Commands\PopulateSkipList;
 use App\Console\Commands\ProcessNextItem;
 use Illuminate\Console\Scheduling\Schedule;
@@ -21,6 +23,8 @@ class Kernel extends ConsoleKernel
         ProcessNextItem::class,
         PopulateSkipList::class,
         CopyMetrics::class,
+        CopyOverlayDates::class,
+        ImportDsdSkip::class,
     ];
 
     /**
@@ -32,7 +36,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('dcp:process-import')->everyMinute();
-        $schedule->command('dcp:copy-metrics')->daily();
+        // $schedule->command('dcp:copy-metrics')->daily();
     }
 
     /**
