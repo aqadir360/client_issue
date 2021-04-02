@@ -187,6 +187,12 @@ class Database
         return $this->fetchFromCompanyDb($sql, []);
     }
 
+    public function fetchSegDsdSkus($storeNum)
+    {
+        $sql = "SELECT sku FROM #t#.seg_dsd WHERE store_num = :store_num";
+        return $this->fetchFromCompanyDb($sql, ['store_num' => $storeNum]);
+    }
+
     public function insertSegSku($sku, $inputBarcode, $barcode)
     {
         try {
@@ -427,6 +433,7 @@ class Database
         );
     }
 
+    // Creates the product in the company database if it does not exist
     public function getOrInsertProduct(Product $product): bool
     {
         $sql = "SELECT product_id FROM #t#.products WHERE product_id = :product_id";

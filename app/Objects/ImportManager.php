@@ -256,11 +256,13 @@ class ImportManager
         }
 
         if ($dept->skip) {
+            $this->writeFileOutput([$department, $category], "Department Rule Mapped: " . $dept->department . " ~ " . $dept->category);
             $this->currentFile->skipped++;
             return false;
         }
 
         if ($dept->departmentId === null) {
+            $this->writeFileOutput([$department, $category], "Department Rule Mapped: " . $dept->department . " ~ " . $dept->category);
             $this->currentFile->skipDepts++;
             return false;
         }
@@ -399,19 +401,6 @@ class ImportManager
         $this->recordResponse($response, 'disco');
     }
 
-    public function persistProduct($barcode, $name, $size): bool
-    {
-        $response = $this->proxy->persistProduct($this->companyId, $barcode, $name, $size);
-
-        if (!$this->proxy->validResponse($response)) {
-            $this->addInvalidBarcode($barcode);
-            $this->currentFile->invalidBarcodeErrors++;
-            return false;
-        }
-
-        return true;
-    }
-
     // Returns null or product ID
     public function createProduct(Product $product): ?string
     {
@@ -432,7 +421,7 @@ class ImportManager
     }
 
     // Returns product id or null
-    public function implementationScan(Product $product, string $storeId, string $aisle, string $section, string $deptId, string $shelf = '')
+    public function implementationScan(Product $product, string $storeId, string $aisle, string $section, string $deptId, string $shelf = '', bool $skipDisco = false)
     {
         $response = $this->proxy->implementationScan(
             $product,
@@ -441,7 +430,8 @@ class ImportManager
             $aisle,
             $section,
             $deptId,
-            $shelf
+            $shelf,
+            $skipDisco
         );
 
         $success = $this->recordResponse($response, 'add');

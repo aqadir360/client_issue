@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 namespace App\Objects;
 
@@ -44,8 +43,10 @@ class Api
         string $aisle,
         string $section,
         string $deptId,
-        string $shelf = ''
-    ) {
+        string $shelf = '',
+        bool $skipDisco = false
+    )
+    {
         return $this->writeRequest(
             'implementation-scan',
             [
@@ -59,6 +60,7 @@ class Api
                 'section' => $section,
                 'shelf' => $shelf,
                 'pulled' => 0,
+                'skipDisco' => $skipDisco,
                 'outOfStock' => false,
             ]
         );
@@ -117,7 +119,8 @@ class Api
         $description,
         $size,
         $createOnly = true
-    ) {
+    )
+    {
         return $this->writeRequest(
             'persist-product',
             [
@@ -141,7 +144,8 @@ class Api
         $last,
         $role,
         $stores
-    ) {
+    )
+    {
         return $this->writeRequest(
             'persist-user',
             [
@@ -192,7 +196,8 @@ class Api
         $barcode,
         $vendor,
         $companyId
-    ) {
+    )
+    {
         return $this->writeRequest(
             'create-product-vendor',
             [

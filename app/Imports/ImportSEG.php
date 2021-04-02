@@ -36,8 +36,13 @@ class ImportSEG implements ImportInterface
     // [17] Avg_Dly_Lbs
     public function __construct(ImportManager $importManager)
     {
+        echo "Constructing SEG" . PHP_EOL;
         $this->import = $importManager;
+
+        echo "Setting Skus" . PHP_EOL;
         $this->setSkus();
+
+        echo "Setting Reclaim" . PHP_EOL;
         $this->setReclaimSkus();
     }
 
@@ -69,6 +74,8 @@ class ImportSEG implements ImportInterface
             return;
         }
 
+        $dsdSkus = $this->getDsdSkus($storeNum);
+
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
                 if ('Loc_Id' == trim($data[0])) {
@@ -85,81 +92,91 @@ class ImportSEG implements ImportInterface
                     continue;
                 }
 
-                $departmentId = $this->import->getDepartmentId($data[12], $data[6]);
-                if ($departmentId !== '5ee880ee-ac21-fcf0-9833-6cb64117f5ea') {
-//                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
-                    continue;
-                }
-
                 $sku = trim($data[7]);
                 $inputBarcode = intval(trim($data[8]));
                 $upc = BarcodeFixer::fixUpc($inputBarcode);
                 if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
                     $this->recordSku(trim($data[7]), $inputBarcode);
-                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode $upc");
                     continue;
                 } else {
                     $this->recordSku($sku, $inputBarcode, $upc);
                 }
 
-                if (isset($this->reclaim[intval($sku)])) {
-                    $departmentId = $this->getReclaimDepartment($departmentId);
-                } else {
+                $location = $this->normalizeLocation($data);
+                if ($location->valid === false) {
+                    $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
                     continue;
                 }
 
-//                $location = $this->normalizeLocation($data);
-//                if ($location->valid === false) {
-//                    $this->import->recordSkipped();
-//                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
-//                    continue;
-//                }
+                $departmentId = $this->import->getDepartmentId($data[12], $data[6]);
+                if ($departmentId === false) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
+                    continue;
+                }
+
+                if (isset($this->reclaim[intval($sku)])) {
+                    $departmentId = $this->getReclaimDepartment($departmentId);
+                }
 
                 $product = $this->import->fetchProduct($upc, $storeId);
+
                 if (!$product->isExistingProduct) {
+                    $product->setDescription($data[9]);
+                    $product->setSize($data[10]);
+
+                    if (empty($product->description)) {
+                        $this->import->writeFileOutput($data, "Skip: Missing Description for New Product");
+                        $this->import->recordFileLineError('ERROR', 'Missing Product Description');
+                        continue;
+                    }
+                }
+
+                if (isset($dsdSkus[intval($sku)])) {
+                    if ($product->hasInventory()) {
+                        $this->import->discontinueProduct($storeId, $product->productId);
+                    }
+
+                    $this->import->writeFileOutput($data, "Skip: DSD Sku $sku");
                     continue;
                 }
 
                 if ($product->hasInventory()) {
-                    echo $product->barcode . PHP_EOL;
-                    $item = $product->inventory[0];
-                    $this->import->updateInventoryLocation(
-                        $item->inventory_item_id,
+                    $productId = $product->productId;
+                    $this->import->recordStatic();
+                    $this->import->writeFileOutput($data, "Success: Inventory Exists");
+                } else {
+                    $productId = $this->import->implementationScan(
+                        $product,
                         $storeId,
+                        $location->aisle,
+                        $location->section,
                         $departmentId,
-                        $item->aisle,
-                        $item->section,
-                        $item->shelf
+                        $location->shelf,
+                        true
                     );
-                    $this->import->writeFileOutput($data, "Success: Updated Department");
+
+                    if ($productId === null) {
+                        $this->import->writeFileOutput($data, "Error: Unable to Create Inventory");
+                    } else {
+                        $this->import->writeFileOutput($data, "Success: Created Inventory");
+                    }
                 }
 
-//                else {
-//                    $productId = $this->import->implementationScan(
-//                        $product,
-//                        $storeId,
-//                        $location->aisle,
-//                        $location->section,
-//                        $departmentId,
-//                        $location->shelf
-//                    );
-//                    $this->import->writeFileOutput($data, "Success: Created Inventory");
-//                }
+                if ($productId) {
+                    $movement = $this->import->parsePositiveFloat($data[16]);
+                    $price = $this->import->parsePositiveFloat($data[14]);
+                    $priceModifier = intval($data[13]);
 
-//                if ($productId) {
-//                    $cost = 0; // Not sending cost
-//                    $movement = $this->import->parsePositiveFloat($data[16]);
-//                    $price = $this->import->parsePositiveFloat($data[14]);
-//                    $priceModifier = intval($data[13]);
-//
-//                    $this->import->persistMetric(
-//                        $storeId,
-//                        $productId,
-//                        $cost,
-//                        $this->import->convertFloatToInt($price / $priceModifier),
-//                        $this->import->convertFloatToInt($movement)
-//                    );
-//                }
+                    $this->import->persistMetric(
+                        $storeId,
+                        $productId,
+                        0,
+                        $this->import->convertFloatToInt($price / $priceModifier),
+                        $this->import->convertFloatToInt($movement)
+                    );
+                }
             }
 
             fclose($handle);
@@ -172,15 +189,7 @@ class ImportSEG implements ImportInterface
     {
         $location = new Location();
         $location->aisle = trim($data[1]);
-
-        $section = trim($data[2]) . trim($data[3]);
-
-        if (strpos($section, "NO AISLE") !== false) {
-
-        }
-
-        $location->section =
-
+        $location->section = trim($data[2]) . trim($data[3]);
         $location->shelf = trim($data[4]);
 
         $location->valid = $this->shouldSkipLocation($location);
@@ -225,6 +234,18 @@ class ImportSEG implements ImportInterface
         foreach ($rows as $row) {
             $this->reclaim[intval($row->sku)] = $row->sku;
         }
+    }
+
+    private function getDsdSkus($storeNum)
+    {
+        $dsd = [];
+        $rows = $this->import->db->fetchSegDsdSkus($storeNum);
+
+        foreach ($rows as $row) {
+            $dsd[intval($row->sku)] = $row->sku;
+        }
+
+        return $dsd;
     }
 
     private function getReclaimDepartment(string $departmentId): ?string
