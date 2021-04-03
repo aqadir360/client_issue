@@ -24,9 +24,9 @@ class OverlayNew
         $this->db = $db;
     }
 
-    public function importUpdates(string $dbName, string $importTypeId, string $companyId, int $scheduleId)
+    public function importUpdates(string $dbName, string $importTypeId, string $companyId, int $scheduleId, int $jobId)
     {
-        $importStatusId = $this->db->startImport($importTypeId, $scheduleId);
+        $importStatusId = $this->db->startImport($importTypeId, $jobId);
         $resultId = $this->db->insertResultsRow($importStatusId, "New Item Overlay");
         $settings = $this->getImportSettings($scheduleId);
 

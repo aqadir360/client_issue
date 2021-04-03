@@ -102,7 +102,13 @@ class ProcessNextItem extends Command
                 return;
         }
 
-        $import->importUpdates($pending->db_name, $pending->import_type_id, $pending->company_id, $pending->import_schedule_id);
+        $import->importUpdates(
+            $pending->db_name,
+            $pending->import_type_id,
+            $pending->company_id,
+            $pending->import_schedule_id,
+            intval($pending->import_job_id)
+        );
     }
 
     private function log($output)
