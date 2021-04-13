@@ -123,7 +123,8 @@ class ImportManager
 
     public function writeFileOutput(array $data, string $message)
     {
-        fputcsv($this->outputFile, [$message] + $data);
+        array_unshift($data, $message);
+        fputcsv($this->outputFile, $data);
     }
 
     public function completeFile()
@@ -330,7 +331,9 @@ class ImportManager
                 $existing->description,
                 $existing->size,
                 $existing->photo,
-                $existing->no_expiration
+                $existing->no_expiration,
+                $existing->created_at,
+                $existing->updated_at
             );
 
             if ($storeId !== null) {
@@ -416,7 +419,7 @@ class ImportManager
         }
 
         $productId = $response->message;
-        // $this->db->insertProduct($productId, $product->barcode, $product->description, $product->size);
+        $this->db->insertProduct($productId, $product->barcode, $product->description, $product->size);
         return $productId;
     }
 

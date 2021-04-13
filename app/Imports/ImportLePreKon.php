@@ -54,7 +54,6 @@ class ImportLePreKon implements ImportInterface
         }
 
         if (($handle = fopen($file, "r")) !== false) {
-
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
                 if (!$this->import->recordRow()) {
                     break;
@@ -78,33 +77,24 @@ class ImportLePreKon implements ImportInterface
                 $product = $this->import->fetchProduct($upc, $storeId);
                 $location = new Location('UNKN', '');
 
-                if ($product->isExistingProduct) {
-                    $productId = $product->productId;
-                    if ($product->hasInventory()) {
-                        $this->import->implementationScan(
-                            $product,
-                            $storeId,
-                            $location->aisle,
-                            $location->section,
-                            $departmentId
-                        );
-                    } else {
-                        $this->import->recordStatic();
-                    }
-                } else {
+                if (!$product->isExistingProduct) {
                     $product->setDescription($data[2]);
                     $product->setSize($this->parseSize(trim($data[3]), trim($data[4])));
-
-                    $productId = $this->import->implementationScan(
-                        $product,
-                        $storeId,
-                        $location->aisle,
-                        $location->section,
-                        $departmentId
-                    );
+                } else if ($product->hasInventory()) {
+                    $this->import->recordStatic();
+                    continue;
                 }
 
+                $productId = $this->import->implementationScan(
+                    $product,
+                    $storeId,
+                    $location->aisle,
+                    $location->section,
+                    $departmentId
+                );
+
                 if ($productId) {
+                    $product->setProductId($productId);
                     $this->import->persistMetric($storeId, $product, 0, $this->parseRetail($data), 0);
                 }
             }

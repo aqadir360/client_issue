@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Imports\Refresh\RaleysInventory;
+use App\Imports\Refresh\VallartaBaby;
 use App\Imports\Refresh\VallartaInventory;
 use App\Objects\ImportManager;
 
@@ -17,6 +18,8 @@ class ImportFactory
                 return new ImportBristolMetrics($importManager);
             case 'buehlers':
                 return new ImportBuehlers($importManager);
+            case 'caputos':
+                return new ImportCaputos($importManager);
             case 'downtoearth':
                 return new ImportDownToEarth($importManager);
             case 'foxbros':
@@ -49,6 +52,8 @@ class ImportFactory
                 return new ImportSEGUsers($importManager);
             case 'vallarta':
                 return new ImportVallarta($importManager);
+            case 'vallarta_baby':
+                return new VallartaBaby($importManager);
             case 'vallarta_refresh':
                 return new VallartaInventory($importManager);
             case 'websters':

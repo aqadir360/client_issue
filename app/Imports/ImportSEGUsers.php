@@ -30,50 +30,58 @@ class ImportSEGUsers implements ImportInterface
         $fileList = glob(storage_path('imports/seg/users/*'));
         $outputHandle = fopen(storage_path('imports/seg/all_users.csv'), 'w');
 
-        foreach ($fileList as $file) {
-            if (($handle = fopen($file, "r")) !== false) {
-                while (($data = fgetcsv($handle, 1000, "|")) !== false) {
-                    fputcsv($outputHandle, $data);
-                }
-
-                fclose($handle);
-            }
+        foreach($fileList as $file) {
+            $this->importUsers($file, $outputHandle);
         }
 
         fclose($outputHandle);
         $this->import->completeImport();
     }
 
-    private function importUsers($file)
+    private function importUsers($file, $output)
     {
         $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-//                if (!$this->import->recordRow()) {
-//                    continue;
-//                }
-
-                $first = trim($data[1]);
-                $last = trim($data[2]);
-                $email = '';
-                $username = $this->parseUsername(trim($data[3]));
-                $storeId = $this->import->storeNumToStoreId(intval(trim($data[0])));
-                if ($storeId === false) {
-                    var_dump($data);
-                    die();
+            while (($data = fgetcsv($handle, 1000, "|")) !== false) {
+                if (!$this->import->recordRow()) {
                     continue;
                 }
 
-//                $role = intval(trim($data[5])) === 2 ? 'S_MANAG' : 'USER';
-                $role = 'USER';
+                $first = trim($data[0]);
+                $last = trim($data[1]);
+                $email = trim($data[2]);
+                $parsedUsername = $this->parseUsername(trim($data[3]));
+                $username = intval($data[3]);
+                $storeId = $this->import->storeNumToStoreId(intval(trim($data[4])));
+                if ($storeId === false) {
+                    continue;
+                }
+
+                $role = intval(trim($data[5])) === 2 ? 'S_MANAG' : 'USER';
+
+                $existing = $this->import->db->fetchUserByUsername($parsedUsername);
+                if ($existing) {
+                    $data[] = "Old Username " ;
+                    $this->import->recordStatic();
+                    fputcsv($output, $data);
+                    continue;
+                }
 
                 $existing = $this->import->db->fetchUserByUsername($username);
-
                 if ($existing) {
-                    var_dump($existing);
-                    // TODO: Make sure has all stores access
+                    $data[] = "exists " ;
+                    $this->import->recordStatic();
+                    fputcsv($output, $data);
+                    continue;
                 } else {
+                    if (!empty($email) && $this->import->db->fetchUserByEmail($email)) {
+                        $data[] = "email " ;
+                        $this->import->recordSkipped();
+                        fputcsv($output, $data);
+                        continue;
+                    }
+
                     echo $username . PHP_EOL;
                     $userId = (string)Uuid::uuid1();
                     $result = $this->import->getProxy()->createUser(
@@ -87,10 +95,6 @@ class ImportSEGUsers implements ImportInterface
                         $role,
                         [$storeId]
                     );
-                    var_dump($userId);
-                    var_dump($storeId);
-                    var_dump($result);
-                    die();
                     $this->import->recordResponse($result, 'add');
                 }
             }

@@ -3,6 +3,7 @@
 namespace App\Console;
 
 use App\Console\Commands\CopyMetrics;
+use App\Console\Commands\CopyNewDates;
 use App\Console\Commands\CopyOverlayDates;
 use App\Console\Commands\DoImport;
 use App\Console\Commands\ImportDsdSkip;
@@ -25,6 +26,7 @@ class Kernel extends ConsoleKernel
         CopyMetrics::class,
         CopyOverlayDates::class,
         ImportDsdSkip::class,
+        CopyNewDates::class,
     ];
 
     /**

@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
         (13, '76eb6116-0e73-4f25-90cb-bd65bc68cd09', 'hardings', 'Harding\'s Inventory', 'Imports Inventory updates by location comparison', 'hardings/imports', '2020-09-28 15:09:34'),
         (14, '1291eca3-984d-b36e-a04d-46290bea6a58', 'leprekon', 'Le-Pre-Kon Inventory and Metrics', 'Imports New, Disco, and Metrics files', 'urmstores/imports', '2020-10-02 19:26:13'),
         (15, 'c6ab761c-1e1f-3011-6740-053e1e81f7c7', 'foxbros', 'Fox Bros Inventory and Metrics', 'Import Update and Metrics files', 'foxbros/imports', '2020-10-07 17:18:47'),
-        (16, 'c3c9f97e-e095-1f19-0c5e-441da2520a9a', 'vallarta_refresh', 'Refresh Vallarta Inventory', 'Requires local pilot files', 'vallarta/imports', '2020-10-30 02:32:25'),
+        (16, 'c3c9f97e-e095-1f19-0c5e-441da2520a9a', 'vallarta_refresh', 'Refresh Vallarta Inventory', 'Requires Pilot_ files', 'vallarta/imports', '2020-10-30 02:32:25'),
         (17, NULL, 'overlay_oos', 'OOS Item Overlay', 'Copies dates for oos items from within company', NULL, '2020-10-29 16:18:35'),
         (18, '9a22701b-d7ae-aaac-1194-d583167f0ba4', 'bristol_metrics', 'Bristol Farms Metrics', 'Imports Metrics', 'bristol/imports', '2020-12-09 17:51:24'),
         (19, 'cd6314b2-f253-2a5a-35f7-ca0e92eb46b3', 'karns', 'Karns Metrics Import', 'In Progress: requires local files', NULL, '2020-12-29 23:42:57'),
@@ -36,7 +36,8 @@ class DatabaseSeeder extends Seeder
         (21, 'fc42b9dc-6d83-11e7-9139-f23c917b0c87', 'metcalfes_metrics', 'Metcalfe\'s Metrics', 'Imports Metrics', 'metcalfes/imports', '2021-01-06 19:10:40'),
 	    (22, '96bec4fe-098f-0e87-2563-11a36e6447ae', 'seg_users', 'SEG User Create', 'Creates and updates users accounts', 'southeastern/imports', '2021-02-22 17:35:33'),
 	    (23, '0ba8c4a0-9e50-11e7-b25f-f23c917b0c87', 'lunds_metrics', 'Lunds Metrics', 'Imports Metrics files', 'lunds/imports', '2021-03-02 22:45:23'),
-	    (24, '3fb5b141-dd03-0555-39c5-0c0e37461825', 'janssens', 'Janssen\'s Pilot', 'Imports products and metrics', 'janssens/imports', '2021-03-19 18:50:59');
+	    (24, '3fb5b141-dd03-0555-39c5-0c0e37461825', 'janssens', 'Janssen\'s Pilot', 'Imports products and metrics', 'janssens/imports', '2021-03-19 18:50:59'),
+    	(25, 'c3c9f97e-e095-1f19-0c5e-441da2520a9a', 'vallarta_baby', 'Refresh Vallarta Baby Dept Inventory', 'Requires Pilot_Baby_ files', 'vallarta/imports', '2021-04-05 15:06:25')
         */
     }
 }

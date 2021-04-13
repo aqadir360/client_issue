@@ -3,15 +3,19 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Ramsey\Uuid\Uuid;
+
 class Product
 {
     public $barcode;
     public $isExistingProduct = false;
     public $productId = null;
     public $description = null;
-    public $size = null;
+    public $size = '';
     public $photo = null;
     public $noExp = false;
+    public $createdAt = null;
+    public $updatedAt = null;
     public $inventory = [];
 
     public function __construct(string $barcode)
@@ -19,7 +23,7 @@ class Product
         $this->barcode = $barcode;
     }
 
-    public function setExistingProduct($productId, $barcode, $description, $size, $photo, $noExp)
+    public function setExistingProduct($productId, $barcode, $description, $size, $photo, $noExp, $createdAt, $updatedAt)
     {
         $this->productId = $productId;
         $this->barcode = $barcode;
@@ -28,6 +32,8 @@ class Product
         $this->photo = $photo;
         $this->noExp = $noExp;
         $this->isExistingProduct = true;
+        $this->createdAt = $createdAt;
+        $this->updatedAt = $updatedAt;
     }
 
     public function hasInventory(): bool
@@ -43,6 +49,11 @@ class Product
     public function setProductId(string $input)
     {
         $this->productId = $input;
+    }
+
+    public function setNewProductId()
+    {
+        $this->productId = (string)Uuid::uuid1();
     }
 
     public function setSize($input)

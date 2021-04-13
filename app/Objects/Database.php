@@ -361,8 +361,6 @@ class Database
 
     public function completeImport($importStatusId, int $filesProcessed, int $lastRun, string $errorMsg)
     {
-        var_dump("complete import");
-        var_dump($importStatusId);
         $sql = "UPDATE import_status
         SET error_message = :msg, files_processed = :files_processed, compare_date = :compare_date, completed_at = NOW()
         WHERE id = :id";
@@ -403,18 +401,19 @@ class Database
         );
     }
 
-    //    public function insertProduct(string $productId, string $barcode, string $name, string $size)
-    //    {
-    //        $sql = "INSERT INTO {$this->db}.products
-    //        (product_id, barcode, description, size, created_at, updated_at)
-    //        VALUES (:product_id, :barcode, :description, :size, NOW(), NOW())";
-    //        return DB::insert($sql, [
-    //            'product_id' => $productId,
-    //            'barcode' => $barcode,
-    //            'description' => $name,
-    //            'size' => $size,
-    //        ]);
-    //    }
+    // Inserts into core db
+    public function insertProduct(string $productId, string $barcode, string $description, ?string $size)
+    {
+        $sql = "INSERT INTO products
+            (product_id, barcode, description, size, created_at, updated_at)
+            VALUES (:product_id, :barcode, :description, :size, NOW(), NOW())";
+        return DB::insert($sql, [
+            'product_id' => $productId,
+            'barcode' => $barcode,
+            'description' => $description,
+            'size' => $size,
+        ]);
+    }
 
     public function insertMetric(string $storeId, string $productId, int $cost, int $retail, int $movement)
     {
@@ -447,18 +446,35 @@ class Database
             return true;
         }
 
-        $sql = "INSERT INTO #t#.products
+        if ($product->isExistingProduct) {
+            $sql = "INSERT INTO #t#.products
+            (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
+            VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
+            DB::connection('db_companies')->insert(
+                $this->companyPdoConvert($sql, $this->dbName), [
+                'product_id' => $product->productId,
+                'barcode' => $product->barcode,
+                'description' => $product->description,
+                'photo' => $product->photo,
+                'no_expiration' => $product->noExp,
+                'size' => $product->size,
+                'created_at' => $product->createdAt,
+                'updated_at' => $product->updatedAt,
+            ]);
+        } else {
+            $sql = "INSERT INTO #t#.products
             (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
             VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, NOW(), NOW())";
-        DB::connection('db_companies')->insert(
-            $this->companyPdoConvert($sql, $this->dbName), [
-            'product_id' => $product->productId,
-            'barcode' => $product->barcode,
-            'description' => $product->description,
-            'photo' => $product->photo,
-            'no_expiration' => $product->noExp,
-            'size' => $product->size,
-        ]);
+            DB::connection('db_companies')->insert(
+                $this->companyPdoConvert($sql, $this->dbName), [
+                'product_id' => $product->productId,
+                'barcode' => $product->barcode,
+                'description' => $product->description,
+                'photo' => $product->photo,
+                'no_expiration' => $product->noExp,
+                'size' => $product->size,
+            ]);
+        }
 
         return true;
     }
@@ -496,6 +512,15 @@ class Database
 
         return DB::selectOne($sql, [
             'username' => $username,
+        ]);
+    }
+
+    public function fetchUserByEmail(string $email)
+    {
+        $sql = "SELECT u.* FROM users u WHERE u.email = :email";
+
+        return DB::selectOne($sql, [
+            'email' => $email,
         ]);
     }
 
@@ -539,11 +564,11 @@ class Database
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on l.store_id = s.store_id
             where i.product_id = :product_id and s.company_id = :company_id and i.expiration_date < :max_date
-            and i.expiration_date > NOW() and i.expiration_date is not null and i.flag is null and i.disco = 0";
+            and i.close_dated_date > '2021-04-13' and i.expiration_date is not null and i.flag is null and i.disco = 0";
 
-        if (!empty($copyFromStores)) {
-            $sql .= " and s.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
-        }
+//        if (!empty($copyFromStores)) {
+//            $sql .= " and s.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
+//        }
 
         $sql .= " order by i.expiration_date $orderDirection ";
 
@@ -563,26 +588,25 @@ class Database
     public function fetchNextClosestDate(
         string $productId,
         string $companyId,
+        string $fromStores,
         string $minDate
     )
     {
-//        $sql = "select i.expiration_date from #t#.inventory_items i
-//            inner join #t#.locations l on l.location_id = i.location_id
-//            where l.store_id IN ($fromStores)
-//            and i.product_id = :product_id
-//            and i.expiration_date > :min_date and i.flag is null and i.disco = 0
-//            order by i.expiration_date asc ";
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on s.store_id = l.store_id
-            where s.company_id = :company_id
-            and i.product_id = :product_id
-            and i.close_dated_date > :min_date and i.flag is null and i.disco = 0
-            order by i.expiration_date asc ";
+            where i.product_id = :product_id and i.expiration_date > :min_date and i.flag is null and i.disco = 0 ";
+
+        if (!empty($fromStores)) {
+            $sql .= "and s.store_id IN ($fromStores) ";
+        } else {
+            $sql .= " and s.company_id = '$companyId' ";
+        }
+
+        $sql .= " order by i.expiration_date asc ";
 
         return $this->fetchOneFromCompanyDb($sql, [
             'product_id' => $productId,
-            'company_id' => $companyId,
             'min_date' => $minDate,
         ]);
     }
@@ -594,7 +618,29 @@ class Database
                 where l.store_id = :store_id and i.close_dated_date < :close_dated and i.status = 'ONSHELF'";
         return $this->fetchFromCompanyDb($sql, [
             'store_id' => $storeId,
-            'close_dated' => '2021-03-30',
+            'close_dated' => '2021-04-09',
+        ]);
+    }
+
+    public function fetchNewInventory($storeId)
+    {
+        $sql = "select inventory_item_id from #t#.inventory_items i
+                inner join #t#.locations l on l.location_id = i.location_id
+                where l.store_id = :store_id and i.flag = 'NEW'";
+        return $this->fetchFromCompanyDb($sql, [
+            'store_id' => $storeId,
+        ]);
+    }
+
+    public function fetchHighCountStores()
+    {
+        $sql = "select s.store_id from #t#.stores s
+            inner join #t#.store_counts c on c.store_id = s.store_id
+            where s.company_id = :company_id
+            group by s.store_id
+            having sum(c.cls_now_count) > 800";
+        return $this->fetchFromCompanyDb($sql, [
+            'company_id' => '96bec4fe-098f-0e87-2563-11a36e6447ae',
         ]);
     }
 
@@ -627,7 +673,7 @@ class Database
         ]);
     }
 
-    public function fetchNewCompanyInventory(string $productId, string $companyId, array $excludeStores, array $excludeDepts)
+    public function fetchNewCompanyInventory(string $productId, string $companyId, array $excludeStores = [], array $excludeDepts = [])
     {
         $sql = "select i.inventory_item_id from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
@@ -721,7 +767,7 @@ class Database
         return DB::getPdo()->lastInsertId();
     }
 
-    private function fetchFromCompanyDb($sql, $params)
+    public function fetchFromCompanyDb($sql, $params)
     {
         return DB::connection('db_companies')->select(
             $this->companyPdoConvert($sql, $this->dbName),
@@ -729,7 +775,7 @@ class Database
         );
     }
 
-    private function fetchOneFromCompanyDb($sql, $params)
+    public function fetchOneFromCompanyDb($sql, $params)
     {
         return DB::connection('db_companies')->selectOne(
             $this->companyPdoConvert($sql, $this->dbName),
