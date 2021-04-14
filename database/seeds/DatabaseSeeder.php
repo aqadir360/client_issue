@@ -37,7 +37,9 @@ class DatabaseSeeder extends Seeder
 	    (22, '96bec4fe-098f-0e87-2563-11a36e6447ae', 'seg_users', 'SEG User Create', 'Creates and updates users accounts', 'southeastern/imports', '2021-02-22 17:35:33'),
 	    (23, '0ba8c4a0-9e50-11e7-b25f-f23c917b0c87', 'lunds_metrics', 'Lunds Metrics', 'Imports Metrics files', 'lunds/imports', '2021-03-02 22:45:23'),
 	    (24, '3fb5b141-dd03-0555-39c5-0c0e37461825', 'janssens', 'Janssen\'s Pilot', 'Imports products and metrics', 'janssens/imports', '2021-03-19 18:50:59'),
-    	(25, 'c3c9f97e-e095-1f19-0c5e-441da2520a9a', 'vallarta_baby', 'Refresh Vallarta Baby Dept Inventory', 'Requires Pilot_Baby_ files', 'vallarta/imports', '2021-04-05 15:06:25')
+    	(25, 'c3c9f97e-e095-1f19-0c5e-441da2520a9a', 'vallarta_baby', 'Refresh Vallarta Baby Dept Inventory', 'Requires Pilot_Baby_ files', 'vallarta/imports', '2021-04-05 15:06:25'),
+	    (26, '9eb88cec-01d9-5353-61e5-613dd8a0ebec', 'caputos', 'Import Caputos Products', 'Requires local file', 'caputos/imports', '2021-04-12 14:10:59'),
+	    (27, '61efcdfa-c0e1-11e7-af75-080027c30a85', 'leevers_metrics', 'Leevers Metrics', 'Requires local file', NULL, '2021-04-14 23:02:15');
         */
     }
 }
