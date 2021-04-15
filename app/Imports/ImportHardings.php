@@ -17,20 +17,6 @@ class ImportHardings implements ImportInterface
         $this->import->setSkipList();
     }
 
-    public function getFilesToImport()
-    {
-        $files = $this->import->ftpManager->getRecentlyModifiedFiles();
-        foreach ($files as $file) {
-            if (strpos($file, '7z') === false) {
-                continue;
-            }
-            $zipFile = $this->import->ftpManager->downloadFile($file);
-            $this->import->ftpManager->unzipSevenZipFile($zipFile, 'hardings_unzipped');
-        }
-
-        return glob(storage_path('imports/hardings_unzipped/*'));
-    }
-
     public function importUpdates()
     {
         $filesToImport = $this->getFilesToImport();
@@ -46,11 +32,25 @@ class ImportHardings implements ImportInterface
             }
 
             $this->importStoreInventory($file, $storeId);
-//            $this->importMetrics($file, $storeId);
+            $this->importMetrics($file, $storeId);
             $this->import->completeFile();
         }
 
         $this->import->completeImport();
+    }
+
+    private function getFilesToImport()
+    {
+        $files = $this->import->ftpManager->getRecentlyModifiedFiles();
+        foreach ($files as $file) {
+            if (strpos($file, '7z') === false) {
+                continue;
+            }
+            $zipFile = $this->import->ftpManager->downloadFile($file);
+            $this->import->ftpManager->unzipSevenZipFile($zipFile, 'hardings_unzipped');
+        }
+
+        return glob(storage_path('imports/hardings_unzipped/*'));
     }
 
     private function importStoreInventory($file, $storeId)
@@ -70,8 +70,16 @@ class ImportHardings implements ImportInterface
     private function setFileInventory(InventoryCompare $compare, $file): bool
     {
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, "|")) !== false) {
-                $upc = '0' . BarcodeFixer::fixUpc(trim($data[3]));
+            while (($data = fgetcsv($handle, 5000, "|")) !== false) {
+                if ($data[0] == 'STORE') {
+                    continue;
+                }
+
+                $upc = BarcodeFixer::fixUpc(trim($data[3]));
+                if ($this->import->isInvalidBarcode($upc, $data[3])) {
+                    continue;
+                }
+
                 $loc = $this->parseLocation(trim($data[18]));
 
                 $compare->setFileInventoryItem(
@@ -104,9 +112,17 @@ class ImportHardings implements ImportInterface
     private function importMetrics($file, $storeId)
     {
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, "|")) !== false) {
-                $upc = '0' . BarcodeFixer::fixUpc(trim($data[3]));
+            while (($data = fgetcsv($handle, 5000, "|")) !== false) {
+                if ($data[0] == 'STORE') {
+                    continue;
+                }
 
+                if (count($data) < 61) {
+                    $this->import->recordFileLineError('ERROR', 'Line too short to parse');
+                    continue;
+                }
+
+                $upc = BarcodeFixer::fixUpc(trim($data[3]));
                 if ($this->import->isInvalidBarcode($upc, $data[3])) {
                     continue;
                 }
@@ -114,12 +130,15 @@ class ImportHardings implements ImportInterface
                 $product = $this->import->fetchProduct($upc);
 
                 if ($product->isExistingProduct) {
+                    $cost = $this->parseCost(floatval($data[60]), intval($data[61]));
+                    $retail = $this->parseRetail(trim($data[7]));
+
                     $this->import->persistMetric(
                         $storeId,
                         $product,
-                        $this->import->convertFloatToInt(floatval($data[4])),
-                        $this->import->convertFloatToInt(floatval($data[3])),
-                        $this->import->convertFloatToInt(floatval($data[2])),
+                        $this->import->convertFloatToInt($cost),
+                        $this->import->convertFloatToInt($retail),
+                        $this->import->convertFloatToInt(floatval($data[33])),
                         true
                     );
                 }
@@ -127,5 +146,19 @@ class ImportHardings implements ImportInterface
 
             fclose($handle);
         }
+    }
+
+    private function parseCost(float $caseCost, int $caseCount): float
+    {
+        return ($caseCost === 0) ? 0 : $caseCost / $caseCount;
+    }
+
+    private function parseRetail(string $input): float
+    {
+        if (strlen($input) > 2) {
+            $input = substr($input, 2);
+        }
+
+        return intval($input) / 100;
     }
 }
