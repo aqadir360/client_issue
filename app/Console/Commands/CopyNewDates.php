@@ -73,7 +73,7 @@ class CopyNewDates extends Command
                     inner join #t#.stores s on l.store_id = s.store_id
                     where i.flag = 'NEW' and s.company_id = :company_id
                     group by i.product_id
-                    having count(i.inventory_item_id) > 100
+                    order by count(i.inventory_item_id) desc
                 ) x on x.product_id = p.product_id
                 where p.no_expiration = 0";
 
@@ -88,7 +88,7 @@ class CopyNewDates extends Command
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on l.store_id = s.store_id
             where i.product_id = :product_id and s.company_id = :company_id
-            and i.close_dated_date > '2021-04-15' and i.expiration_date is not null and i.flag is null and i.disco = 0
+            and i.close_dated_date > '2021-04-20' and i.expiration_date is not null and i.flag is null and i.disco = 0
             order by i.expiration_date asc ";
 
         return $this->db->fetchOneFromCompanyDb($sql, [
