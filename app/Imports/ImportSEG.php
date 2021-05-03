@@ -48,9 +48,7 @@ class ImportSEG implements ImportInterface
 
     public function importUpdates()
     {
-//        $fileList = $this->import->downloadFilesByName('SEG_DCP_Initial_20210304_');
-
-        $fileList = glob(storage_path('/imports/seg/*'));
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_Initial_20210304_');
 
         foreach ($fileList as $file) {
             $this->importInventory($file);
@@ -159,10 +157,8 @@ class ImportSEG implements ImportInterface
 
                     if ($productId === null) {
                         $this->import->writeFileOutput($data, "Error: Unable to Create Inventory");
-                        continue;
                     } else {
                         $this->import->writeFileOutput($data, "Success: Created Inventory");
-                        $product->setProductId($productId);
                     }
                 }
 
@@ -173,7 +169,7 @@ class ImportSEG implements ImportInterface
 
                     $this->import->persistMetric(
                         $storeId,
-                        $product,
+                        $productId,
                         0,
                         $this->import->convertFloatToInt($price / $priceModifier),
                         $this->import->convertFloatToInt($movement)
@@ -206,7 +202,7 @@ class ImportSEG implements ImportInterface
 
     private function getStoreNum(string $filename)
     {
-        $filename = str_replace('_updated', '', $filename);
+        $filename = str_replace('_version5', '', $filename);
         $start = strrpos($filename, '_');
         $end = strrpos($filename, '.');
         return substr($filename, $start + 1, $end - $start - 1);

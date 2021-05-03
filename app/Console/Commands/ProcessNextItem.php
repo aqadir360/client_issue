@@ -49,8 +49,6 @@ class ProcessNextItem extends Command
 
         $database->setImportJobInProgress($pending->import_job_id);
 
-        $this->log("Starting " . $pending->type);
-
         if ($pending->type === 'overlay_new' || $pending->type === 'overlay_oos') {
             $this->runOverlay($database, $pending);
         } else {

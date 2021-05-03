@@ -54,21 +54,21 @@ class ImportJanssens implements ImportInterface
                     continue;
                 }
 
-                $product = $this->import->fetchAndCreateCompanyProduct($upc);
+                $product = $this->import->fetchProduct($upc);
 
                 if ($product === null || !$product->isExistingProduct) {
-//                    $product->setDescription($data[2]);
-//                    $product->setSize($this->parseSize(trim($data[2]), trim($data[3])));
+                    $product->setDescription($data[2]);
+                    $product->setSize($this->parseSize(trim($data[2]), trim($data[3])));
 
                     $this->import->writeFileOutput($data, "Skip: New Product");
                     $this->import->recordFileLineError('ERROR', 'Missing Product Description');
                     continue;
                 }
 
-//                $productId = $this->import->createProduct($product);
+                $productId = $this->import->createProduct($product);
                 $this->import->writeFileOutput($data, "Success: Created Product");
 
-//                if ($productId) {
+                if ($productId) {
                     $retail = $this->import->parsePositiveFloat($data[9]);
                     if (isset($data[30])) {
                         $movement = $this->import->parsePositiveFloat($data[30] / 45);
@@ -85,7 +85,7 @@ class ImportJanssens implements ImportInterface
                         $this->import->convertFloatToInt($retail),
                         $this->import->convertFloatToInt($movement)
                     );
-//                }
+                }
             }
 
             fclose($handle);

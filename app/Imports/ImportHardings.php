@@ -138,7 +138,7 @@ class ImportHardings implements ImportInterface
                         $product,
                         $this->import->convertFloatToInt($cost),
                         $this->import->convertFloatToInt($retail),
-                        $this->import->convertFloatToInt(floatval($data[33])),
+                        $this->import->convertFloatToInt(abs(floatval($data[33]))),
                         true
                     );
                 }
@@ -150,7 +150,7 @@ class ImportHardings implements ImportInterface
 
     private function parseCost(float $caseCost, int $caseCount): float
     {
-        return ($caseCost === 0) ? 0 : $caseCost / $caseCount;
+        return ($caseCount === 0) ? 0 : $caseCost / $caseCount;
     }
 
     private function parseRetail(string $input): float

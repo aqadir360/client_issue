@@ -132,7 +132,7 @@ class ImportLunds implements ImportInterface
                 }
 
                 $product = $this->import->fetchProduct($upc, $storeId);
-                if ($product->isExistingProduct) {
+                if ($product->isExistingProduct && $product->hasInventory()) {
                     $this->handleExistingProduct($product, $storeId, $departmentId, $location);
                 } else {
                     $product->setDescription(($data[2]));
@@ -192,7 +192,9 @@ class ImportLunds implements ImportInterface
                 $storeId,
                 $location->aisle,
                 $location->section,
-                $departmentId
+                $departmentId,
+                '',
+                true
             );
         }
     }

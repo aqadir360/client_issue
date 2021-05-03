@@ -86,6 +86,15 @@ class Database
         return false;
     }
 
+    public function fetchCompanyProductByBarcode(string $barcode)
+    {
+        $sql = "SELECT * FROM #t#.products WHERE barcode = :barcode";
+
+        return $this->fetchOneFromCompanyDb($sql, [
+            'barcode' => $barcode,
+        ]);
+    }
+
     public function fetchProductFromCompany(string $productId)
     {
         $sql = "SELECT * FROM #t#.products p WHERE p.product_id = :product_id";
@@ -104,6 +113,17 @@ class Database
 
         return $this->fetchFromCompanyDb($sql, [
             'product_id' => $productId,
+            'store_id' => $storeId,
+        ]);
+    }
+
+    public function fetchStoreProducts(string $storeId)
+    {
+        $sql = "SELECT DISTINCT i.product_id FROM #t#.inventory_items i
+             INNER JOIN #t#.locations l on l.location_id = i.location_id
+             WHERE l.store_id = :store_id AND i.disco = 0";
+
+        return $this->fetchFromCompanyDb($sql, [
             'store_id' => $storeId,
         ]);
     }
@@ -384,6 +404,17 @@ class Database
         ]);
     }
 
+    public function fetchStoreMetrics(string $storeId)
+    {
+        $sql = "SELECT cost, retail, movement, barcode FROM #t#.metrics m
+            INNER JOIN #t#.products p on p.product_id = m.product_id
+            WHERE store_id = :store_id";
+
+        return $this->fetchFromCompanyDb($sql, [
+            'store_id' => $storeId,
+        ]);
+    }
+
     public function updateMetric(string $storeId, string $productId, int $cost, int $retail, int $movement)
     {
         $sql = "UPDATE #t#.metrics
@@ -446,34 +477,39 @@ class Database
             return true;
         }
 
-        if ($product->isExistingProduct) {
-            $sql = "INSERT INTO #t#.products
+        try {
+            if ($product->isExistingProduct) {
+                $sql = "INSERT INTO #t#.products
             (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
             VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
-            DB::connection('db_companies')->insert(
-                $this->companyPdoConvert($sql, $this->dbName), [
-                'product_id' => $product->productId,
-                'barcode' => $product->barcode,
-                'description' => $product->description,
-                'photo' => $product->photo,
-                'no_expiration' => $product->noExp,
-                'size' => $product->size,
-                'created_at' => $product->createdAt,
-                'updated_at' => $product->updatedAt,
-            ]);
-        } else {
-            $sql = "INSERT INTO #t#.products
+                DB::connection('db_companies')->insert(
+                    $this->companyPdoConvert($sql, $this->dbName), [
+                    'product_id' => $product->productId,
+                    'barcode' => $product->barcode,
+                    'description' => $product->description,
+                    'photo' => $product->photo,
+                    'no_expiration' => $product->noExp,
+                    'size' => $product->size,
+                    'created_at' => $product->createdAt,
+                    'updated_at' => $product->updatedAt,
+                ]);
+            } else {
+                $sql = "INSERT INTO #t#.products
             (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
             VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, NOW(), NOW())";
-            DB::connection('db_companies')->insert(
-                $this->companyPdoConvert($sql, $this->dbName), [
-                'product_id' => $product->productId,
-                'barcode' => $product->barcode,
-                'description' => $product->description,
-                'photo' => $product->photo,
-                'no_expiration' => $product->noExp,
-                'size' => $product->size,
-            ]);
+                DB::connection('db_companies')->insert(
+                    $this->companyPdoConvert($sql, $this->dbName), [
+                    'product_id' => $product->productId,
+                    'barcode' => $product->barcode,
+                    'description' => $product->description,
+                    'photo' => $product->photo,
+                    'no_expiration' => $product->noExp,
+                    'size' => $product->size,
+                ]);
+            }
+        } catch (\PDOException $e) {
+            echo $product->productId . " " . $product->barcode . PHP_EOL;
+            return false;
         }
 
         return true;
@@ -611,14 +647,16 @@ class Database
         ]);
     }
 
-    public function fetchCloseDatedInventory($storeId)
+    public function fetchCloseDatedInventory($storeId, $compareDate)
     {
         $sql = "select inventory_item_id, product_id from #t#.inventory_items i
                 inner join #t#.locations l on l.location_id = i.location_id
-                where l.store_id = :store_id and i.close_dated_date < :close_dated and i.status = 'ONSHELF'";
+                where l.store_id = :store_id and i.close_dated_date < :close_dated
+                and i.expiring_date > :expiring_date and i.status = 'ONSHELF' and i.flag is null and i.disco = 0";
         return $this->fetchFromCompanyDb($sql, [
             'store_id' => $storeId,
-            'close_dated' => '2021-04-09',
+            'close_dated' => $compareDate,
+            'expiring_date' => $compareDate,
         ]);
     }
 
@@ -632,15 +670,16 @@ class Database
         ]);
     }
 
-    public function fetchHighCountStores()
+    public function fetchHighCountStores($count)
     {
         $sql = "select s.store_id from #t#.stores s
             inner join #t#.store_counts c on c.store_id = s.store_id
             where s.company_id = :company_id
             group by s.store_id
-            having sum(c.cls_now_count) > 800";
+            having sum(c.cls_now_count) > :count";
         return $this->fetchFromCompanyDb($sql, [
             'company_id' => '96bec4fe-098f-0e87-2563-11a36e6447ae',
+            'count' => $count,
         ]);
     }
 

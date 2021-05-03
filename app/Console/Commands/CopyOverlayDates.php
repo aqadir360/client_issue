@@ -25,7 +25,7 @@ class CopyOverlayDates extends Command
         $this->db->setDbName('all_companies_db');
         $this->proxy = new Api();
 
-        $stores = $this->db->fetchHighCountStores();
+        $stores = $this->db->fetchHighCountStores(1000);
 
         foreach ($stores as $store) {
             $this->fixCloseDatedItemCounts($store->store_id);
@@ -35,9 +35,9 @@ class CopyOverlayDates extends Command
     private function fixCloseDatedItemCounts(string $storeId)
     {
         echo $storeId . PHP_EOL;
-        $inventory = $this->db->fetchCloseDatedInventory($storeId);
+        $inventory = $this->db->fetchCloseDatedInventory($storeId, '2021-04-30');
         $total = count($inventory);
-        $max = $total * .7;
+        $max = $total * .3;
         $updated = 0;
         $minDate = new \DateTime();
         $minDate->add(new \DateInterval('P1M'));

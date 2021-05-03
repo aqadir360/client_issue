@@ -318,10 +318,48 @@ class ImportManager
 
     // Populates product object by barcode, setting isExistingProduct = true if found
     // Sets store inventory if storeId is not null
-    public function fetchProduct(string $upc, ?string $storeId = null): Product
+    // Gets the company product or inserts from core table if existing
+    public function fetchProduct(string $upc, ?string $storeId = null): ?Product
     {
         $product = new Product($upc);
+        $companyProduct = $this->db->fetchCompanyProductByBarcode($upc);
 
+        // If product exists in company db, populate and check for inventory
+        if ($companyProduct) {
+            $product->setExistingProduct(
+                $companyProduct->product_id,
+                $companyProduct->barcode,
+                $companyProduct->description,
+                $companyProduct->size,
+                $companyProduct->photo,
+                $companyProduct->no_expiration,
+                $companyProduct->created_at,
+                $companyProduct->updated_at
+            );
+
+            if ($storeId !== null) {
+                $product->inventory = $this->db->fetchProductInventory($product->productId, $storeId);
+            }
+
+            return $product;
+        }
+
+        // If product exists in core db, copy to company db
+        $product = $this->fetchCoreProduct($upc);
+        if ($product->isExistingProduct) {
+            $product->setNewProductId();
+            if ($this->db->insertCompanyProduct($product) === false) {
+                return null;
+            }
+        }
+
+        return $product;
+    }
+
+    // Populates product object by barcode, setting isExistingProduct = true if found
+    private function fetchCoreProduct(string $upc): Product
+    {
+        $product = new Product($upc);
         $existing = $this->db->fetchProductByBarcode($product->barcode);
 
         if ($existing !== false) {
@@ -335,27 +373,6 @@ class ImportManager
                 $existing->created_at,
                 $existing->updated_at
             );
-
-            if ($storeId !== null) {
-                $product->inventory = $this->db->fetchProductInventory($product->productId, $storeId);
-            }
-        }
-
-        return $product;
-    }
-
-    public function fetchAndCreateCompanyProduct(string $upc): ?Product
-    {
-        $product = $this->fetchProduct($upc);
-
-        if ($product->isExistingProduct) {
-            $companyProduct = $this->db->fetchProductFromCompany($product->productId);
-
-            if (!$companyProduct) {
-                if ($this->db->insertCompanyProduct($product) === false) {
-                    return null;
-                }
-            }
         }
 
         return $product;
@@ -418,9 +435,8 @@ class ImportManager
             return null;
         }
 
-        $productId = $response->message;
-        $this->db->insertProduct($productId, $product->barcode, $product->description, $product->size);
-        return $productId;
+        $this->db->insertProduct($product->productId, $product->barcode, $product->description, $product->size);
+        return $product->productId;
     }
 
     // Returns product id or null
@@ -586,7 +602,6 @@ class ImportManager
                 $this->currentFile->skipped++;
             }
         } else {
-            $this->db->getOrInsertProduct($product);
             $this->db->insertMetric($storeId, $product->productId, $cost, $retail, $movement);
             $this->currentFile->metrics++;
         }

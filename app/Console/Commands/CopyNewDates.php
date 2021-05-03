@@ -41,7 +41,7 @@ class CopyNewDates extends Command
 
         foreach ($products as $product) {
             // Check for the next closest date
-            $closestDate = $this->fetchClosestDate($product->product_id, $companyId);
+            $closestDate = $this->fetchClosestDate($product->product_id, $companyId, '2021-04-29');
 
             if ($closestDate && $closestDate->expiration_date) {
                 $updatedCount++;
@@ -82,18 +82,19 @@ class CopyNewDates extends Command
         ]);
     }
 
-    public function fetchClosestDate(string $productId, string $companyId)
+    public function fetchClosestDate(string $productId, string $companyId, string $compareDate)
     {
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on l.store_id = s.store_id
             where i.product_id = :product_id and s.company_id = :company_id
-            and i.close_dated_date > '2021-04-20' and i.expiration_date is not null and i.flag is null and i.disco = 0
+            and i.close_dated_date > :compare_date and i.expiration_date is not null and i.flag is null and i.disco = 0
             order by i.expiration_date asc ";
 
         return $this->db->fetchOneFromCompanyDb($sql, [
             'product_id' => $productId,
             'company_id' => $companyId,
+            'compare_date' => $compareDate
         ]);
     }
 }
