@@ -6,6 +6,7 @@ use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 use App\Objects\InventoryCompare;
 use App\Objects\SkippedLocations;
+use Illuminate\Support\Facades\Storage;
 
 class ImportHansens implements ImportInterface
 {
@@ -23,12 +24,12 @@ class ImportHansens implements ImportInterface
 
     public function getFilesToImport()
     {
-        $files = $this->import->ftpManager->getRecentlyModifiedFiles();
+        // Gets files from Hansen's server
+        $hansensFtp = Storage::disk('hansensFtp');
+        $files = $hansensFtp->allFiles();
         foreach ($files as $file) {
-            if (strpos($file, 'zip') === false) {
-                continue;
-            }
-            $zipFile = $this->import->ftpManager->downloadFile($file);
+            Storage::disk('imports')->put(basename($file), $hansensFtp->get($file));
+            $zipFile = storage_path('imports/' . basename($file));
             $this->import->ftpManager->unzipFile($zipFile, 'hansens_unzipped');
         }
 
