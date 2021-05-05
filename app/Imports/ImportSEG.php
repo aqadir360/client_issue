@@ -51,7 +51,7 @@ class ImportSEG implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_initial_202104*.csv');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_initial_2021041');
 
         foreach ($fileList as $file) {
             $this->importInventory($file);
