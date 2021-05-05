@@ -133,7 +133,7 @@ class ImportManager
         $this->currentFile->updateCompletedRow();
 
         if (!$this->debugMode) {
-            //$this->currentFile->deleteFile();
+            $this->currentFile->deleteFile();
         }
 
         fclose($this->outputFile);

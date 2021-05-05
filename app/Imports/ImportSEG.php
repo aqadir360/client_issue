@@ -3,10 +3,11 @@
 namespace App\Imports;
 
 use App\Models\Location;
+use App\Models\Product;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 
-// Imports SEG pilot files
+// Updates SEG Inventory Locations
 class ImportSEG implements ImportInterface
 {
     /** @var ImportManager */
@@ -14,6 +15,7 @@ class ImportSEG implements ImportInterface
 
     private $skus;
     private $reclaim;
+    private $existingProducts = [];
 
     // Expected File Columns:
     // [0] Loc_Id
@@ -34,6 +36,7 @@ class ImportSEG implements ImportInterface
     // [15] Pck_Num
     // [16] Avg_Dly_Units
     // [17] Avg_Dly_Lbs
+    // [18] Asl_Des
     public function __construct(ImportManager $importManager)
     {
         echo "Constructing SEG" . PHP_EOL;
@@ -48,7 +51,7 @@ class ImportSEG implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_Initial_20210304_');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_initial_202104*.csv');
 
         foreach ($fileList as $file) {
             $this->importInventory($file);
@@ -76,15 +79,11 @@ class ImportSEG implements ImportInterface
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
-                if ('Loc_Id' == trim($data[0])) {
-                    continue;
-                }
-
                 if (!$this->import->recordRow()) {
                     continue;
                 }
 
-                if (count($data) < 12) {
+                if (count($data) < 18) {
                     $this->import->writeFileOutput($data, "Skip: Parsing Error");
                     $this->import->recordFileLineError('ERROR', 'Unable to parse row: ' . json_encode($data));
                     continue;
@@ -94,11 +93,11 @@ class ImportSEG implements ImportInterface
                 $inputBarcode = intval(trim($data[8]));
                 $upc = BarcodeFixer::fixUpc($inputBarcode);
                 if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
-                    $this->recordSku(trim($data[7]), $inputBarcode);
+//                    $this->recordSku(trim($data[7]), $inputBarcode);
                     $this->import->writeFileOutput($data, "Skip: Invalid Barcode $upc");
                     continue;
                 } else {
-                    $this->recordSku($sku, $inputBarcode, $upc);
+//                    $this->recordSku($sku, $inputBarcode, $upc);
                 }
 
                 $location = $this->normalizeLocation($data);
@@ -118,17 +117,20 @@ class ImportSEG implements ImportInterface
                     $departmentId = $this->getReclaimDepartment($departmentId);
                 }
 
-                $product = $this->import->fetchProduct($upc, $storeId);
+                $product = $this->fetchProduct($upc, $storeId);
 
                 if (!$product->isExistingProduct) {
-                    $product->setDescription($data[9]);
-                    $product->setSize($data[10]);
-
-                    if (empty($product->description)) {
-                        $this->import->writeFileOutput($data, "Skip: Missing Description for New Product");
-                        $this->import->recordFileLineError('ERROR', 'Missing Product Description');
-                        continue;
-                    }
+                    $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, "Skip: New Product");
+                    continue;
+//                    $product->setDescription($data[9]);
+//                    $product->setSize($data[10]);
+//
+//                    if (empty($product->description)) {
+//                        $this->import->writeFileOutput($data, "Skip: Missing Description for New Product");
+//                        $this->import->recordFileLineError('ERROR', 'Missing Product Description');
+//                        continue;
+//                    }
                 }
 
                 if (isset($dsdSkus[intval($sku)])) {
@@ -141,40 +143,26 @@ class ImportSEG implements ImportInterface
                 }
 
                 if ($product->hasInventory()) {
-                    $productId = $product->productId;
-                    $this->import->recordStatic();
-                    $this->import->writeFileOutput($data, "Success: Inventory Exists");
+                    $this->handleExistingInventory($data, $product, $storeId, $location, $departmentId);
                 } else {
-                    $productId = $this->import->implementationScan(
-                        $product,
-                        $storeId,
-                        $location->aisle,
-                        $location->section,
-                        $departmentId,
-                        $location->shelf,
-                        true
-                    );
-
-                    if ($productId === null) {
-                        $this->import->writeFileOutput($data, "Error: Unable to Create Inventory");
-                    } else {
-                        $this->import->writeFileOutput($data, "Success: Created Inventory");
-                    }
+                    $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, "Skip: New Inventory");
+//                    $this->createInventory($data, $product, $storeId, $location, $departmentId);
                 }
 
-                if ($productId) {
-                    $movement = $this->import->parsePositiveFloat($data[16]);
-                    $price = $this->import->parsePositiveFloat($data[14]);
-                    $priceModifier = intval($data[13]);
-
-                    $this->import->persistMetric(
-                        $storeId,
-                        $productId,
-                        0,
-                        $this->import->convertFloatToInt($price / $priceModifier),
-                        $this->import->convertFloatToInt($movement)
-                    );
-                }
+//                if ($productId) {
+//                    $movement = $this->import->parsePositiveFloat($data[16]);
+//                    $price = $this->import->parsePositiveFloat($data[14]);
+//                    $priceModifier = intval($data[13]);
+//
+//                    $this->import->persistMetric(
+//                        $storeId,
+//                        $productId,
+//                        0,
+//                        $this->import->convertFloatToInt($price / $priceModifier),
+//                        $this->import->convertFloatToInt($movement)
+//                    );
+//                }
             }
 
             fclose($handle);
@@ -183,10 +171,86 @@ class ImportSEG implements ImportInterface
         $this->import->completeFile();
     }
 
+    private function fetchProduct($upc, $storeId): Product
+    {
+        if (isset($this->existingProducts[intval($upc)])) {
+            $product = $this->existingProducts[intval($upc)];
+            $product->inventory = [];
+        } else {
+            $product = $this->import->fetchProduct($upc);
+            $this->existingProducts[intval($upc)] = $product;
+        }
+
+        if ($product->isExistingProduct) {
+            $product->inventory = $this->import->db->fetchProductInventory($product->productId, $storeId);
+        }
+
+        return $product;
+    }
+
+    private function createInventory($data, Product $product, string $storeId, Location $location, string $departmentId): ?string
+    {
+        $productId = $this->import->implementationScan(
+            $product,
+            $storeId,
+            $location->aisle,
+            $location->section,
+            $departmentId,
+            $location->shelf,
+            true
+        );
+
+        if ($productId === null) {
+            $this->import->writeFileOutput($data, "Error: Unable to Create Inventory");
+        } else {
+            $this->import->writeFileOutput($data, "Success: Created Inventory");
+        }
+
+        return $productId;
+    }
+
+    private function handleExistingInventory($data, Product $product, string $storeId, Location $location, string $departmentId)
+    {
+        $item = $product->getMatchingInventoryItem($location, $departmentId);
+        if ($item === null) {
+            $this->import->recordSkipped();
+            $this->import->writeFileOutput($data, "Error: Inventory match not found");
+            return $product->productId;
+        }
+
+        if ($this->needToMoveItem($item, $location, $departmentId)) {
+            $this->import->updateInventoryLocation(
+                $item->inventory_item_id,
+                $storeId,
+                $departmentId,
+                $location->aisle,
+                $location->section,
+                $location->shelf
+            );
+            $this->import->writeFileOutput($data, "Success: Updated Inventory Location");
+        } else {
+            $this->import->recordStatic();
+            $this->import->writeFileOutput($data, "Static: Inventory Exists");
+        }
+
+        return $product->productId;
+    }
+
+    private function needToMoveItem($item, Location $location, string $departmentId)
+    {
+        return !(
+            $item->aisle == $location->aisle
+            && $item->section == $location->section
+            && $item->department_id == $departmentId
+        );
+    }
+
     private function normalizeLocation(array $data): Location
     {
+        //Aisle number: Asl_des (use only last two digits), Section: Asl_Side+Plnogm_Pstn_Ind, Shelf: Shelf
         $location = new Location();
-        $location->aisle = trim($data[1]);
+        $aisle = trim($data[18]);
+        $location->aisle = trim(substr($aisle, strrpos($aisle, ' ', 1)));
         $location->section = trim($data[2]) . trim($data[3]);
         $location->shelf = trim($data[4]);
 
