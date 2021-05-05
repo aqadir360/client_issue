@@ -109,11 +109,12 @@ class ImportManager
     {
         $this->filesProcessed++;
         $file = basename($filePath);
+        $outputFileName = $file . time() . '-output.csv';
         $this->currentFile = new FileStatus($filePath);
-        $this->currentFile->insertFileRow($this->importStatusId);
+        $this->currentFile->insertFileRow($this->importStatusId, $outputFileName);
         $this->outputContent("---- Importing $file");
 
-        $this->outputFile = fopen(storage_path('output/' . $file . time() . '-output.csv'), 'w');
+        $this->outputFile = fopen(storage_path('output/' . $outputFileName), 'w');
     }
 
     public function recordFileLineError($status, $message)

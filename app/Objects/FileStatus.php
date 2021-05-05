@@ -117,13 +117,15 @@ class FileStatus
         }
     }
 
-    public function insertFileRow($importStatusId)
+    public function insertFileRow($importStatusId, $outputFileName)
     {
-        $sql = "INSERT INTO import_results (import_status_id, filename, created_at) VALUES (:import_status_id, :filename, NOW())";
+        $sql = "INSERT INTO import_results (import_status_id, filename, output_file, created_at)
+            VALUES (:import_status_id, :filename, output_file, NOW())";
 
         DB::insert($sql, [
             'import_status_id' => $importStatusId,
             'filename' => basename($this->filename),
+            'output_file' => $outputFileName,
         ]);
 
         $this->fileRowId = DB::getPdo()->lastInsertId();
