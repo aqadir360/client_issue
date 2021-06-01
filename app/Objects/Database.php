@@ -5,8 +5,8 @@ namespace App\Objects;
 
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
-use Ramsey\Uuid\Uuid;
 use Log;
+use Ramsey\Uuid\Uuid;
 
 class Database
 {
@@ -147,8 +147,8 @@ class Database
             );
             return true;
         } catch (\Exception $e) {
-            var_dump($e);
-            var_dump($product);
+            Log::error("Insert Company Product Error " . $this->dbName);
+            Log::error($e);
         }
         return false;
     }
@@ -594,8 +594,7 @@ class Database
         array $copyFromStores,
         string $orderDirection,
         string $maxDate
-    )
-    {
+    ) {
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on l.store_id = s.store_id
@@ -626,8 +625,7 @@ class Database
         string $companyId,
         string $fromStores,
         string $minDate
-    )
-    {
+    ) {
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on s.store_id = l.store_id
@@ -686,8 +684,7 @@ class Database
     public function addNextClosestDate(
         string $productId,
         string $expiration
-    )
-    {
+    ) {
         $sql = "update #t#.product_dates set closest_date = :expiration_date where product_id = :product_id";
 
         return DB::connection('db_companies')->update(

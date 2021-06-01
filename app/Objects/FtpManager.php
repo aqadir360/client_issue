@@ -23,7 +23,7 @@ class FtpManager
         if ($ftpPath !== null) {
             $this->ftp = Storage::disk('sftp');
         }
-        $this->compareDate = $compareDate;
+        $this->compareDate = 1619560804;
     }
 
     // Reads most recently modified date from local txt file

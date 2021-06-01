@@ -45,10 +45,17 @@ class ImportWebsters implements ImportInterface
 
                 $upc = substr(trim($data[0], "'"), 1);
                 $barcode = $upc . BarcodeFixer::calculateMod10Checksum($upc);
+
+                if ($this->import->isInvalidBarcode($barcode, $upc)) {
+                    $this->import->writeFileOutput($data, 'Error: Invalid Barcode');
+                    continue;
+                }
+
                 $product = $this->import->fetchProduct($barcode, $this->storeId);
 
                 if ($product->hasInventory()) {
                     $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, 'Skipped: Existing Inventory');
                     continue;
                 }
 
@@ -56,13 +63,19 @@ class ImportWebsters implements ImportInterface
                     $product->setDescription($data[1]);
                 }
 
-                $this->import->implementationScan(
+                $productId = $this->import->implementationScan(
                     $product,
                     $this->storeId,
                     'UNKN',
                     '',
                     $this->import->getDepartmentId('grocery')
                 );
+
+                if ($productId === null) {
+                    $this->import->writeFileOutput($data, 'Error: Unable to create product');
+                } else {
+                    $this->import->writeFileOutput($data, 'Success: Created Inventory');
+                }
             }
 
             fclose($handle);

@@ -49,8 +49,7 @@ class ImportManager
         int $importTypeId,
         ?int $importJobId,
         bool $debugMode
-    )
-    {
+    ) {
         $this->companyId = $companyId;
         $this->importTypeId = $importTypeId;
 
@@ -348,10 +347,7 @@ class ImportManager
         // If product exists in core db, copy to company db
         $product = $this->fetchCoreProduct($upc);
         if ($product->isExistingProduct) {
-            $product->setNewProductId();
-            if ($this->db->insertCompanyProduct($product) === false) {
-                return null;
-            }
+            $this->db->insertCompanyProduct($product);
         }
 
         return $product;

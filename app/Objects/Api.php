@@ -45,12 +45,12 @@ class Api
         string $deptId,
         string $shelf = '',
         bool $skipDisco = false
-    )
-    {
+    ) {
         return $this->writeRequest(
             'implementation-scan',
             [
                 'companyId' => $companyId,
+                'productId' => $product->productId,
                 'barcode' => $product->barcode,
                 'name' => $product->description,
                 'size' => $product->size,
@@ -119,8 +119,7 @@ class Api
         $description,
         $size,
         $createOnly = true
-    )
-    {
+    ) {
         return $this->writeRequest(
             'persist-product',
             [
@@ -144,8 +143,7 @@ class Api
         $last,
         $role,
         $stores
-    )
-    {
+    ) {
         return $this->writeRequest(
             'persist-user',
             [
@@ -196,8 +194,7 @@ class Api
         $barcode,
         $vendor,
         $companyId
-    )
-    {
+    ) {
         return $this->writeRequest(
             'create-product-vendor',
             [
