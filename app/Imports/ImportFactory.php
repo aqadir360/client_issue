@@ -2,9 +2,6 @@
 
 namespace App\Imports;
 
-use App\Imports\Refresh\RaleysInventory;
-use App\Imports\Refresh\VallartaBaby;
-use App\Imports\Refresh\VallartaInventory;
 use App\Objects\ImportManager;
 
 class ImportFactory
@@ -44,10 +41,12 @@ class ImportFactory
                 return new ImportLundsMetrics($importManager);
             case 'metcalfes_metrics':
                 return new ImportMetcalfesMetrics($importManager);
+            case 'new_morning_market':
+                return new ImportNewMorningMarket($importManager);
             case 'raleys':
                 return new ImportRaleys($importManager);
             case 'raleys_refresh':
-                return new RaleysInventory($importManager);
+                return new Refresh\RaleysInventory($importManager);
             case 'raleys_metrics':
                 return new ImportRaleysMetrics($importManager);
             case 'seg':
@@ -57,9 +56,9 @@ class ImportFactory
             case 'vallarta':
                 return new ImportVallarta($importManager);
             case 'vallarta_baby':
-                return new VallartaBaby($importManager);
+                return new Refresh\VallartaBaby($importManager);
             case 'vallarta_refresh':
-                return new VallartaInventory($importManager);
+                return new Refresh\VallartaInventory($importManager);
             case 'websters':
                 return new ImportWebsters($importManager);
             case 'websters_metrics':
