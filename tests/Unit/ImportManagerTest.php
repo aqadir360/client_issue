@@ -39,8 +39,10 @@ class ImportManagerTest extends TestCase
             $database,
             $ftpManager,
             'companyId',
+            'dbName',
             1,
-            2
+            2,
+            false
         );
 
         $importManager->setSkipList();

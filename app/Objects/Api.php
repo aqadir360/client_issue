@@ -167,6 +167,41 @@ class Api
         );
     }
 
+    public function updateUser(array $existingUser, array $stores, ?string $email)
+    {
+        return $this->writeRequest(
+            'persist-user',
+            [
+                'companyId' => $existingUser['company_id'],
+                'userId' => $existingUser['user_id'],
+                'username' => $existingUser['username'],
+                'email' => $email,
+                'firstName' => $existingUser['first_name'],
+                'lastName' => $existingUser['last_name'],
+                'role' => $existingUser['role'],
+                'timezoneSetting' => $existingUser['timezone_setting'],
+                'dateChecker' => $existingUser['date_checker'],
+                'requireReset' => $existingUser['require_reset'],
+                'implementationScan' => $existingUser['imp_scan'],
+                'resetScan' => $existingUser['reset_scan'],
+                'OverlayScan' => $existingUser['overlay_scan'],
+                'title' => $existingUser['title'],
+                'stores' => $stores,
+            ]
+        );
+    }
+
+    public function deleteUser(string $companyId, string $userId)
+    {
+        return $this->writeRequest(
+            'delete-user',
+            [
+                'companyId' => $companyId,
+                'userId' => $userId,
+            ]
+        );
+    }
+
     public function updateInventoryLocation($companyId, $itemId, $storeId, $deptId, $aisle, $section, $shelf = '')
     {
         return $this->writeRequest(

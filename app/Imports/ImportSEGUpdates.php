@@ -81,6 +81,8 @@ class ImportSEGUpdates implements ImportInterface
             return;
         }
 
+        $this->import->outputAndResetFile();
+
         $compare->setExistingInventory();
         $compare->compareInventorySets();
 
@@ -96,7 +98,7 @@ class ImportSEGUpdates implements ImportInterface
                 }
 
                 if (count($data) < 21) {
-                    //$this->import->writeFileOutput($data, "Skip: Parsing Error");
+                    $this->import->writeFileOutput($data, "Skip: Parsing Error");
                     continue;
                 }
 
@@ -118,7 +120,7 @@ class ImportSEGUpdates implements ImportInterface
                     $productId = $this->import->createProduct($product);
 
                     if ($productId === null) {
-                        //$this->import->writeFileOutput($data, "Skip: Could not create product");
+                        $this->import->writeFileOutput($data, "Skip: Could not create product");
                         continue;
                     }
 
@@ -136,7 +138,7 @@ class ImportSEGUpdates implements ImportInterface
                     continue;
                 }
 
-                $departmentId = $this->import->getDepartmentId($data[12], $data[6]);
+                $departmentId = $this->import->getDepartmentId($data[12], $data[6], $upc);
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;

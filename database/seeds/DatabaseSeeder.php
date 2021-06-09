@@ -39,7 +39,8 @@ class DatabaseSeeder extends Seeder
 	    (24, '3fb5b141-dd03-0555-39c5-0c0e37461825', 'janssens', 'Janssen\'s Pilot', 'Imports products and metrics', 'janssens/imports', '2021-03-19 18:50:59'),
     	(25, 'c3c9f97e-e095-1f19-0c5e-441da2520a9a', 'vallarta_baby', 'Refresh Vallarta Baby Dept Inventory', 'Requires Pilot_Baby_ files', 'vallarta/imports', '2021-04-05 15:06:25'),
 	    (26, '9eb88cec-01d9-5353-61e5-613dd8a0ebec', 'caputos', 'Import Caputos Products', 'Requires local file', 'caputos/imports', '2021-04-12 14:10:59'),
-	    (27, '61efcdfa-c0e1-11e7-af75-080027c30a85', 'leevers_metrics', 'Leevers Metrics', 'Requires local file', NULL, '2021-04-14 23:02:15');
+	    (27, '61efcdfa-c0e1-11e7-af75-080027c30a85', 'leevers_metrics', 'Leevers Metrics', 'Requires local file', NULL, '2021-04-14 23:02:15'),
+	    (28, '2291eca3-984d-b36e-a04d-462902ea6ax8', 'new_morning_market', 'New Morning Market Pilot', 'Imports products and metrics', NULL, '2021-06-04 03:41:43');
         */
     }
 }

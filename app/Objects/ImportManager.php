@@ -139,6 +139,12 @@ class ImportManager
         fclose($this->outputFile);
     }
 
+    public function outputAndResetFile()
+    {
+        $this->outputContent($this->currentFile->outputResults());
+        $this->currentFile->resetCounts();
+    }
+
     public function downloadFilesByName(string $name, bool $matching = true): array
     {
         $output = [];
@@ -241,11 +247,12 @@ class ImportManager
 
     // Finds matching department id by company department mappings
     // Increments skipped or skipDepts and returns false if invalid
-    public function getDepartmentId(string $department, string $category = '')
+    public function getDepartmentId(string $department, string $category = '', string $upc = '')
     {
         $dept = $this->departments->getMatchingDepartment($department, $category);
 
         if ($dept === null) {
+            $this->writeFileOutput([$upc, $department, $category], "Department Rule NOT Mapped");
             $this->addInvalidDepartment(trim($department . ' ' . $category));
             $this->currentFile->skipDepts++;
             return false;
@@ -253,22 +260,28 @@ class ImportManager
 
         if ($dept->wildcardDeptMatch) {
             // Record unmatched departments
-            $this->addInvalidDepartment(trim($department . ' ' . $category));
+            $this->addInvalidDepartment(trim("Wildcard Match: " . $department . ' ' . $category));
         }
 
         if ($dept->skip) {
-            $this->writeFileOutput([$department, $category], "Department Rule Mapped: " . $dept->department . " ~ " . $dept->category);
+            $this->outputDepartmentMapping($upc, $department, $category, $dept);
             $this->currentFile->skipped++;
             return false;
         }
 
         if ($dept->departmentId === null) {
-            $this->writeFileOutput([$department, $category], "Department Rule Mapped: " . $dept->department . " ~ " . $dept->category);
+            $this->outputDepartmentMapping($upc, $department, $category, $dept);
             $this->currentFile->skipDepts++;
             return false;
         }
 
+        $this->outputDepartmentMapping($upc, $department, $category, $dept);
         return $dept->departmentId;
+    }
+
+    private function outputDepartmentMapping($upc, $department, $category, $dept)
+    {
+        $this->writeFileOutput([$upc, $department, $category], "Department Rule Mapped: " . $dept->department . " ~ " . $dept->category);
     }
 
     // Finds store id by store number mapping
@@ -432,7 +445,6 @@ class ImportManager
             return null;
         }
 
-        $this->db->insertProduct($product->productId, $product->barcode, $product->description, $product->size);
         return $product->productId;
     }
 
@@ -546,7 +558,7 @@ class ImportManager
         }
 
         if (count($this->invalidDepts) > 0) {
-            $this->outputContent("Invalid Departments:");
+            $this->outputContent("Unmatched Departments:");
             $this->outputContentList($this->invalidDepts);
         }
 

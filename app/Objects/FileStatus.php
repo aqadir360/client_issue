@@ -110,6 +110,26 @@ class FileStatus
         return $str;
     }
 
+    public function resetCounts()
+    {
+        $this->adds = 0;
+        $this->moves = 0;
+        $this->discos = 0;
+        $this->metrics = 0;
+        $this->newproducts = 0;
+        $this->errors = 0;
+        $this->total = 0;
+        $this->static = 0;
+        $this->skipped = 0;
+        $this->skipList = 0;
+        $this->skipStores = 0;
+        $this->skipDepts = 0;
+        $this->invalidBarcodeErrors = 0;
+        $this->invalidDepts = [];
+        $this->invalidStores = [];
+        $this->invalidBarcodes = [];
+    }
+
     public function deleteFile()
     {
         if (file_exists($this->filename)) {
@@ -200,7 +220,7 @@ class FileStatus
             'import_id' => $this->fileRowId,
             'row' => $this->total,
             'status' => $status,
-            'message' => $message,
+            'message' => addslashes($message),
         ]);
     }
 }

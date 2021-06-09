@@ -19,14 +19,15 @@ class InventoryCompare
 
     private $totalExistingItems = 0;
     private $maxAllowedDiscoPercent = 40;
-    private $minItemsForTrackedLoc = 3;
+    private $minItemsForTrackedLoc;
 
-    public function __construct(ImportManager $import, string $storeId)
+    public function __construct(ImportManager $import, string $storeId, $minItems = 3)
     {
         $this->companyId = $import->companyId();
         $this->storeId = $storeId;
         $this->proxy = $import->getProxy();
         $this->import = $import;
+        $this->minItemsForTrackedLoc = $minItems;
     }
 
     // Gets inventory from the API and sets tracked locations
@@ -54,6 +55,7 @@ class InventoryCompare
                     'section' => $item->section,
                     'shelf' => $item->shelf,
                     'departmentId' => $item->departmentId,
+                    'barcode' => $item->barcode,
                     'found' => false,
                 ];
 
@@ -112,7 +114,7 @@ class InventoryCompare
         }
     }
 
-    public function setFileInventoryItem($barcode, $aisle, $section, $shelf, $description, $size)
+    public function setFileInventoryItem($barcode, $aisle, $section, $shelf, $description, $size, $deptId = null)
     {
         // Sort by barcode, then include only one item per aisle
         $this->fileItemsLookup[intval($barcode)][$aisle] = [
@@ -121,6 +123,7 @@ class InventoryCompare
             'shelf' => $shelf,
             'description' => $description,
             'size' => $size,
+            'departmentId' => $deptId,
         ];
     }
 
@@ -174,10 +177,12 @@ class InventoryCompare
     private function moveItem($existingItem, $newItem)
     {
         if ($this->shouldMoveItem($existingItem, $newItem)) {
+            $deptId = isset($newItem['departmentId']) ? $newItem['departmentId'] : $existingItem['departmentId'];
+
             $this->import->updateInventoryLocation(
                 $existingItem['id'],
                 $this->storeId,
-                $existingItem['departmentId'],
+                $deptId,
                 $newItem['aisle'],
                 $newItem['section'],
                 $newItem['shelf']
@@ -185,7 +190,7 @@ class InventoryCompare
 
             $this->updateTrackedLocations(
                 $this->getLocKey($newItem['aisle'], $newItem['section']),
-                $existingItem['departmentId']
+                $deptId
             );
         } else {
             $this->import->recordStatic();
@@ -197,6 +202,11 @@ class InventoryCompare
     {
         if ($this->import->shouldSkipLocation($item['aisle'])) {
             return false;
+        }
+
+        // Move to new department if changed
+        if (isset($item['departmentId']) && $item['departmentId'] !== $existing['departmentId']) {
+            return true;
         }
 
         return !($existing['aisle'] === $item['aisle']
@@ -222,7 +232,11 @@ class InventoryCompare
             return;
         }
 
-        $item['departmentId'] = $this->trackedLocations[$locKey]['deptId'];
+        if (!isset($item['departmentId'])) {
+            // Use same department as other items in location if not included in file
+            $item['departmentId'] = $this->trackedLocations[$locKey]['deptId'];
+        }
+
         $item['barcode'] = $barcode;
 
         $this->implementationScan($item);

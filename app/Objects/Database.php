@@ -132,7 +132,7 @@ class Database
     {
         $sql = "INSERT INTO #t#.products
             (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
-            VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, NOW(), NOW())";
+            VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
 
         try {
             DB::connection('db_companies')->insert(
@@ -143,6 +143,8 @@ class Database
                     'size' => $product->size,
                     'photo' => $product->photo,
                     'no_expiration' => $product->noExp,
+                    'created_at' => $product->createdAt,
+                    'updated_at' => $product->updatedAt,
                 ]
             );
             return true;
@@ -557,6 +559,17 @@ class Database
 
         return DB::selectOne($sql, [
             'email' => $email,
+        ]);
+    }
+
+    public function fetchUserStores(string $userId)
+    {
+        $sql = "SELECT s.store_id, s.store_num FROM user_stores us
+                INNER JOIN stores s on s.store_id = us.store_id
+                WHERE us.user_id = :user_id";
+
+        return DB::selectOne($sql, [
+            'user_id' => $userId,
         ]);
     }
 
