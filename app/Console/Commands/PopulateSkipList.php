@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Objects\Database;
 use Illuminate\Console\Command;
-use Log;
 
 // Fills in product descriptions for skip list
 class PopulateSkipList extends Command

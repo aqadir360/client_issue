@@ -332,7 +332,7 @@ class ImportManager
     // Populates product object by barcode, setting isExistingProduct = true if found
     // Sets store inventory if storeId is not null
     // Gets the company product or inserts from core table if existing
-    public function fetchProduct(string $upc, ?string $storeId = null): ?Product
+    public function fetchProduct(string $upc, ?string $storeId = null): Product
     {
         $product = new Product($upc);
         $companyProduct = $this->db->fetchCompanyProductByBarcode($upc);
