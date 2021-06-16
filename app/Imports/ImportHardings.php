@@ -32,7 +32,7 @@ class ImportHardings implements ImportInterface
             }
 
             $this->importStoreInventory($file, $storeId);
-            $this->importMetrics($file, $storeId);
+
             $this->import->completeFile();
         }
 
@@ -42,10 +42,19 @@ class ImportHardings implements ImportInterface
     private function getFilesToImport()
     {
         $files = $this->import->ftpManager->getRecentlyModifiedFiles();
+        $filesToDownload = [];
+
+        // Import only the most recent file per store
         foreach ($files as $file) {
             if (strpos($file, '7z') === false) {
                 continue;
             }
+
+            $storeNum = substr(basename($file), 3, 3);
+            $filesToDownload[intval($storeNum)] = $file;
+        }
+
+        foreach ($filesToDownload as $file) {
             $zipFile = $this->import->ftpManager->downloadFile($file);
             $this->import->ftpManager->unzipSevenZipFile($zipFile, 'hardings_unzipped');
         }
@@ -57,7 +66,7 @@ class ImportHardings implements ImportInterface
     {
         $compare = new InventoryCompare($this->import, $storeId);
 
-        $exists = $this->setFileInventory($compare, $file);
+        $exists = $this->setFileInventory($compare, $file, $storeId);
         if (!$exists) {
             $this->import->outputContent("Skipping $storeId - Import file was empty");
             return;
@@ -67,10 +76,15 @@ class ImportHardings implements ImportInterface
         $compare->compareInventorySets();
     }
 
-    private function setFileInventory(InventoryCompare $compare, $file): bool
+    private function setFileInventory(InventoryCompare $compare, $file, $storeId): bool
     {
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 5000, "|")) !== false) {
+                if (count($data) < 37) {
+                    $this->import->recordFileLineError('ERROR', 'Line too short to parse');
+                    continue;
+                }
+
                 if ($data[0] == 'STORE') {
                     continue;
                 }
@@ -81,6 +95,9 @@ class ImportHardings implements ImportInterface
                 }
 
                 $loc = $this->parseLocation(trim($data[18]));
+                if ($loc === false) {
+                    continue;
+                }
 
                 $compare->setFileInventoryItem(
                     $upc,
@@ -90,40 +107,8 @@ class ImportHardings implements ImportInterface
                     trim($data[35]),
                     trim($data[36] . " " . $data[37])
                 );
-            }
-
-            fclose($handle);
-        }
-
-        $total = $compare->fileInventoryCount();
-        $this->import->setTotalCount($total);
-        return $total > 0;
-    }
-
-    private function parseLocation(string $location)
-    {
-        return [
-            'aisle' => substr($location, 0, 2),
-            'section' => str_replace('_', '', substr($location, 3, 5)),
-            'shelf' => substr($location, 9, 2),
-        ];
-    }
-
-    private function importMetrics($file, $storeId)
-    {
-        if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 5000, "|")) !== false) {
-                if ($data[0] == 'STORE') {
-                    continue;
-                }
 
                 if (count($data) < 61) {
-                    $this->import->recordFileLineError('ERROR', 'Line too short to parse');
-                    continue;
-                }
-
-                $upc = BarcodeFixer::fixUpc(trim($data[3]));
-                if ($this->import->isInvalidBarcode($upc, $data[3])) {
                     continue;
                 }
 
@@ -139,13 +124,30 @@ class ImportHardings implements ImportInterface
                         $this->import->convertFloatToInt($cost),
                         $this->import->convertFloatToInt($retail),
                         $this->import->convertFloatToInt(abs(floatval($data[33]))),
-                        true
+                        false
                     );
                 }
             }
 
             fclose($handle);
         }
+
+        $total = $compare->fileInventoryCount();
+        $this->import->setTotalCount($total);
+        return $total > 0;
+    }
+
+    private function parseLocation(string $location)
+    {
+        if (empty(trim($location)) || strpos($location, '_') === false) {
+            return false;
+        }
+
+        return [
+            'aisle' => substr($location, 0, 2),
+            'section' => str_replace('_', '', substr($location, 3, 5)),
+            'shelf' => substr($location, 9, 2),
+        ];
     }
 
     private function parseCost(float $caseCost, int $caseCount): float

@@ -249,6 +249,7 @@ class InventoryCompare
         if (!$product->isExistingProduct) {
             $product->setDescription($this->parseDescription($item['description']));
             $product->setSize($this->parseSize($item['size']));
+            $this->import->createProduct($product);
         }
 
         $this->import->implementationScan(
