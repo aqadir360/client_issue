@@ -52,7 +52,7 @@ class ImportFactory
             case 'seg':
                 return new ImportSEG($importManager);
             case 'seg_users':
-                return new ImportSEGUsers($importManager);
+                return new ImportSEGUserUpdates($importManager);
             case 'vallarta':
                 return new ImportVallarta($importManager);
             case 'vallarta_baby':

@@ -50,8 +50,8 @@ class ImportSEGUserUpdates implements ImportInterface
                     continue;
                 }
 
-                if (trim($data[7]) === 'T') {
-                    $result = $this->import->getProxy()->deleteUser($existing['company_id'], $existing['user_id']);
+                if (isset($data[7]) && trim($data[7]) === 'T') {
+                    $result = $this->import->getProxy()->deleteUser($existing->company_id, $existing->user_id);
                     $this->import->recordResponse($result, 'disco');
                     $this->import->writeFileOutput($data, "Success: Deleted User");
                     continue;
@@ -63,7 +63,7 @@ class ImportSEGUserUpdates implements ImportInterface
                     continue;
                 }
 
-                if ($this->sameUserStore($existing['user_id'], $storeId)) {
+                if ($this->sameUserStore($existing->user_id, $storeId)) {
                     $this->import->recordStatic();
                     $this->import->writeFileOutput($data, "Skipped: Same User Store");
                     continue;
@@ -95,7 +95,7 @@ class ImportSEGUserUpdates implements ImportInterface
     {
         $userStores = $this->import->db->fetchUserStores($userId);
         foreach ($userStores as $store) {
-            if ($store['store_id'] === $storeId) {
+            if ($store->store_id === $storeId) {
                 return true;
             }
         }

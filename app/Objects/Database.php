@@ -564,11 +564,11 @@ class Database
 
     public function fetchUserStores(string $userId)
     {
-        $sql = "SELECT s.store_id, s.store_num FROM user_stores us
-                INNER JOIN stores s on s.store_id = us.store_id
+        $sql = "SELECT s.store_id, s.store_num FROM #t#.user_stores us
+                INNER JOIN #t#.stores s on s.store_id = us.store_id
                 WHERE us.user_id = :user_id";
 
-        return DB::selectOne($sql, [
+        return $this->fetchFromCompanyDb($sql, [
             'user_id' => $userId,
         ]);
     }
