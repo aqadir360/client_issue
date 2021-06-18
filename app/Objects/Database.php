@@ -44,7 +44,7 @@ class Database
 
     public function fetchStores(string $companyId)
     {
-        $sql = "SELECT store_id, store_num, name FROM #t#.stores WHERE company_id = :company_id";
+        $sql = "SELECT store_id, store_num, name FROM #t#.stores WHERE company_id = :company_id AND archived_at IS NULL";
 
         return $this->fetchFromCompanyDb($sql, [
             'company_id' => $companyId,
