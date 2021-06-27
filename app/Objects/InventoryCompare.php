@@ -82,13 +82,58 @@ class InventoryCompare
             }
         }
 
+        $this->createMissing();
+        $this->discontinueRemaining();
+    }
+
+    // Creates items found in file but not existing inventory
+    // Discontinues items in existing inventory but not in file if below allowed disco percent
+    public function compareInventorySetsWithoutMoves()
+    {
+        // Skip all products in common between both inventory sets
+        foreach ($this->fileItemsLookup as $barcode => $items) {
+            if (isset($this->inventoryLookup[$barcode])) {
+                unset($this->fileItemsLookup[$barcode]);
+                $this->inventoryLookup[$barcode][0]['found'] = true;
+            }
+        }
+
+        $this->createMissing();
+        $this->discontinueRemaining();
+    }
+
+    public function setFileInventoryItem($barcode, $aisle, $section, $shelf, $description, $size, $deptId = null)
+    {
+        // Sort by barcode, then include only one item per aisle
+        $this->fileItemsLookup[intval($barcode)][$aisle] = [
+            'aisle' => $aisle,
+            'section' => $section,
+            'shelf' => $shelf,
+            'description' => $description,
+            'size' => $size,
+            'departmentId' => $deptId,
+        ];
+    }
+
+    public function fileInventoryCount(): int
+    {
+        $count = count($this->fileItemsLookup);
+        $this->import->outputContent("$count inventory items in file");
+        return $count;
+    }
+
+    private function createMissing()
+    {
         // Create any items from file that were not in existing inventory
         foreach ($this->fileItemsLookup as $barcode => $items) {
             foreach ($items as $aisle => $item) {
                 $this->createNewItem($barcode, $item);
             }
         }
+    }
 
+    private function discontinueRemaining()
+    {
         // Get all existing items not found in file
         $discoItems = [];
         foreach ($this->inventoryLookup as $items) {
@@ -112,26 +157,6 @@ class InventoryCompare
         foreach ($discoItems as $item) {
             $this->discontinue($item);
         }
-    }
-
-    public function setFileInventoryItem($barcode, $aisle, $section, $shelf, $description, $size, $deptId = null)
-    {
-        // Sort by barcode, then include only one item per aisle
-        $this->fileItemsLookup[intval($barcode)][$aisle] = [
-            'aisle' => $aisle,
-            'section' => $section,
-            'shelf' => $shelf,
-            'description' => $description,
-            'size' => $size,
-            'departmentId' => $deptId,
-        ];
-    }
-
-    public function fileInventoryCount(): int
-    {
-        $count = count($this->fileItemsLookup);
-        $this->import->outputContent("$count inventory items in file");
-        return $count;
     }
 
     private function handleOneToOneMatch($barcode, $items)

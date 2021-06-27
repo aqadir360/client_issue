@@ -25,13 +25,7 @@ class ImportHardings implements ImportInterface
             $this->import->startNewFile($file);
 
             $storeNum = substr(basename($file), 3, 3);
-            $storeId = $this->import->storeNumToStoreId($storeNum);
-            if ($storeId === false) {
-                $this->import->outputContent("Invalid Store $storeNum");
-                continue;
-            }
-
-            $this->importStoreInventory($file, $storeId);
+            $this->importStoreInventory($file, $storeNum);
 
             $this->import->completeFile();
         }
@@ -62,8 +56,14 @@ class ImportHardings implements ImportInterface
         return glob(storage_path('imports/hardings_unzipped/*'));
     }
 
-    private function importStoreInventory($file, $storeId)
+    private function importStoreInventory($file, $storeNum)
     {
+        $storeId = $this->import->storeNumToStoreId($storeNum);
+        if ($storeId === false) {
+            $this->import->outputContent("Invalid Store $storeNum");
+            return;
+        }
+
         $compare = new InventoryCompare($this->import, $storeId);
 
         $exists = $this->setFileInventory($compare, $file, $storeId);
@@ -73,7 +73,16 @@ class ImportHardings implements ImportInterface
         }
 
         $compare->setExistingInventory();
-        $compare->compareInventorySets();
+
+        // DCP2-560: Skipping location updates for North Muskegon and Middleville due to bad location data
+        switch ($storeNum) {
+            case 165: // North Muskegon
+            case 455: // Middleville
+                $compare->compareInventorySetsWithoutMoves();
+                break;
+            default:
+                $compare->compareInventorySets();
+        }
     }
 
     private function setFileInventory(InventoryCompare $compare, $file, $storeId): bool
