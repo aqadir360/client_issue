@@ -23,7 +23,7 @@ class FtpManager
         if ($ftpPath !== null) {
             $this->ftp = Storage::disk('sftp');
         }
-        $this->compareDate = 1619560804;
+        $this->compareDate = $compareDate;
     }
 
     // Reads most recently modified date from local txt file
@@ -63,7 +63,6 @@ class FtpManager
     // Writes from FTP to local storage/imports/
     public function downloadFile(string $file)
     {
-        echo "Downloading $file" . PHP_EOL;
         try {
             if (!file_exists(storage_path('imports/' . basename($file)))) {
                 Storage::disk('imports')->put(basename($file), $this->ftp->get($file));
