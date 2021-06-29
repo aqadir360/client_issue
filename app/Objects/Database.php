@@ -197,6 +197,27 @@ class Database
         }
     }
 
+    public function fetchPriceChopperSkus()
+    {
+        $sql = "SELECT sku_num, barcode FROM #t#.pc_products";
+        return $this->fetchFromCompanyDb($sql, []);
+    }
+
+    public function insertPriceChopperSku($sku, $barcode)
+    {
+        try {
+            $sql = "INSERT INTO #t#.pc_products (sku_num, barcode, created_at) VALUES (:sku_num, :barcode, NOW())";
+            DB::connection('db_companies')->insert(
+                $this->companyPdoConvert($sql, $this->dbName), [
+                    'sku_num' => $sku,
+                    'barcode' => $barcode,
+                ]
+            );
+        } catch (\Exception $e) {
+            Log::error($e);
+        }
+    }
+
     public function fetchSegSkus()
     {
         $sql = "SELECT sku, barcode FROM #t#.seg_products";

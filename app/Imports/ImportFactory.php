@@ -43,6 +43,8 @@ class ImportFactory
                 return new ImportMetcalfesMetrics($importManager);
             case 'new_morning_market':
                 return new ImportNewMorningMarket($importManager);
+            case 'price_chopper':
+                return new ImportPriceChopper($importManager);
             case 'raleys':
                 return new ImportRaleys($importManager);
             case 'raleys_refresh':
@@ -50,7 +52,7 @@ class ImportFactory
             case 'raleys_metrics':
                 return new ImportRaleysMetrics($importManager);
             case 'seg':
-                return new ImportSEG($importManager);
+                return new ImportSEGUpdates($importManager);
             case 'seg_users':
                 return new ImportSEGUserUpdates($importManager);
             case 'vallarta':

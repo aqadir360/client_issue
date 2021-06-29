@@ -69,16 +69,14 @@ class ImportSEGUserUpdates implements ImportInterface
                     continue;
                 }
 
-                $email = trim($data[2]);
-
                 $result = $this->import->getProxy()->updateUser(
                     $existing,
                     [$storeId],
-                    $email
+                    trim($data[2])
                 );
 
                 if ($result) {
-                    $this->import->recordAdd();
+                    $this->import->recordMove();
                     $this->import->writeFileOutput($data, "Success: Updated User");
                 } else {
                     $this->import->writeFileOutput($data, "Error: Could Not Update User");

@@ -46,7 +46,7 @@ class ImportSEGUpdates implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_DEV_0478_20210528');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_dev_');
 
         foreach ($fileList as $file) {
             $this->importInventory($file);
@@ -162,12 +162,17 @@ class ImportSEGUpdates implements ImportInterface
                     $movement = $this->import->parsePositiveFloat($data[16]);
                     $price = $this->import->parsePositiveFloat($data[14]);
                     $priceModifier = intval($data[13]);
+                    if ($priceModifier <= 0) {
+                        $price = 0;
+                    } else {
+                        $price = $price / $priceModifier;
+                    }
 
                     $this->import->persistMetric(
                         $storeId,
                         $product,
                         0,
-                        $this->import->convertFloatToInt($price / $priceModifier),
+                        $this->import->convertFloatToInt($price),
                         $this->import->convertFloatToInt($movement)
                     );
 

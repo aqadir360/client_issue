@@ -413,6 +413,12 @@ class ImportManager
         $this->currentFile->adds++;
     }
 
+
+    public function recordMove()
+    {
+        $this->currentFile->moves++;
+    }
+
     public function discontinueInventory(string $itemId)
     {
         $response = $this->proxy->writeInventoryDisco($this->companyId, $itemId);
