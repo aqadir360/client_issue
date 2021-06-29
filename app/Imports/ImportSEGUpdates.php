@@ -29,7 +29,7 @@ class ImportSEGUpdates implements ImportInterface
     // [10] Size_Desc
     // [11] Dept_Id
     // [12] Dept_Desc
-    // [13] Price_Mult
+    // [13] Price_Mult - mislabled, reversed with 14
     // [14] Price
     // [15] Pck_Num
     // [16] Avg_Dly_Units
@@ -133,19 +133,20 @@ class ImportSEGUpdates implements ImportInterface
                     continue;
                 }
 
-                if (trim($data[19]) === 'Y') {
+                if (intval($data[19]) === 1) {
                     $this->import->writeFileOutput($data, "Skip: DSD Sku $sku");
                     continue;
                 }
 
-                $departmentId = $this->import->getDepartmentId($data[12], $data[6], $upc);
+                $departmentId = $this->import->getDepartmentId(trim(strtolower($data[12])), trim(strtolower($data[6])), $upc);
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
                 }
 
-                if (trim($data[20]) === 'Y') {
+                if (intval($data[20]) === 1) {
                     $departmentId = $this->getReclaimDepartment($departmentId);
+                    $this->import->writeFileOutput($data, "Mapped Reclaim Department");
                 }
 
                 $compare->setFileInventoryItem(
@@ -160,8 +161,8 @@ class ImportSEGUpdates implements ImportInterface
 
                 if ($product && $product->isExistingProduct) {
                     $movement = $this->import->parsePositiveFloat($data[16]);
-                    $price = $this->import->parsePositiveFloat($data[14]);
-                    $priceModifier = intval($data[13]);
+                    $price = $this->import->parsePositiveFloat($data[13]);
+                    $priceModifier = intval($data[14]);
                     if ($priceModifier <= 0) {
                         $price = 0;
                     } else {
