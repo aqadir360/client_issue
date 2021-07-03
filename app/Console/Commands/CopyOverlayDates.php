@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Objects\Api;
 use App\Objects\Database;
-use Log;
 use Illuminate\Console\Command;
 
 // Gets the next closest date for the given product set

@@ -127,11 +127,8 @@ class ImportSEGUpdates implements ImportInterface
                     $product->setProductId($productId);
                 }
 
+                // Do not skip invalid locations until after the comparison to avoid disco
                 $location = $this->normalizeLocation($data);
-                if ($location->valid === false) {
-                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
-                    continue;
-                }
 
                 if (intval($data[19]) === 1) {
                     $this->import->writeFileOutput($data, "Skip: DSD Sku $sku");
@@ -151,9 +148,7 @@ class ImportSEGUpdates implements ImportInterface
 
                 $compare->setFileInventoryItem(
                     $upc,
-                    $location->aisle,
-                    $location->section,
-                    $location->shelf,
+                    $location,
                     trim($data[9]),
                     trim($data[10]),
                     $departmentId

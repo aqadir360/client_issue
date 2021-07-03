@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 use App\Objects\InventoryCompare;
@@ -79,13 +80,10 @@ class ImportHansens implements ImportInterface
                 }
 
                 $upc = '0' . BarcodeFixer::fixUpc(trim($data[4]));
-                $loc = $this->parseLocation(trim($data[13]));
 
                 $compare->setFileInventoryItem(
                     $upc,
-                    $loc['aisle'],
-                    $loc['section'],
-                    $loc['shelf'],
+                    $this->parseLocation(trim($data[13])),
                     trim($data[6]),
                     trim($data[7])
                 );
@@ -97,12 +95,14 @@ class ImportHansens implements ImportInterface
         return $compare->fileInventoryCount() > 0;
     }
 
-    private function parseLocation(string $location)
+    private function parseLocation(string $location): Location
     {
-        return [
-            'aisle' => substr($location, 0, 2),
-            'section' => substr($location, 2, 3),
-            'shelf' => substr($location, 5, 2),
-        ];
+        $location = new Location(
+            substr($location, 0, 2),
+            substr($location, 2, 3),
+            substr($location, 5, 2),
+        );
+        $location->valid = true;
+        return $location;
     }
 }

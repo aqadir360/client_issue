@@ -2,6 +2,8 @@
 
 namespace App\Objects;
 
+use App\Models\Location;
+
 class InventoryCompare
 {
     /** @var Api */
@@ -102,13 +104,11 @@ class InventoryCompare
         $this->discontinueRemaining();
     }
 
-    public function setFileInventoryItem($barcode, $aisle, $section, $shelf, $description, $size, $deptId = null)
+    public function setFileInventoryItem(string $barcode, Location $location, $description, $size, $deptId = null)
     {
         // Sort by barcode, then include only one item per aisle
-        $this->fileItemsLookup[intval($barcode)][$aisle] = [
-            'aisle' => $aisle,
-            'section' => $section,
-            'shelf' => $shelf,
+        $this->fileItemsLookup[intval($barcode)][$location->aisle] = [
+            'location' => $location,
             'description' => $description,
             'size' => $size,
             'departmentId' => $deptId,
@@ -208,13 +208,13 @@ class InventoryCompare
                 $existingItem['id'],
                 $this->storeId,
                 $deptId,
-                $newItem['aisle'],
-                $newItem['section'],
-                $newItem['shelf']
+                $newItem['location']->aisle,
+                $newItem['location']->section,
+                $newItem['location']->shelf
             );
 
             $this->updateTrackedLocations(
-                $this->getLocKey($newItem['aisle'], $newItem['section']),
+                $this->getLocKey($newItem['location']->aisle, $newItem['location']->section),
                 $deptId
             );
         } else {
@@ -225,7 +225,7 @@ class InventoryCompare
     // Do not move to skipped or identical locations
     private function shouldMoveItem($existing, $item): bool
     {
-        if ($this->import->shouldSkipLocation($item['aisle'])) {
+        if ($this->import->shouldSkipLocation($item['location']->aisle) || $item['location']->valid === false) {
             return false;
         }
 
@@ -234,9 +234,9 @@ class InventoryCompare
             return true;
         }
 
-        return !($existing['aisle'] === $item['aisle']
-            && $existing['section'] === $item['section']
-            && $existing['shelf'] === $item['shelf']);
+        return !($existing['aisle'] === $item['location']->aisle
+            && $existing['section'] === $item['location']->section
+            && $existing['shelf'] === $item['location']->shelf);
     }
 
     private function createNewItem($barcode, $item)
@@ -245,11 +245,16 @@ class InventoryCompare
             return;
         }
 
-        if ($this->import->shouldSkipLocation($item['aisle'], $item['section'], $item['shelf'])) {
+        if ($item['location']->valid === false) {
+            $this->import->recordSkipped();
             return;
         }
 
-        $locKey = $this->getLocKey($item['aisle'], $item['section']);
+        if ($this->import->shouldSkipLocation($item['location']->aisle, $item['location']->section, $item['location']->shelf)) {
+            return;
+        }
+
+        $locKey = $this->getLocKey($item['location']->aisle, $item['location']->section);
 
         // Do not add items in untracked locations
         if (!isset($this->trackedLocations[$locKey]) || ($this->trackedLocations[$locKey]['count'] <= $this->minItemsForTrackedLoc)) {
@@ -280,10 +285,10 @@ class InventoryCompare
         $this->import->implementationScan(
             $product,
             $this->storeId,
-            $item['aisle'],
-            $item['section'],
+            $item['location']->aisle,
+            $item['location']->section,
             $item['departmentId'],
-            $item['shelf']
+            $item['location']->shelf
         );
     }
 

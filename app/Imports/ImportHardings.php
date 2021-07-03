@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 use App\Objects\InventoryCompare;
@@ -104,15 +105,13 @@ class ImportHardings implements ImportInterface
                 }
 
                 $loc = $this->parseLocation(trim($data[18]));
-                if ($loc === false) {
+                if ($loc->valid === false) {
                     continue;
                 }
 
                 $compare->setFileInventoryItem(
                     $upc,
-                    $loc['aisle'],
-                    $loc['section'],
-                    $loc['shelf'],
+                    $loc,
                     trim($data[35]),
                     trim($data[36] . " " . $data[37])
                 );
@@ -146,17 +145,19 @@ class ImportHardings implements ImportInterface
         return $total > 0;
     }
 
-    private function parseLocation(string $location)
+    private function parseLocation(string $input): Location
     {
-        if (empty(trim($location)) || strpos($location, '_') === false) {
-            return false;
+        $location = new Location();
+        if (empty(trim($input)) || strpos($input, '_') === false) {
+            return $location;
         }
 
-        return [
-            'aisle' => substr($location, 0, 2),
-            'section' => str_replace('_', '', substr($location, 3, 5)),
-            'shelf' => substr($location, 9, 2),
-        ];
+        $location->aisle = substr($location, 0, 2);
+        $location->section = str_replace('_', '', substr($location, 3, 5));
+        $location->shelf = substr($location, 9, 2);
+        $location->valid = true;
+
+        return $location;
     }
 
     private function parseCost(float $caseCost, int $caseCount): float

@@ -694,7 +694,7 @@ class Database
 
     public function fetchNewInventory($storeId)
     {
-        $sql = "select inventory_item_id from #t#.inventory_items i
+        $sql = "select inventory_item_id, product_id from #t#.inventory_items i
                 inner join #t#.locations l on l.location_id = i.location_id
                 where l.store_id = :store_id and i.flag = 'NEW'";
         return $this->fetchFromCompanyDb($sql, [
