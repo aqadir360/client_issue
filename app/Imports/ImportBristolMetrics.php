@@ -19,7 +19,7 @@ class ImportBristolMetrics implements ImportInterface
 
     public function importUpdates()
     {
-        $metricsFiles = glob(storage_path('imports/bristol_metrics.csv'));
+        $metricsFiles = glob(storage_path('imports/bristol_01.csv'));
 
         foreach ($metricsFiles as $file) {
             $this->importMetricsFile($file);
@@ -31,10 +31,10 @@ class ImportBristolMetrics implements ImportInterface
     private function importMetricsFile(string $file)
     {
         $this->import->startNewFile($file);
-        $storeId = '29e58f03-d843-d2b7-9b09-cf63a89264e4'; // Newport Beach
+        $storeId = '13b5c85d-4767-9472-1ce8-627e98c4faeb'; // Rolling Hills
 
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
+            while (($data = fgetcsv($handle, 10000, "|")) !== false) {
                 if (!$this->import->recordRow()) {
                     break;
                 }
@@ -44,18 +44,23 @@ class ImportBristolMetrics implements ImportInterface
                     continue;
                 }
 
+                echo $upc . PHP_EOL;
+
                 $product = $this->import->fetchProduct($upc);
-                if ($product->isExistingProduct) {
-                    $this->import->persistMetric(
-                        $storeId,
-                        $product,
-                        $this->import->convertFloatToInt(floatval($data[3])),
-                        $this->import->convertFloatToInt(floatval($data[2])),
-                        $this->import->convertFloatToInt(floatval($data[1]))
-                    );
-                } else {
-                    $this->import->recordSkipped();
+
+                if (!$product->isExistingProduct) {
+                    $product->setDescription($data[5]);
+                    $product->setSize($data[6]);
+                    $this->import->createProduct($product);
                 }
+
+                $this->import->persistMetric(
+                    $storeId,
+                    $product,
+                    $this->import->convertFloatToInt(floatval($data[9])),
+                    $this->import->convertFloatToInt(floatval($data[8])),
+                    $this->import->convertFloatToInt(floatval($data[7]))
+                );
             }
 
             fclose($handle);

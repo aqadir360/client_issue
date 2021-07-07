@@ -27,10 +27,10 @@ class CopyOverlayDates extends Command
         $companyId = '6859ef83-7f11-05fe-0661-075be46276ec';
 
         $stores = [
-//            '0fc44423-144b-57ff-92a1-1537cfcd7aa5', // 26
+            '0fc44423-144b-57ff-92a1-1537cfcd7aa5', // 26
             '0d57eb30-973a-7cc2-779b-aa90acbdde0d', // 158
             '47c27ad7-6024-06d4-114b-a6bbc782a2f1', // 184
-//            'c1926f26-c1bb-b68d-44f4-a9398e4027b3', // 191
+            'c1926f26-c1bb-b68d-44f4-a9398e4027b3', // 191
         ];
 
         $fromStores = [
@@ -43,6 +43,8 @@ class CopyOverlayDates extends Command
         foreach ($stores as $storeId) {
             $this->overlayInventory('price_chopper', $companyId, $storeId, $fromStores);
         }
+
+        $this->proxy->triggerUpdateCounts($companyId);
     }
 
     private function fixCloseDatedItemCounts(string $storeId)
@@ -86,7 +88,7 @@ class CopyOverlayDates extends Command
         $products = $this->db->fetchNewInventory($storeId);
 
         $minDate = new \DateTime();
-        $minDate->add(new \DateInterval('P1W'));
+        $minDate->add(new \DateInterval('P1D'));
 
         echo count($products) . PHP_EOL;
 
@@ -103,8 +105,6 @@ class CopyOverlayDates extends Command
             if ($closestDate && $closestDate->expiration_date) {
                 echo $closestDate->expiration_date . PHP_EOL;
                 $this->proxy->writeInventoryExpiration($companyId, $product->inventory_item_id, $closestDate->expiration_date);
-            } else {
-                echo $product->product_id . PHP_EOL;
             }
         }
     }
