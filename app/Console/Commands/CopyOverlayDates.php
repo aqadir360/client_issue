@@ -21,13 +21,27 @@ class CopyOverlayDates extends Command
     public function handle()
     {
         $this->db = new Database();
-        $this->db->setDbName('all_companies_db');
+        $this->db->setDbName('price_chopper');
         $this->proxy = new Api();
 
-        $stores = $this->db->fetchHighCountStores(1000);
+        $companyId = '6859ef83-7f11-05fe-0661-075be46276ec';
 
-        foreach ($stores as $store) {
-            $this->fixCloseDatedItemCounts($store->store_id);
+        $stores = [
+            '0fc44423-144b-57ff-92a1-1537cfcd7aa5', // 26
+            '0d57eb30-973a-7cc2-779b-aa90acbdde0d', // 158
+            '47c27ad7-6024-06d4-114b-a6bbc782a2f1', // 184
+            'c1926f26-c1bb-b68d-44f4-a9398e4027b3', // 191
+        ];
+
+        $fromStores = [
+            '40bada9f-9296-acf3-114d-e631f6338e42',
+            '48784336-16ef-c4f9-f37c-061813b61fff',
+            'c935b3bd-28c9-73ad-b682-31092a523e85',
+            'da2794e9-ed7e-4e61-fc18-f89425400376'
+        ];
+
+        foreach ($stores as $storeId) {
+            $this->overlayInventory('price_chopper', $companyId, $storeId, $fromStores);
         }
     }
 
@@ -64,27 +78,27 @@ class CopyOverlayDates extends Command
         $this->proxy->triggerUpdateCounts($companyId, $storeId);
     }
 
-    private function overlayInventory(string $dbName, array $fromStores)
+    private function overlayInventory(string $dbName, string $companyId, string $storeId, array $fromStores)
     {
         $this->db->setDbName($dbName);
         $stores = $this->db->getListParams($fromStores);
 
-        $products = $this->db->fetchProductsWithoutDates();
+        $products = $this->db->fetchNewInventory($storeId);
 
         $minDate = new \DateTime();
-        $minDate->add(new \DateInterval('P2W'));
+        $minDate->add(new \DateInterval('P1M'));
 
         foreach ($products as $product) {
             // Check for the next closest date
             $closestDate = $this->db->fetchNextClosestDate(
                 $product->product_id,
-                '96bec4fe-098f-0e87-2563-11a36e6447ae',
+                $companyId,
                 $stores,
                 $minDate->format('Y-m-d')
             );
 
             if ($closestDate && $closestDate->expiration_date) {
-                $this->db->addNextClosestDate($product->product_id, $closestDate->expiration_date);
+                $this->proxy->writeInventoryExpiration($companyId, $product->inventory_item_id, $closestDate->expiration_date);
             }
         }
     }
