@@ -658,25 +658,26 @@ class Database
         string $productId,
         string $companyId,
         string $fromStores,
-        string $minDate
+        string $minDate,
+        string $dbName
     ) {
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on s.store_id = l.store_id
-            where i.product_id = :product_id and i.expiration_date > :min_date and i.flag is null and i.disco = 0 ";
+            where i.product_id = :product_id and i.expiring_date > :min_date and i.flag is null and i.disco = 0";
 
-        if (!empty($fromStores)) {
-            $sql .= "and s.store_id IN ($fromStores) ";
-        } else {
-            $sql .= " and s.company_id = '$companyId' ";
-        }
+//        if (!empty($fromStores)) {
+//            $sql .= "and s.store_id IN ($fromStores) ";
+//        } else {
+//            $sql .= " and s.company_id = '$companyId' ";
+//        }
 
         $sql .= " order by i.expiration_date asc ";
 
         return $this->fetchOneFromCompanyDb($sql, [
             'product_id' => $productId,
             'min_date' => $minDate,
-        ]);
+        ], $dbName);
     }
 
     public function fetchCloseDatedInventory($storeId, $compareDate)
