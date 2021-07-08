@@ -207,7 +207,7 @@ class ImportSEGUpdates implements ImportInterface
 
     private function getStoreNum(string $filename)
     {
-        return intval(substr($filename, 12, strrpos($filename, '_') - 1));
+        return intval(substr($filename, 8, strrpos($filename, '_') - 1));
     }
 
     private function recordSku($sku, $inputBarcode, $barcode = null)
