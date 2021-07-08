@@ -46,10 +46,12 @@ class ImportSEGUpdates implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_dev_');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_');
 
         foreach ($fileList as $file) {
-            $this->importInventory($file);
+            if (strpos($file, 'User') === false) {
+                $this->importInventory($file);
+            }
         }
 
         $this->import->completeImport();
