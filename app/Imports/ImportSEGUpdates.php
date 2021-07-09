@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\Location;
+use App\Models\Product;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 use App\Objects\InventoryCompare;
@@ -12,6 +13,8 @@ class ImportSEGUpdates implements ImportInterface
 {
     /** @var ImportManager */
     private $import;
+
+    private $products = [];
 
     private $skus;
 
@@ -94,7 +97,7 @@ class ImportSEGUpdates implements ImportInterface
     private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
     {
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
+            while (($data = fgetcsv($handle, 10000, ",")) !== false) {
                 if (trim($data[0]) === 'Loc_Id') {
                     continue;
                 }
@@ -104,40 +107,20 @@ class ImportSEGUpdates implements ImportInterface
                     continue;
                 }
 
-                $sku = trim($data[7]);
-                $inputBarcode = trim($data[8]);
-                $upc = BarcodeFixer::fixLength($inputBarcode);
-                $this->recordSku($sku, intval($inputBarcode));
-                if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
+                $product = $this->getOrCreateProduct($data);
+                if ($product === null) {
                     continue;
-                } else {
-                    $this->recordSku($sku, intval($inputBarcode), $upc);
-                }
-
-                $product = $this->import->fetchProduct($upc);
-                if (!$product->isExistingProduct) {
-                    $product->setDescription($data[9]);
-                    $product->setSize($data[10]);
-
-                    $productId = $this->import->createProduct($product);
-
-                    if ($productId === null) {
-                        $this->import->writeFileOutput($data, "Skip: Could not create product");
-                        continue;
-                    }
-
-                    $product->setProductId($productId);
                 }
 
                 // Do not skip invalid locations until after the comparison to avoid disco
                 $location = $this->normalizeLocation($data);
 
                 if (intval($data[19]) === 1) {
-                    $this->import->writeFileOutput($data, "Skip: DSD Sku $sku");
+                    $this->import->writeFileOutput($data, "Skip: DSD Sku");
                     continue;
                 }
 
-                $departmentId = $this->import->getDepartmentId(trim(strtolower($data[12])), trim(strtolower($data[6])), $upc);
+                $departmentId = $this->import->getDepartmentId(trim(strtolower($data[12])), trim(strtolower($data[6])), $product->barcode);
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
@@ -149,7 +132,7 @@ class ImportSEGUpdates implements ImportInterface
                 }
 
                 $compare->setFileInventoryItem(
-                    $upc,
+                    $product->barcode,
                     $location,
                     trim($data[9]),
                     trim($data[10]),
@@ -184,6 +167,42 @@ class ImportSEGUpdates implements ImportInterface
         }
 
         return $compare->fileInventoryCount() > 0;
+    }
+
+    private function getOrCreateProduct(array $data): ?Product
+    {
+        $sku = trim($data[7]);
+        $inputBarcode = trim($data[8]);
+        $upc = BarcodeFixer::fixLength($inputBarcode);
+        $this->recordSku($sku, intval($inputBarcode));
+        if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
+            return null;
+        } else {
+            $this->recordSku($sku, intval($inputBarcode), $upc);
+        }
+
+        if (isset($this->products[intval($upc)])) {
+            return $this->products[intval($upc)];
+        }
+
+        $product = $this->import->fetchProduct($upc);
+        if (!$product->isExistingProduct) {
+            $product->setDescription($data[9]);
+            $product->setSize($data[10]);
+
+            $productId = $this->import->createProduct($product);
+
+            if ($productId === null) {
+                $this->import->writeFileOutput($data, "Skip: Could not create product");
+                return null;
+            }
+
+            $product->setProductId($productId);
+        }
+
+        $this->products[intval($upc)] = $product;
+
+        return $product;
     }
 
     private function normalizeLocation(array $data): Location
