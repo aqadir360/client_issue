@@ -158,7 +158,7 @@ class ImportSEGUpdates implements ImportInterface
                     );
 
                     if (trim($data[21]) === 'Y') {
-                        $this->import->createVendor($upc, 'Own Brand');
+                        $this->import->createVendor($product->barcode, 'Own Brand');
                     }
                 }
             }
