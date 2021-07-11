@@ -102,6 +102,10 @@ class ImportSEGUpdates implements ImportInterface
                     continue;
                 }
 
+                if (!$this->import->recordRow()) {
+                    continue;
+                }
+
                 if (count($data) < 21) {
                     $this->import->writeFileOutput($data, "Skip: Parsing Error");
                     continue;
@@ -174,11 +178,9 @@ class ImportSEGUpdates implements ImportInterface
         $sku = trim($data[7]);
         $inputBarcode = trim($data[8]);
         $upc = BarcodeFixer::fixLength($inputBarcode);
-        $this->recordSku($sku, intval($inputBarcode));
         if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
-            return null;
-        } else {
             $this->recordSku($sku, intval($inputBarcode), $upc);
+            return null;
         }
 
         if (isset($this->products[intval($upc)])) {
@@ -187,6 +189,8 @@ class ImportSEGUpdates implements ImportInterface
 
         $product = $this->import->fetchProduct($upc);
         if (!$product->isExistingProduct) {
+            $this->recordSku($sku, intval($inputBarcode));
+
             $product->setDescription($data[9]);
             $product->setSize($data[10]);
 

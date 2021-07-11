@@ -27,41 +27,37 @@ class CopyOverlayDates extends Command
         $companyId = '6859ef83-7f11-05fe-0661-075be46276ec';
 
         $stores = [
-            'aa90bf58-500a-22ab-9071-b199b88e5b48', // 245
-            '06eeb1ae-c3dc-56ad-8bc6-a349a49f2fdf', // 112
-            '2cb67239-6a70-97f4-0380-ed2c777b0d13' // 23
+            '491ad47e-4c56-0001-7b2b-59ca6d87fa0b', // 140
+            'b48cffab-c7ef-b7bc-cb5d-9d0f7743b714', // 172
+            'e01c107a-7188-f6f8-5f8d-980ec31fc67f', // 174
         ];
 
-        $fromStores = [
-            '40bada9f-9296-acf3-114d-e631f6338e42',
-            '48784336-16ef-c4f9-f37c-061813b61fff',
-            'c935b3bd-28c9-73ad-b682-31092a523e85',
-            'da2794e9-ed7e-4e61-fc18-f89425400376'
-        ];
+        $fromStores = [];
 
         foreach ($stores as $storeId) {
-            $this->overlayInventory('price_chopper', $companyId, $storeId, $fromStores);
+            $this->overlayInventory($companyId, $storeId, $fromStores);
         }
 
         $this->proxy->triggerUpdateCounts($companyId);
     }
 
-    private function fixCloseDatedItemCounts(string $storeId)
+    private function fixCloseDatedItemCounts(string $companyId, string $storeId, array $fromStores)
     {
         echo $storeId . PHP_EOL;
-        $inventory = $this->db->fetchCloseDatedInventory($storeId, '2021-04-30');
+        $inventory = $this->db->fetchCloseDatedInventory($storeId, '2021-07-10');
         $total = count($inventory);
-        $max = $total * .3;
+        echo $total . PHP_EOL;
+        $max = $total - 218;
         $updated = 0;
         $minDate = new \DateTime();
         $minDate->add(new \DateInterval('P1M'));
-        $companyId = '96bec4fe-098f-0e87-2563-11a36e6447ae';
+        $stores = $this->db->getListParams($fromStores);
 
         foreach ($inventory as $item) {
             $closestDate = $this->db->fetchNextClosestDate(
                 $item->product_id,
                 $companyId,
-                '',
+                $stores,
                 $minDate->format('Y-m-d')
             );
 
@@ -79,9 +75,8 @@ class CopyOverlayDates extends Command
         $this->proxy->triggerUpdateCounts($companyId, $storeId);
     }
 
-    private function overlayInventory(string $dbName, string $companyId, string $storeId, array $fromStores)
+    private function overlayInventory(string $companyId, string $storeId, array $fromStores)
     {
-        $this->db->setDbName($dbName);
         $stores = $this->db->getListParams($fromStores);
 
         $products = $this->db->fetchNewInventory($storeId);
@@ -97,8 +92,7 @@ class CopyOverlayDates extends Command
                 $product->product_id,
                 $companyId,
                 $stores,
-                $minDate->format('Y-m-d'),
-                $dbName
+                $minDate->format('Y-m-d')
             );
 
             if ($closestDate && $closestDate->expiration_date) {

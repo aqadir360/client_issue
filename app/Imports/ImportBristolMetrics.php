@@ -7,6 +7,7 @@ use App\Objects\ImportManager;
 
 // Bristol Farms Metrics Import
 // TODO: Currently using local files, update when FTP files start sending
+// Store|UPC|Aisle|Section|Department|Category|Description|Size|Movement|Price|Cost
 class ImportBristolMetrics implements ImportInterface
 {
     /** @var ImportManager */
@@ -19,7 +20,7 @@ class ImportBristolMetrics implements ImportInterface
 
     public function importUpdates()
     {
-        $metricsFiles = glob(storage_path('imports/bristol_01.csv'));
+        $metricsFiles = glob(storage_path('imports/bristol.csv'));
 
         foreach ($metricsFiles as $file) {
             $this->importMetricsFile($file);
@@ -31,7 +32,6 @@ class ImportBristolMetrics implements ImportInterface
     private function importMetricsFile(string $file)
     {
         $this->import->startNewFile($file);
-        $storeId = '13b5c85d-4767-9472-1ce8-627e98c4faeb'; // Rolling Hills
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 10000, "|")) !== false) {
@@ -39,27 +39,30 @@ class ImportBristolMetrics implements ImportInterface
                     break;
                 }
 
-                $upc = BarcodeFixer::fixUpc(trim($data[0]));
-                if ($this->import->isInvalidBarcode($upc, $data[0])) {
+                $storeId = $this->import->storeNumToStoreId(intval($data[0]));
+                if (!$storeId) {
                     continue;
                 }
 
-                echo $upc . PHP_EOL;
+                $upc = BarcodeFixer::fixUpc(trim($data[1]));
+                if ($this->import->isInvalidBarcode($upc, $data[1])) {
+                    continue;
+                }
 
                 $product = $this->import->fetchProduct($upc);
 
                 if (!$product->isExistingProduct) {
-                    $product->setDescription($data[5]);
-                    $product->setSize($data[6]);
+                    $product->setDescription($data[6]);
+                    $product->setSize($data[7]);
                     $this->import->createProduct($product);
                 }
 
                 $this->import->persistMetric(
                     $storeId,
                     $product,
+                    $this->import->convertFloatToInt(floatval($data[10])),
                     $this->import->convertFloatToInt(floatval($data[9])),
-                    $this->import->convertFloatToInt(floatval($data[8])),
-                    $this->import->convertFloatToInt(floatval($data[7]))
+                    $this->import->convertFloatToInt(floatval($data[8]))
                 );
             }
 
