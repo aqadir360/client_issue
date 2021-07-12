@@ -102,7 +102,7 @@ class CopyOverlayDates extends Command
         $sql = "SELECT s.store_id, s.store_num, x.count
                 FROM #t#.stores s
                 INNER JOIN (
-                select sum(cls_now_count) as count, store_id from #t#.store_counts
+                select sum(cls_now_count) + sum(exp_now_count) as count, store_id from #t#.store_counts
                 group by store_id
                 ) x on x.store_id = s.store_id
                 WHERE s.archived_at IS NULL and s.company_id = :company_id
