@@ -26,7 +26,7 @@ class CopyOverlayDates extends Command
 
         $companyId = '96bec4fe-098f-0e87-2563-11a36e6447ae';
 
-        $stores = $this->db->fetchStores($companyId);
+        $stores = $this->fetchHighCountStores($companyId);
 
         $fromStores = [];
 
@@ -95,5 +95,21 @@ class CopyOverlayDates extends Command
                 $this->proxy->writeInventoryExpiration($companyId, $product->inventory_item_id, $closestDate->expiration_date);
             }
         }
+    }
+
+    private function fetchHighCountStores($companyId)
+    {
+        $sql = "SELECT s.store_id, s.store_num, x.count
+                FROM #t#.stores s
+                INNER JOIN (
+                select sum(cls_now_count) as count, store_id from #t#.store_counts
+                group by store_id
+                ) x on x.store_id = s.store_id
+                WHERE s.archived_at IS NULL and s.company_id = :company_id
+                order by x.count desc";
+
+        return $this->db->fetchFromCompanyDb($sql, [
+            'company_id' => $companyId
+        ]);
     }
 }
