@@ -663,7 +663,7 @@ class Database
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on s.store_id = l.store_id
-            where i.product_id = :product_id and i.expiring_date > :min_date and i.flag is null and i.disco = 0";
+            where i.product_id = :product_id and i.close_dated_date > :min_date and i.flag is null and i.disco = 0";
 
         if (!empty($fromStores)) {
             $sql .= " and s.store_id IN ($fromStores) ";

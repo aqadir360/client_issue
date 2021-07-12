@@ -21,21 +21,18 @@ class CopyOverlayDates extends Command
     public function handle()
     {
         $this->db = new Database();
-        $this->db->setDbName('price_chopper');
+        $this->db->setDbName('all_companies_db');
         $this->proxy = new Api();
 
-        $companyId = '6859ef83-7f11-05fe-0661-075be46276ec';
+        $companyId = '96bec4fe-098f-0e87-2563-11a36e6447ae';
 
-        $stores = [
-            '491ad47e-4c56-0001-7b2b-59ca6d87fa0b', // 140
-            'b48cffab-c7ef-b7bc-cb5d-9d0f7743b714', // 172
-            'e01c107a-7188-f6f8-5f8d-980ec31fc67f', // 174
-        ];
+        $stores = $this->db->fetchStores($companyId);
 
         $fromStores = [];
 
-        foreach ($stores as $storeId) {
-            $this->overlayInventory($companyId, $storeId, $fromStores);
+        foreach ($stores as $store) {
+            echo $store->store_num . PHP_EOL;
+            $this->fixCloseDatedItemCounts($companyId, $store->store_id, $fromStores);
         }
 
         $this->proxy->triggerUpdateCounts($companyId);
@@ -43,11 +40,9 @@ class CopyOverlayDates extends Command
 
     private function fixCloseDatedItemCounts(string $companyId, string $storeId, array $fromStores)
     {
-        echo $storeId . PHP_EOL;
-        $inventory = $this->db->fetchCloseDatedInventory($storeId, '2021-07-10');
+        $inventory = $this->db->fetchCloseDatedInventory($storeId, '2021-07-12');
         $total = count($inventory);
-        echo $total . PHP_EOL;
-        $max = $total - 218;
+        $max = $total * .8;
         $updated = 0;
         $minDate = new \DateTime();
         $minDate->add(new \DateInterval('P1M'));
