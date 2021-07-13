@@ -232,7 +232,7 @@ class ImportSEGUpdates implements ImportInterface
 
     private function shouldSkipLocation(Location $location): bool
     {
-        return !(empty($location->aisle) || intval($location->aisle) === 0);
+        return !(empty($location->aisle) || intval($location->aisle) === 0 || $location->aisle === 'NA');
     }
 
     private function getStoreNum(string $filename)
