@@ -211,10 +211,17 @@ class ImportSEGUpdates implements ImportInterface
 
     private function normalizeLocation(array $data): Location
     {
-        //Aisle number: Asl_des (use only last two digits), Section: Asl_Side+Plnogm_Pstn_Ind, Shelf: Shelf
+        // Aisle number: Asl_des (use only last two digits if containing prefix Aisle)
+        // Section: Asl_Side+Plnogm_Pstn_Ind, Shelf: Shelf
         $location = new Location();
+
         $aisle = trim($data[18]);
-        $location->aisle = trim(substr($aisle, strrpos($aisle, ' ', 1)));
+        if (strpos($aisle, 'Aisle') !== false) {
+            $location->aisle = trim(substr($aisle, strrpos($aisle, ' ', 1)));
+        } else {
+            $location->aisle = trim($aisle);
+        }
+
         $location->section = trim($data[2]) . trim($data[3]);
         $location->shelf = trim($data[4]);
 
@@ -267,6 +274,6 @@ class ImportSEGUpdates implements ImportInterface
                 return '7bafcd3c-0879-6864-c134-97ec182f58e3';
         }
 
-        return null;
+        return $departmentId;
     }
 }
