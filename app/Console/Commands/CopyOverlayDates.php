@@ -21,18 +21,20 @@ class CopyOverlayDates extends Command
     public function handle()
     {
         $this->db = new Database();
-        $this->db->setDbName('all_companies_db');
+        $this->db->setDbName('price_chopper');
         $this->proxy = new Api();
 
-        $companyId = '96bec4fe-098f-0e87-2563-11a36e6447ae';
+        $companyId = '6859ef83-7f11-05fe-0661-075be46276ec';
 
-        $stores = $this->fetchHighCountStores($companyId);
+        $stores = [
+            '35087c0a-f850-2fed-06d2-c3c62dccac0c', // 237
+            '6bbaeca1-062b-db57-d73f-54c134316285', // 130
+        ];
 
         $fromStores = [];
 
-        foreach ($stores as $store) {
-            echo $store->store_num . PHP_EOL;
-            $this->fixCloseDatedItemCounts($companyId, $store->store_id, $fromStores);
+        foreach ($stores as $storeId) {
+            $this->overlayInventory($companyId, $storeId, $fromStores);
         }
 
         $this->proxy->triggerUpdateCounts($companyId);
@@ -77,7 +79,7 @@ class CopyOverlayDates extends Command
         $products = $this->db->fetchNewInventory($storeId);
 
         $minDate = new \DateTime();
-        $minDate->add(new \DateInterval('P1D'));
+        $minDate->add(new \DateInterval('P4D'));
 
         echo count($products) . PHP_EOL;
 
