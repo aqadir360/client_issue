@@ -49,7 +49,7 @@ class ImportSEGUpdates implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_18_20210706.csv');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_');
 
         foreach ($fileList as $file) {
             if (strpos($file, 'User') === false) {
