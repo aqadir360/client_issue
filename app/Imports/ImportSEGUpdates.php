@@ -143,28 +143,28 @@ class ImportSEGUpdates implements ImportInterface
                     $departmentId
                 );
 
-                if ($product && $product->isExistingProduct) {
-                    $movement = $this->import->parsePositiveFloat($data[16]);
-                    $price = $this->import->parsePositiveFloat($data[13]);
-                    $priceModifier = intval($data[14]);
-                    if ($priceModifier <= 0) {
-                        $price = 0;
-                    } else {
-                        $price = $price / $priceModifier;
-                    }
-
-                    $this->import->persistMetric(
-                        $storeId,
-                        $product,
-                        0,
-                        $this->import->convertFloatToInt($price),
-                        $this->import->convertFloatToInt($movement)
-                    );
-
-                    if (trim($data[21]) === 'Y') {
-                        $this->import->createVendor($product->barcode, 'Own Brand');
-                    }
-                }
+//                if ($product && $product->isExistingProduct) {
+//                    $movement = $this->import->parsePositiveFloat($data[16]);
+//                    $price = $this->import->parsePositiveFloat($data[13]);
+//                    $priceModifier = intval($data[14]);
+//                    if ($priceModifier <= 0) {
+//                        $price = 0;
+//                    } else {
+//                        $price = $price / $priceModifier;
+//                    }
+//
+//                    $this->import->persistMetric(
+//                        $storeId,
+//                        $product,
+//                        0,
+//                        $this->import->convertFloatToInt($price),
+//                        $this->import->convertFloatToInt($movement)
+//                    );
+//
+//                    if (trim($data[21]) === 'Y') {
+//                        $this->import->createVendor($product->barcode, 'Own Brand');
+//                    }
+//                }
             }
 
             fclose($handle);
