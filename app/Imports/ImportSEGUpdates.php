@@ -222,7 +222,7 @@ class ImportSEGUpdates implements ImportInterface
             $location->aisle = trim($aisle);
         }
 
-        $location->section = trim($data[2]) . trim($data[3]);
+        $location->section = strtoupper(trim($data[2])) . trim($data[3]);
         $location->shelf = trim($data[4]);
 
         $location->valid = $this->shouldSkipLocation($location);
