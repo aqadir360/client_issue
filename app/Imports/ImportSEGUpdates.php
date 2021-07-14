@@ -49,7 +49,7 @@ class ImportSEGUpdates implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_18_20210706.csv');
 
         foreach ($fileList as $file) {
             if (strpos($file, 'User') === false) {
@@ -232,7 +232,7 @@ class ImportSEGUpdates implements ImportInterface
 
     private function shouldSkipLocation(Location $location): bool
     {
-        return !(empty($location->aisle) || intval($location->aisle) === 0 || $location->aisle === 'NA');
+        return (empty($location->aisle) || intval($location->aisle) === 0 || $location->aisle === 'NA');
     }
 
     private function getStoreNum(string $filename)
