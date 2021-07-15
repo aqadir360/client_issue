@@ -27,7 +27,8 @@ class CopyOverlayDates extends Command
         $companyId = '6859ef83-7f11-05fe-0661-075be46276ec';
 
         $stores = [
-            '8638c72c-94a6-8c9b-3f22-3257604c3c3c', // 165
+            '17812ff5-faf3-1933-8a63-9f20d64c20e4', // 190
+            '4f479569-09b8-3c7e-2ade-122e42de6e65', // 240
         ];
 
         $fromStores = [];
