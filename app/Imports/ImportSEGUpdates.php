@@ -143,28 +143,28 @@ class ImportSEGUpdates implements ImportInterface
                     $departmentId
                 );
 
-//                if ($product && $product->isExistingProduct) {
-//                    $movement = $this->import->parsePositiveFloat($data[16]);
-//                    $price = $this->import->parsePositiveFloat($data[13]);
-//                    $priceModifier = intval($data[14]);
-//                    if ($priceModifier <= 0) {
-//                        $price = 0;
-//                    } else {
-//                        $price = $price / $priceModifier;
-//                    }
-//
-//                    $this->import->persistMetric(
-//                        $storeId,
-//                        $product,
-//                        0,
-//                        $this->import->convertFloatToInt($price),
-//                        $this->import->convertFloatToInt($movement)
-//                    );
-//
-//                    if (trim($data[21]) === 'Y') {
-//                        $this->import->createVendor($product->barcode, 'Own Brand');
-//                    }
-//                }
+                if ($product && $product->isExistingProduct) {
+                    $movement = $this->import->parsePositiveFloat($data[16]);
+                    $price = $this->import->parsePositiveFloat($data[13]);
+                    $priceModifier = intval($data[14]);
+                    if ($priceModifier <= 0) {
+                        $price = 0;
+                    } else {
+                        $price = $price / $priceModifier;
+                    }
+
+                    $this->import->persistMetric(
+                        $storeId,
+                        $product,
+                        0,
+                        $this->import->convertFloatToInt($price),
+                        $this->import->convertFloatToInt($movement)
+                    );
+
+                    if (trim($data[21]) === 'Y') {
+                        $this->import->createVendor($product->barcode, 'Own Brand');
+                    }
+                }
             }
 
             fclose($handle);
@@ -198,6 +198,7 @@ class ImportSEGUpdates implements ImportInterface
 
             if ($productId === null) {
                 $this->import->writeFileOutput($data, "Skip: Could not create product");
+                $this->products[intval($upc)] = null;
                 return null;
             }
 
@@ -225,14 +226,22 @@ class ImportSEGUpdates implements ImportInterface
         $location->section = strtoupper(trim($data[2])) . trim($data[3]);
         $location->shelf = trim($data[4]);
 
-        $location->valid = $this->shouldSkipLocation($location);
+        $location->valid = $this->isValidLocation($location);
 
         return $location;
     }
 
-    private function shouldSkipLocation(Location $location): bool
+    private function isValidLocation(Location $location): bool
     {
-        return (empty($location->aisle) || intval($location->aisle) === 0 || $location->aisle === 'NA');
+        if (empty($location->aisle) || intval($location->aisle) === 0 || strtoupper($location->aisle) === 'NA') {
+            return false;
+        }
+
+        if (strtoupper($location->aisle) === 'NA') {
+            return false;
+        }
+
+        return true;
     }
 
     private function getStoreNum(string $filename)
