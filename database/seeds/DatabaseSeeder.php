@@ -41,7 +41,8 @@ class DatabaseSeeder extends Seeder
 	    (26, '9eb88cec-01d9-5353-61e5-613dd8a0ebec', 'caputos', 'Import Caputos Products', 'Requires local file', 'caputos/imports', '2021-04-12 14:10:59'),
 	    (27, '61efcdfa-c0e1-11e7-af75-080027c30a85', 'leevers_metrics', 'Leevers Metrics', 'Requires local file', NULL, '2021-04-14 23:02:15'),
 	    (28, '2291eca3-984d-b36e-a04d-462902ea6ax8', 'new_morning_market', 'New Morning Market Pilot', 'Imports products and metrics', NULL, '2021-06-04 03:41:43'),
-	    (29, '6859ef83-7f11-05fe-0661-075be46276ec', 'price_chopper', 'Price Chopper Pilot', 'Imports products and metrics', 'pricechopper/imports', '2021-06-18 15:30:43');
+	    (29, '6859ef83-7f11-05fe-0661-075be46276ec', 'price_chopper', 'Price Chopper Pilot', 'Imports products and metrics', 'pricechopper/imports', '2021-06-18 15:30:43'),
+	    (30, NULL, 'overlay_notifications', 'Notification Dates Overlay', 'Copies dates for close dated and expiring items from within company', NULL, '2021-07-23 22:07:42');
         */
     }
 }

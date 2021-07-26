@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Imports\ImportFactory;
 use App\Imports\Overlay\OverlayNew;
+use App\Imports\Overlay\OverlayNotifications;
 use App\Imports\Overlay\OverlayOos;
 use App\Objects\Api;
 use App\Objects\CalculateSchedule;
@@ -49,7 +50,7 @@ class ProcessNextItem extends Command
 
         $database->setImportJobInProgress($pending->import_job_id);
 
-        if ($pending->type === 'overlay_new' || $pending->type === 'overlay_oos') {
+        if (strpos($pending->type, 'overlay') !== false) {
             $this->runOverlay($database, $pending);
         } else {
             $this->runFileImport($database, $pending);
@@ -94,6 +95,9 @@ class ProcessNextItem extends Command
                 break;
             case 'overlay_oos':
                 $import = new OverlayOos(new Api(), $database);
+                break;
+            case 'overlay_notifications':
+                $import = new OverlayNotifications(new Api(), $database);
                 break;
             default:
                 $this->log("Invalid Overlay Type " . $pending->type);

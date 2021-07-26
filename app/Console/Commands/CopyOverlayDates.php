@@ -21,24 +21,20 @@ class CopyOverlayDates extends Command
     public function handle()
     {
         $this->db = new Database();
-        $this->db->setDbName('price_chopper');
+        $this->db->setDbName('all_companies_db');
         $this->proxy = new Api();
 
-        $companyId = '6859ef83-7f11-05fe-0661-075be46276ec';
+        $companyId = '96bec4fe-098f-0e87-2563-11a36e6447ae';
 
         $stores = [
-            'd62efcf3-d295-d382-0b86-376d46218720', // 001
-            'cd9c9091-921c-8636-7892-0bee8bd775a2', // 003
-            '1a179819-f09a-575a-03d5-57c3cd7a06cb', // 175
-            '11620e29-9650-bf92-1747-446691b8c6d7', // 181
-            '32125a38-a04a-78c0-147e-0984709b0795', // 198
-            '9dcd19f7-f5f7-4b73-5552-2c79c6277f4e', // 129
+            '762daa98-3afb-11eb-883a-080027205eeb', // 1405
+            '856616b2-3afb-11eb-9ac1-080027205eeb', // 1472
         ];
 
         $fromStores = [];
 
         foreach ($stores as $storeId) {
-            $this->overlayInventory($companyId, $storeId, $fromStores);
+            $this->fixCloseDatedItemCounts($companyId, $storeId, $fromStores);
         }
 
         $this->proxy->triggerUpdateCounts($companyId);
@@ -46,7 +42,7 @@ class CopyOverlayDates extends Command
 
     private function fixCloseDatedItemCounts(string $companyId, string $storeId, array $fromStores)
     {
-        $inventory = $this->db->fetchCloseDatedInventory($storeId, '2021-07-12');
+        $inventory = $this->db->fetchCloseDatedInventory($storeId, '2021-07-28');
         $total = count($inventory);
         $max = $total * .8;
         $updated = 0;
