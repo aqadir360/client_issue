@@ -24,7 +24,7 @@ class ImportWebsters implements ImportInterface
 
     public function importUpdates()
     {
-        $newFiles = $this->import->downloadFilesByName('NEW');
+        $newFiles = $this->import->downloadFilesByName('DCP_EXPORT_NEW');
 
         foreach ($newFiles as $file) {
             $this->importNewFile($file);
@@ -60,7 +60,15 @@ class ImportWebsters implements ImportInterface
                 }
 
                 if (!$product->isExistingProduct) {
-                    $product->setDescription($data[1]);
+                    $name = trim($data[1], "'");
+                    $sizePosition = $this->findSize($name);
+
+                    if ($sizePosition > 0) {
+                        $product->setDescription(trim(substr($name, 0, $sizePosition)));
+                        $product->setSize(trim(substr($name, $sizePosition)));
+                    } else {
+                        $product->setDescription($name);
+                    }
                 }
 
                 $productId = $this->import->implementationScan(
@@ -82,5 +90,25 @@ class ImportWebsters implements ImportInterface
         }
 
         $this->import->completeFile();
+    }
+
+    // Tries to find the last complete number in the description
+    private function findSize(string $name)
+    {
+        $sizePosition = 0;
+        $numFound = false;
+
+        for ($i = strlen($name) - 1; $i >= 0; $i--) {
+            if ($numFound && $name[$i] === ' ') {
+                $sizePosition = $i;
+                break;
+            }
+
+            if (is_numeric($name[$i])) {
+                $numFound = true;
+            }
+        }
+
+        return $sizePosition;
     }
 }
