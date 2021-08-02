@@ -156,7 +156,7 @@ class ImportSEGUpdates implements ImportInterface
                     $this->import->persistMetric(
                         $storeId,
                         $product,
-                        0,
+                        $this->import->convertFloatToInt($price), // clone retail to cost
                         $this->import->convertFloatToInt($price),
                         $this->import->convertFloatToInt($movement)
                     );
