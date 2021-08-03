@@ -71,32 +71,38 @@ class RaleysInventory implements ImportInterface
 
                 $barcode = BarcodeFixer::fixLength($data[1]);
                 if ($this->import->isInvalidBarcode($barcode, $data[1])) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
                 }
 
                 if ($this->import->isInSkipList($barcode)) {
+                    $this->import->writeFileOutput($data, "Skip: Skip List");
                     continue;
                 }
 
                 $storeId = $this->import->storeNumToStoreId(trim($data[2]));
                 if ($storeId === false) {
+                    $this->import->writeFileOutput($data, "Skip: Store Not Found");
                     continue;
                 }
 
                 $location = $this->normalizeRaleysLocation($data[9]);
                 if (!$location->valid) {
                     $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
                     continue;
                 }
 
                 $product = $this->import->fetchProduct($barcode, $storeId);
                 if ($product->hasInventory()) {
                     $this->import->recordStatic();
+                    $this->import->writeFileOutput($data, "Static: Existing Inventory");
                     continue;
                 }
 
                 $deptId = $this->import->getDepartmentId($data[5], $data[6]);
                 if ($deptId === false) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
                 }
 
@@ -105,13 +111,19 @@ class RaleysInventory implements ImportInterface
                     $product->setSize($data[8]);
                 }
 
-                $this->import->implementationScan(
+                $success = $this->import->implementationScan(
                     $product,
                     $storeId,
                     $location->aisle,
                     $location->section,
                     $deptId
                 );
+
+                if (!is_null($success)) {
+                    $this->import->writeFileOutput($data, "Success: Created Inventory");
+                } else {
+                    $this->import->writeFileOutput($data, "Error: Could Not Create Inventory");
+                }
 
                 $this->recordSku(trim($data[0]), $barcode);
             }
@@ -139,41 +151,48 @@ class RaleysInventory implements ImportInterface
 
                 $barcode = BarcodeFixer::fixLength($data[1]);
                 if ($this->import->isInvalidBarcode($barcode, $data[1])) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
                 }
 
                 $storeId = $this->import->storeNumToStoreId(trim($data[2]));
                 if ($storeId === false) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Store");
                     continue;
                 }
 
                 $product = $this->import->fetchProduct($barcode, $storeId);
                 if ($product->isExistingProduct === false) {
                     $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, "Skip: New Product");
                     continue;
                 }
 
                 $location = $this->normalizeRaleysLocation($data[3]);
                 if (!$location->valid) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
                     $this->import->recordSkipped();
                     continue;
                 }
 
                 $item = $product->getMatchingInventoryItem($location);
                 if ($item === null) {
+                    $this->import->writeFileOutput($data, "Skip: Match Not Found");
                     $this->import->recordSkipped();
                     continue;
                 }
 
                 if ($this->needToMoveItem($item, $location)) {
-                    $this->import->updateInventoryLocation(
+                    $success = $this->import->updateInventoryLocation(
                         $item->inventory_item_id,
                         $storeId,
                         $item->department_id,
                         $location->aisle,
                         $location->section
                     );
+                    $this->recordLocationUpdate($success, $data, $location->aisle, $location->section);
                 } else {
+                    $this->import->writeFileOutput($data, "Static: No Move Needed");
                     $this->import->recordStatic();
                 }
             }
@@ -184,9 +203,18 @@ class RaleysInventory implements ImportInterface
         $this->import->completeFile();
     }
 
-    private function needToMoveItem($item, Location $location)
+    private function recordLocationUpdate(bool $success, array $data, $aisle, $section)
     {
-        return !($item->aisle == $location->aisle && $item->section == $location->section);
+        if ($success) {
+            $this->import->writeFileOutput($data, "Success: Updated Location $aisle $section");
+        } else {
+            $this->import->writeFileOutput($data, "Error: Could Not Update Location");
+        }
+    }
+
+    private function needToMoveItem($item, Location $location): bool
+    {
+        return !($item->aisle === $location->aisle && $item->section === $location->section);
     }
 
     private function normalizeRaleysLocation(string $input): Location

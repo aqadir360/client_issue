@@ -390,9 +390,9 @@ class ImportManager
 
     public function recordRow(): bool
     {
-        if ($this->debugMode && $this->currentFile->total + 1 > 1000) {
-            return false;
-        }
+//        if ($this->debugMode && $this->currentFile->total + 1 > 1000) {
+//            return false;
+//        }
 
         $this->currentFile->total++;
         return true;
@@ -480,7 +480,7 @@ class ImportManager
         return null;
     }
 
-    public function updateInventoryLocation(string $itemId, string $storeId, string $deptId, string $aisle, string $section, string $shelf = '')
+    public function updateInventoryLocation(string $itemId, string $storeId, string $deptId, string $aisle, string $section, string $shelf = ''): bool
     {
         $response = $this->proxy->updateInventoryLocation(
             $this->companyId,
@@ -491,7 +491,7 @@ class ImportManager
             $section,
             $shelf
         );
-        $this->recordResponse($response, 'move');
+        return $this->recordResponse($response, 'move');
     }
 
     public function createVendor(string $barcode, string $vendor)
