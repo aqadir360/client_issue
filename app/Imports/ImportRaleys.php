@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\Location;
+use App\Models\Product;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 
@@ -119,15 +120,18 @@ class ImportRaleys implements ImportInterface
 
                 $upc = BarcodeFixer::fixLength(trim($data[1]));
                 if ($this->import->isInvalidBarcode($upc, $data[1])) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
                 }
 
                 $storeId = $this->import->storeNumToStoreId(trim($data[2]));
                 if ($storeId === false) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Store");
                     continue;
                 }
 
                 $this->import->discontinueProductByBarcode($storeId, $upc);
+                $this->import->writeFileOutput($data, "Success: Discontinued");
             }
 
             fclose($handle);
@@ -153,56 +157,61 @@ class ImportRaleys implements ImportInterface
                 $sku = intval($data[0]);
                 $barcode = BarcodeFixer::fixLength($data[1]);
                 if ($this->import->isInvalidBarcode($barcode, $data[1])) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
                 }
 
                 $storeId = $this->import->storeNumToStoreId(trim($data[2]));
                 if ($storeId === false) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Store");
                     continue;
                 }
 
                 $product = $this->import->fetchProduct($barcode, $storeId);
                 if ($product->isExistingProduct === false) {
                     $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, "Skip: New Product");
                     continue;
                 }
 
                 $location = $this->normalizeRaleysLocation($data[3]);
                 if (!$location->valid) {
                     # these items are slated for disco and will appear in an upcoming disco file
+                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
                     $this->import->recordSkipped();
+                    continue;
+                }
+
+                $departmentId = $this->import->getDepartmentId(trim($data[6]), trim($data[7]));
+                if (!$departmentId) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
                 }
 
                 $item = $product->getMatchingInventoryItem($location);
 
                 if ($item !== null) {
-                    if ($this->needToMoveItem($item, $location)) {
-                        $this->import->updateInventoryLocation(
+                    if ($this->needToMoveItem($item, $location, $departmentId)) {
+                        $this->moveInventoryItem(
                             $item->inventory_item_id,
                             $storeId,
-                            $item->department_id,
+                            $departmentId,
                             $location->aisle,
-                            $location->section
+                            $location->section,
+                            $data
                         );
                     } else {
+                        $this->import->writeFileOutput($data, "Static: Existing Inventory");
                         $this->import->recordStatic();
                     }
                 } else {
                     if ($this->primarySkuInventoryExists($sku, $barcode, $storeId)) {
+                        $this->import->writeFileOutput($data, "Skip: Primary SKU Exists");
                         $this->import->recordSkipped();
+                    } else if ($this->import->isInSkipList($barcode)) {
+                        $this->import->writeFileOutput($data, "Skip: Skip List");
                     } else {
-                        if ($this->import->isInSkipList($barcode)) {
-                            continue;
-                        }
-
-                        $this->import->implementationScan(
-                            $product,
-                            $storeId,
-                            $location->aisle,
-                            $location->section,
-                            $this->import->getDepartmentId('grocery')
-                        );
+                        $this->createInventory($product, $storeId, $location, $departmentId, $data);
                     }
                 }
             }
@@ -211,6 +220,40 @@ class ImportRaleys implements ImportInterface
         }
 
         $this->import->completeFile();
+    }
+
+    private function createInventory(Product $product, $storeId, Location $location, $departmentId, $data)
+    {
+        $success = $this->import->implementationScan(
+            $product,
+            $storeId,
+            $location->aisle,
+            $location->section,
+            $departmentId
+        );
+
+        if (!is_null($success)) {
+            $this->import->writeFileOutput($data, "Success: Created Inventory");
+        } else {
+            $this->import->writeFileOutput($data, "Error: Could Not Create Inventory");
+        }
+    }
+
+    private function moveInventoryItem($itemId, $storeId, $departmentId, $aisle, $section, $data)
+    {
+        $success = $this->import->updateInventoryLocation(
+            $itemId,
+            $storeId,
+            $departmentId,
+            $aisle,
+            $section
+        );
+
+        if ($success) {
+            $this->import->writeFileOutput($data, "Success: Updated Location $aisle $section");
+        } else {
+            $this->import->writeFileOutput($data, "Error: Could Not Update Location");
+        }
     }
 
     private function primarySkuInventoryExists($sku, $barcode, $storeId): bool
@@ -226,9 +269,12 @@ class ImportRaleys implements ImportInterface
         return false;
     }
 
-    private function needToMoveItem($item, Location $location)
+    private function needToMoveItem($item, Location $location, string $departmentId)
     {
-        return !($item->aisle == $location->aisle && $item->section == $location->section);
+        return !($item->aisle === $location->aisle
+            && $item->section === $location->section
+            && $item->department_id === $departmentId
+        );
     }
 
     private function normalizeRaleysLocation(string $input): Location

@@ -175,18 +175,24 @@ class RaleysInventory implements ImportInterface
                     continue;
                 }
 
-                $item = $product->getMatchingInventoryItem($location);
+                $departmentId = $this->import->getDepartmentId(trim($data[6]), trim($data[7]));
+                if (!$departmentId) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
+                    continue;
+                }
+
+                $item = $product->getMatchingInventoryItem($location, $departmentId);
                 if ($item === null) {
                     $this->import->writeFileOutput($data, "Skip: Match Not Found");
                     $this->import->recordSkipped();
                     continue;
                 }
 
-                if ($this->needToMoveItem($item, $location)) {
+                if ($this->needToMoveItem($item, $location, $departmentId)) {
                     $success = $this->import->updateInventoryLocation(
                         $item->inventory_item_id,
                         $storeId,
-                        $item->department_id,
+                        $departmentId,
                         $location->aisle,
                         $location->section
                     );
@@ -212,9 +218,11 @@ class RaleysInventory implements ImportInterface
         }
     }
 
-    private function needToMoveItem($item, Location $location): bool
+    private function needToMoveItem($item, Location $location, string $departmentId): bool
     {
-        return !($item->aisle === $location->aisle && $item->section === $location->section);
+        return !($item->aisle === $location->aisle
+            && $item->section === $location->section
+            && $item->department_id === $departmentId);
     }
 
     private function normalizeRaleysLocation(string $input): Location
