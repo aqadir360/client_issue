@@ -216,16 +216,20 @@ class FileStatus
         $this->insertErrorMessage($status, $message);
     }
 
-    private function insertErrorMessage($status, $message)
+    private function insertErrorMessage(string $status, string $message)
     {
-        $sql = "INSERT INTO import_errors (import_id, row, status, message, created_at)
+        try {
+            $sql = "INSERT INTO import_errors (import_id, row, status, message, created_at)
             VALUES (:import_id, :row, :status, :message, NOW())";
 
-        DB::insert($sql, [
-            'import_id' => $this->fileRowId,
-            'row' => $this->total,
-            'status' => $status,
-            'message' => addslashes($message),
-        ]);
+            DB::insert($sql, [
+                'import_id' => $this->fileRowId,
+                'row' => $this->total,
+                'status' => $status,
+                'message' => addslashes($message),
+            ]);
+        } catch (\Exception $e) {
+            var_dump($e);
+        }
     }
 }

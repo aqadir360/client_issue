@@ -97,7 +97,7 @@ class ImportSEGUpdates implements ImportInterface
     private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
     {
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 10000, ",")) !== false) {
+            while (($data = fgetcsv($handle, 10000, "|")) !== false) {
                 if (trim($data[0]) === 'Loc_Id') {
                     continue;
                 }
@@ -132,7 +132,6 @@ class ImportSEGUpdates implements ImportInterface
 
                 if (intval($data[20]) === 1) {
                     $departmentId = $this->getReclaimDepartment($departmentId);
-                    $this->import->writeFileOutput($data, "Mapped Reclaim Department");
                 }
 
                 $compare->setFileInventoryItem(
@@ -164,6 +163,14 @@ class ImportSEGUpdates implements ImportInterface
                     if (trim($data[21]) === 'Y') {
                         $this->import->createVendor($product->barcode, 'Own Brand');
                     }
+
+                    if ($location->valid) {
+                        $this->import->writeFileOutput($data, "Success: Valid Product");
+                    } else {
+                        $this->import->writeFileOutput($data, "Skipped: Invalid Location");
+                    }
+                } else {
+                    $this->import->writeFileOutput($data, "Skipped: New Product");
                 }
             }
 
@@ -233,7 +240,7 @@ class ImportSEGUpdates implements ImportInterface
 
     private function isValidLocation(Location $location): bool
     {
-        if (empty($location->aisle) || intval($location->aisle) === 0 || strtoupper($location->aisle) === 'NA') {
+        if (empty($location->aisle) || $location->aisle === "0") {
             return false;
         }
 
