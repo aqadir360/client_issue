@@ -2,6 +2,7 @@
 
 namespace App\Objects;
 
+use App\Models\Department;
 use App\Models\Product;
 use Ramsey\Uuid\Uuid;
 
@@ -39,6 +40,7 @@ class ImportManager
     private $invalidDepts = [];
     private $invalidStores = [];
     private $invalidBarcodes = [];
+    private $mappedDepartments = [];
 
     public function __construct(
         Api $api,
@@ -113,6 +115,7 @@ class ImportManager
         $this->currentFile->insertFileRow($this->importStatusId, $outputFileName);
         $this->outputContent("---- Importing $file");
 
+        $this->mappedDepartments = [];
         $this->outputFile = fopen(storage_path('output/' . $outputFileName), 'w');
     }
 
@@ -264,24 +267,35 @@ class ImportManager
         }
 
         if ($dept->skip) {
-            $this->outputDepartmentMapping($upc, $department, $category, $dept);
+            $this->outputDepartmentMapping($department, $category, $dept);
             $this->currentFile->skipped++;
             return false;
         }
 
         if ($dept->departmentId === null) {
-            $this->outputDepartmentMapping($upc, $department, $category, $dept);
+            $this->outputDepartmentMapping($department, $category, $dept);
             $this->currentFile->skipDepts++;
             return false;
         }
 
-        $this->outputDepartmentMapping($upc, $department, $category, $dept);
+        $this->outputDepartmentMapping($department, $category, $dept);
         return $dept->departmentId;
     }
 
-    private function outputDepartmentMapping($upc, $department, $category, $dept)
+    private function outputDepartmentMapping(string $department, string $category, Department $dept)
     {
-        $this->writeFileOutput([$upc, $department, $category], "Department Rule Mapped: " . $dept->department . " ~ " . $dept->category);
+        if (!isset($this->mappedDepartments[$department . " " . $category])) {
+            $this->db->insertDepartmentMapped(
+                $this->currentFile->getFileRowId(),
+                $department,
+                $category,
+                $dept->departmentId,
+                $dept->departmentRule,
+                $dept->categoryRule,
+                $dept->skip
+            );
+            $this->mappedDepartments[$department . " " . $category] = true;
+        }
     }
 
     // Finds store id by store number mapping
@@ -390,9 +404,9 @@ class ImportManager
 
     public function recordRow(): bool
     {
-//        if ($this->debugMode && $this->currentFile->total + 1 > 1000) {
-//            return false;
-//        }
+        if ($this->debugMode && $this->currentFile->total + 1 > 1000) {
+            return false;
+        }
 
         $this->currentFile->total++;
         return true;

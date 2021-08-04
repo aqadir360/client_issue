@@ -7,6 +7,9 @@ class Department
 {
     public $departmentId;
 
+    public $departmentRule;
+    public $categoryRule;
+
     public $department;
     public $wildcardDeptMatch;
     public $partialDeptMatch;
@@ -20,6 +23,9 @@ class Department
     public function __construct(?string $departmentId, string $department, string $category, $skip)
     {
         $this->departmentId = $departmentId;
+
+        $this->departmentRule = $department;
+        $this->categoryRule = $category;
 
         $this->department = strtolower($department);
         $this->wildcardDeptMatch = $department === '%';

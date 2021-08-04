@@ -197,6 +197,22 @@ class Database
         }
     }
 
+    public function insertDepartmentMapped($fileRowId, $department, $category, $departmentId, $departmentRule, $categoryRule, $skip)
+    {
+        $sql = "INSERT INTO import_department_mapped
+            (import_result_id, department_id, department, category, department_rule, category_rule, skip)
+            VALUES (:import_result_id, :department_id, :department, :category, :department_rule, :category_rule, :skip)";
+        DB::insert($sql, [
+            'import_result_id' => $fileRowId,
+            'department_id' => $departmentId,
+            'department' => $department,
+            'category' => $category,
+            'department_rule' => $departmentRule,
+            'category_rule' => $categoryRule,
+            'skip' => $skip ? 1 : 0
+        ]);
+    }
+
     public function fetchPriceChopperSkus()
     {
         $sql = "SELECT sku_num, barcode FROM #t#.pc_products";

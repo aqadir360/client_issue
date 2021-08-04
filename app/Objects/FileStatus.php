@@ -38,6 +38,11 @@ class FileStatus
         $this->content .= "<p>" . $content . "</p>";
     }
 
+    public function getFileRowId()
+    {
+        return $this->fileRowId;
+    }
+
     public function outputResults(): string
     {
         $unaccountedRows = $this->total;
