@@ -201,7 +201,7 @@ class InventoryCompare
 
     private function moveItem($existingItem, $newItem)
     {
-        if ($this->shouldMoveItem($existingItem, $newItem)) {
+        if ($this->shouldMoveItem($existingItem, $newItem) && $newItem['location']->valid) {
             $deptId = isset($newItem['departmentId']) ? $newItem['departmentId'] : $existingItem['departmentId'];
 
             $this->import->updateInventoryLocation(
