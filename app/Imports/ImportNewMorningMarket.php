@@ -2,15 +2,33 @@
 
 namespace App\Imports;
 
+use App\Models\Location;
+use App\Models\Product;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
+use App\Objects\InventoryCompare;
 
-// Requires local file
+// Updates New Morning Market Inventory by comparison
 class ImportNewMorningMarket implements ImportInterface
 {
     /** @var ImportManager */
     private $import;
 
+    // Expected Columns:
+    // [0] UPC/PLU
+    // [1] Qty Sold
+    // [2] Department
+    // [3] Price
+    // [4] Unit Cost
+    // [5] Size
+    // [6] Long Description
+    // [7] Brand
+    // [8] Aisle
+    // [9] Shelf
+    // [10] Cur Price Qty
+    // [11] Cur Price
+    // [12] Base Un Cst
+    // [13] Category Name
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
@@ -18,67 +36,126 @@ class ImportNewMorningMarket implements ImportInterface
 
     public function importUpdates()
     {
-        $files = glob(storage_path('nmm_products.csv'));
+        // TODO: get value from file if provided
+        $storeId = '9662b68e-bb14-11eb-af4c-080027af75ff';
 
-        foreach ($files as $file) {
-            $this->importProductsAndMetrics($file);
+        $fileList = $this->import->downloadFilesByName('date');
+
+        foreach ($fileList as $file) {
+            $this->importInventory($file, $storeId);
         }
 
         $this->import->completeImport();
     }
 
-    private function importProductsAndMetrics($file)
+    private function importInventory(string $file, string $storeId)
     {
-        // TODO: remove hard coding
-        $storeId = '9662b68e-bb14-11eb-af4c-080027af75ff';
         $this->import->startNewFile($file);
 
-        if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-                if (!$this->import->recordRow()) {
-                    break;
-                }
+        $compare = new InventoryCompare($this->import, $storeId, 0);
 
-                $barcode = BarcodeFixer::fixUpc(trim($data[0]));
-                if ($this->import->isInvalidBarcode($barcode, $data[0])) {
+        $exists = $this->setFileInventory($compare, $file, $storeId);
+
+        if (!$exists) {
+            $this->import->outputContent("Skipping - Import file was empty");
+            return;
+        }
+
+        $this->import->outputAndResetFile();
+
+        $compare->setExistingInventory();
+        $compare->compareInventorySets();
+
+        $this->import->completeFile();
+    }
+
+    private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
+    {
+        if (($handle = fopen($file, "r")) !== false) {
+            while (($data = fgetcsv($handle, 10000, "|")) !== false) {
+                if (trim($data[0]) === 'UPC/PLU') {
                     continue;
                 }
 
-                $product = $this->import->fetchProduct($barcode);
-                if ($product->isExistingProduct === false) {
-                    $product->setDescription(trim($data[7]));
-                    $product->setSize(trim($data[6]));
+                if (!$this->import->recordRow()) {
+                    continue;
+                }
+
+                $inputBarcode = trim($data[0]);
+                $upc = BarcodeFixer::fixUpc($inputBarcode);
+                if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
+                    continue;
+                }
+
+                $product = $this->import->fetchProduct($upc);
+                if (!$product->isExistingProduct) {
+                    $product->setDescription($data[6]);
+                    $product->setSize($data[5]);
 
                     $productId = $this->import->createProduct($product);
-                    if (!$productId) {
+
+                    if ($productId === null) {
+                        $this->import->writeFileOutput($data, "Skip: Could not create product");
                         continue;
-                    } else {
-                        $product->setProductId($productId);
                     }
+
+                    $product->setProductId($productId);
                 }
 
-                $cost = $this->import->parsePositiveFloat($data[5]);
-                $retail = $this->import->parsePositiveFloat($data[4]);
-
-                if ($cost > $retail) {
-                    $cost = 0;
+                $location = $this->normalizeLocation($data);
+                if (!$location->valid) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
+                    continue;
                 }
 
-                $movement = $this->import->parsePositiveFloat(floatval($data[2]));
+                $departmentId = $this->import->getDepartmentId(trim(strtolower($data[2])), trim(strtolower($data[13])), $product->barcode);
+                if ($departmentId === false) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
+                    continue;
+                }
 
-                $this->import->persistMetric(
-                    $storeId,
-                    $product,
-                    $this->import->convertFloatToInt($cost),
-                    $this->import->convertFloatToInt($retail),
-                    $this->import->convertFloatToInt($movement),
-                    false
+                $compare->setFileInventoryItem(
+                    $product->barcode,
+                    $location,
+                    trim($data[6]),
+                    trim($data[5]),
+                    $departmentId
                 );
+
+                if ($product && $product->isExistingProduct) {
+                    $this->createMetric($storeId, $product, $data);
+                    $this->import->writeFileOutput($data, "Success: Valid Product");
+                } else {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Product");
+                }
             }
 
             fclose($handle);
         }
 
-        $this->import->completeFile();
+        return $compare->fileInventoryCount() > 0;
+    }
+
+    private function createMetric(string $storeId, Product $product, array $data)
+    {
+        $movement = $this->import->parsePositiveFloat($data[1]) / 90;
+        $retail = $this->import->parsePositiveFloat($data[3]);
+        $cost = $this->import->parsePositiveFloat($data[4]);
+
+        $this->import->persistMetric(
+            $storeId,
+            $product,
+            $this->import->convertFloatToInt($cost),
+            $this->import->convertFloatToInt($retail),
+            $this->import->convertFloatToInt($movement)
+        );
+    }
+
+    private function normalizeLocation(array $data): Location
+    {
+        // maintain full aisle string, excluding spaces
+        $location = new Location(trim($data[8]), trim($data[9]));
+        $location->valid = true;
+        return $location;
     }
 }
