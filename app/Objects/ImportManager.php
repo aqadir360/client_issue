@@ -166,6 +166,21 @@ class ImportManager
         return $output;
     }
 
+    public function downloadStoreFileByName($files, string $name, string $storeNum): ?string
+    {
+        foreach ($files as $file) {
+            if (strpos($file, $name) !== false && strpos($file, $storeNum) !== false) {
+                return $this->ftpManager->downloadFile($file);
+            }
+        }
+        return null;
+    }
+
+    public function getStores(): array
+    {
+        return $this->stores;
+    }
+
     public function addInvalidStore($storeId)
     {
         $this->invalidStores[$storeId] = $storeId;
