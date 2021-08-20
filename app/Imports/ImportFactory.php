@@ -31,6 +31,8 @@ class ImportFactory
                 return new ImportJanssens($importManager);
             case 'karns':
                 return new ImportKarns($importManager);
+            case 'lazy_acres':
+                return new ImportLazyAcres($importManager);
             case 'leevers_metrics':
                 return new ImportLeeversMetrics($importManager);
             case 'leprekon':
