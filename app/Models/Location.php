@@ -17,4 +17,9 @@ class Location
         $this->shelf = $shelf;
         $this->valid = false;
     }
+
+    public function __toString()
+    {
+        return trim($this->aisle . " " . $this->section . " " . $this->shelf);
+    }
 }

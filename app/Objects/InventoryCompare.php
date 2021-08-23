@@ -217,8 +217,11 @@ class InventoryCompare
                 $this->getLocKey($newItem['location']->aisle, $newItem['location']->section),
                 $deptId
             );
+
+            $this->import->writeFileOutput($newItem, "Success: Moved");
         } else {
             $this->import->recordStatic();
+            $this->import->writeFileOutput($newItem, "Static: Existing Inventory");
         }
     }
 
@@ -256,10 +259,12 @@ class InventoryCompare
 
         $locKey = $this->getLocKey($item['location']->aisle, $item['location']->section);
 
-        // Do not add items in untracked locations
-        if (!isset($this->trackedLocations[$locKey]) || ($this->trackedLocations[$locKey]['count'] <= $this->minItemsForTrackedLoc)) {
-            $this->import->recordSkipped();
-            return;
+        if ($this->minItemsForTrackedLoc > 0) {
+            // Do not add items in untracked locations
+            if (!isset($this->trackedLocations[$locKey]) || ($this->trackedLocations[$locKey]['count'] <= $this->minItemsForTrackedLoc)) {
+                $this->import->recordSkipped();
+                return;
+            }
         }
 
         if (!isset($item['departmentId'])) {
@@ -290,12 +295,15 @@ class InventoryCompare
             $item['departmentId'],
             $item['location']->shelf
         );
+
+        $this->import->writeFileOutput($item, "Success: Created");
     }
 
     private function discontinue($item)
     {
         $response = $this->proxy->writeInventoryDisco($this->companyId, $item['id']);
         $this->import->recordResponse($response, 'disco');
+        $this->import->writeFileOutput($item, "Success: Disco");
     }
 
     private function getLocKey($aisle, $section)

@@ -80,31 +80,17 @@ class RaleysInventory implements ImportInterface
 
                 $barcode = BarcodeFixer::fixLength($data[1]);
                 if ($this->import->isInvalidBarcode($barcode, $data[1])) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
                 }
 
                 // Skip if all info is already filled
-                if (isset($locationInventory[intval($barcode)])) {
-                    if ($locationInventory[intval($barcode)][0]->isExistingProduct === true) {
-                        continue;
-                    }
+                if (isset($locationInventory[intval($barcode)]) && $locationInventory[intval($barcode)][0]->isExistingProduct === true) {
+                    continue;
                 }
 
                 if ($this->import->isInSkipList($barcode)) {
                     $this->import->writeFileOutput($data, "Skip: Skip List");
-                    continue;
-                }
-
-                $location = $this->normalizeRaleysLocation($data[9]);
-                if (!$location->valid) {
-                    $this->import->recordSkipped();
-                    $this->import->writeFileOutput($data, "Skip: Invalid Location");
-                    continue;
-                }
-
-                $deptId = $this->import->getDepartmentId($data[5], $data[6]);
-                if ($deptId === false) {
-                    $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
                 }
 
@@ -118,8 +104,17 @@ class RaleysInventory implements ImportInterface
 
                 if (isset($locationInventory[intval($barcode)])) {
                     $locationInventory[intval($barcode)][0] = $product;
+                    $this->import->writeFileOutput($data, "Success: Filled Location File Product Info");
                 } else {
-                    $locationInventory[intval($product->barcode)] = [$product, $location, $deptId];
+                    $location = $this->normalizeRaleysLocation($data[9]);
+                    $deptId = $this->import->getDepartmentId($data[5], $data[6]);
+
+                    if ($location->valid && $deptId !== false) {
+                        $locationInventory[intval($product->barcode)] = [$product, $location, $deptId];
+                        $this->import->writeFileOutput($data, "Success: Valid Inventory");
+                    } else {
+                        $this->import->writeFileOutput($data, "Skip: Invalid Location");
+                    }
                 }
             }
 
@@ -150,7 +145,10 @@ class RaleysInventory implements ImportInterface
                     continue;
                 }
 
-                $product = $this->import->fetchProduct($barcode, $storeId);
+                if ($this->import->isInSkipList($barcode)) {
+                    $this->import->writeFileOutput($data, "Skip: Skip List");
+                    continue;
+                }
 
                 $location = $this->normalizeRaleysLocation($data[3]);
                 if (!$location->valid) {
@@ -165,7 +163,9 @@ class RaleysInventory implements ImportInterface
                     continue;
                 }
 
+                $product = $this->import->fetchProduct($barcode, $storeId);
                 $locationInventory[intval($product->barcode)] = [$product, $location, $departmentId];
+                $this->import->writeFileOutput($data, "Success: Valid Inventory");
             }
 
             fclose($handle);
