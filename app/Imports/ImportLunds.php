@@ -187,15 +187,19 @@ class ImportLunds implements ImportInterface
                 $this->import->recordStatic();
             }
         } else {
-            $this->import->implementationScan(
-                $product,
-                $storeId,
-                $location->aisle,
-                $location->section,
-                $departmentId,
-                '',
-                true
-            );
+            if ($product->noExp === true) {
+                $this->import->recordSkipped();
+            } else {
+                $this->import->implementationScan(
+                    $product,
+                    $storeId,
+                    $location->aisle,
+                    $location->section,
+                    $departmentId,
+                    '',
+                    true
+                );
+            }
         }
     }
 
