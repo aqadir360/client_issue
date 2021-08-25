@@ -29,9 +29,15 @@ class ImportRaleys implements ImportInterface
 
         $files = $this->import->ftpManager->getRecentlyModifiedFiles();
         foreach ($files as $file) {
-            if (strpos($file, 'dcp_new_items_we') !== false || strpos($file, 'dcp_new_items_eod') !== false) {
+            if (strpos($file, 'dcp_new_items_we') !== false
+                || strpos($file, 'dcp_new_items_eod') !== false
+                || strpos($file, 'dcp_new_items_108_424_eod_') !== false
+            ) {
                 $newFiles[] = $this->import->ftpManager->downloadFile($file);
-            } elseif (strpos($file, 'dcp_disc_items_we') !== false || strpos($file, 'dcp_disc_items_eod') !== false) {
+            } elseif (strpos($file, 'dcp_disc_items_we') !== false
+                || strpos($file, 'dcp_disc_items_eod') !== false
+                || strpos($file, 'dcp_disc_items_108_424_eod_') !== false
+            ) {
                 $discoFiles[] = $this->import->ftpManager->downloadFile($file);
             } elseif (strpos($file, 'dcp_aisle_locations_we') !== false
                 || strpos($file, 'dcp_aisle_locations_eod') !== false
