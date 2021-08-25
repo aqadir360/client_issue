@@ -33,7 +33,10 @@ class ImportRaleys implements ImportInterface
                 $newFiles[] = $this->import->ftpManager->downloadFile($file);
             } elseif (strpos($file, 'dcp_disc_items_we') !== false || strpos($file, 'dcp_disc_items_eod') !== false) {
                 $discoFiles[] = $this->import->ftpManager->downloadFile($file);
-            } elseif (strpos($file, 'dcp_aisle_locations_we') !== false || strpos($file, 'dcp_aisle_locations_eod') !== false) {
+            } elseif (strpos($file, 'dcp_aisle_locations_we') !== false
+                || strpos($file, 'dcp_aisle_locations_eod') !== false
+                || strpos($file, 'dcp_aisle_locations_108_424_eod') !== false
+            ) {
                 $moveFiles[] = $this->import->ftpManager->downloadFile($file);
             }
         }
