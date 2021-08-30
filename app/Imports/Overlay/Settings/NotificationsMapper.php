@@ -21,6 +21,7 @@ class NotificationsMapper
     public $compareDate = null;
     public $minDate = null;
     public $maxDate = null;
+    public $dateType = 'closest';
 
     public function __construct(array $result)
     {
@@ -50,6 +51,9 @@ class NotificationsMapper
                     break;
                 case 'compare_date':
                     $this->compareDate = $row->value;
+                    break;
+                case 'date_type':
+                    $this->dateType = $row->value;
                     break;
             }
         }

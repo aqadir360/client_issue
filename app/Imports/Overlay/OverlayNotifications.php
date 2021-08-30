@@ -50,9 +50,10 @@ class OverlayNotifications
         $updatedCount = $totalCount = $skipped = 0;
 
         $fromStores = $this->db->getListParams($settings->copyFrom);
+        $skipDepts = $this->db->getListParams($settings->excludeDepts);
 
         foreach ($settings->copyTo as $storeId) {
-            $inventory = $this->fetchCloseDatedInventory($storeId, $settings->compareDate);
+            $inventory = $this->fetchCloseDatedInventory($storeId, $skipDepts, $settings->compareDate);
 
             $total = count($inventory);
             $totalCount += $total;
@@ -65,7 +66,8 @@ class OverlayNotifications
                     $companyId,
                     $fromStores,
                     $settings->minDate,
-                    $settings->maxDate
+                    $settings->maxDate,
+                    $settings->dateType
                 );
 
                 if ($closestDate && $closestDate->expiration_date) {
@@ -91,12 +93,17 @@ class OverlayNotifications
         return new Settings($result);
     }
 
-    public function fetchCloseDatedInventory($storeId, $compareDate)
+    public function fetchCloseDatedInventory(string $storeId, string $deptExclude, string $compareDate)
     {
         $sql = "select inventory_item_id, product_id from #t#.inventory_items i
                 inner join #t#.locations l on l.location_id = i.location_id
                 where l.store_id = :store_id and i.close_dated_date < :close_dated
                 and i.status = 'ONSHELF' and i.flag is null and i.disco = 0";
+
+        if (!empty($deptExclude)) {
+            $sql .= " and i.department_id NOT IN ($deptExclude) ";
+        }
+
         return $this->db->fetchFromCompanyDb($sql, [
             'store_id' => $storeId,
             'close_dated' => $compareDate,
@@ -108,7 +115,8 @@ class OverlayNotifications
         string $companyId,
         string $fromStores,
         string $minDate,
-        string $maxDate
+        string $maxDate,
+        string $dateType
     ) {
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
@@ -122,7 +130,11 @@ class OverlayNotifications
             $sql .= " and s.company_id = '$companyId' ";
         }
 
-        $sql .= " order by i.expiration_date asc ";
+        if ($dateType === 'closest') {
+            $sql .= " order by i.expiration_date asc ";
+        } else {
+            $sql .= " order by i.expiration_date desc ";
+        }
 
         return $this->db->fetchOneFromCompanyDb($sql, [
             'product_id' => $productId,
