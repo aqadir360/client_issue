@@ -32,6 +32,7 @@ class ImportNewMorningMarket implements ImportInterface
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
+        $this->import->setSkipList();
     }
 
     public function importUpdates()
@@ -84,6 +85,11 @@ class ImportNewMorningMarket implements ImportInterface
                 $inputBarcode = trim($data[0]);
                 $upc = BarcodeFixer::fixUpc($inputBarcode);
                 if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
+                    continue;
+                }
+
+                if ($this->import->isInSkipList($upc)) {
+                    $this->import->writeFileOutput($data, 'Skip: In Skip List');
                     continue;
                 }
 
