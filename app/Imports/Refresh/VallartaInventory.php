@@ -114,11 +114,11 @@ class VallartaInventory implements ImportInterface
                     $deptId
                 );
 
-//                if ($success !== null) {
+                if ($success !== null) {
                     $this->import->writeFileOutput($data, 'Success: Created Inventory');
-//                } else {
-//                    $this->import->writeFileOutput($data, 'Error: Could Not Create Inventory');
-//                }
+                } else {
+                    $this->import->writeFileOutput($data, 'Error: Could Not Create Inventory');
+                }
             }
 
             fclose($handle);

@@ -21,6 +21,7 @@ class NotificationsMapper
     public $compareDate = null;
     public $minDate = null;
     public $maxDate = null;
+    public $skipChecked = false;
     public $dateType = 'closest';
 
     public function __construct(array $result)
@@ -54,6 +55,9 @@ class NotificationsMapper
                     break;
                 case 'date_type':
                     $this->dateType = $row->value;
+                    break;
+                case 'skip_checked':
+                    $this->skipChecked = intval($row->value) === 1;
                     break;
             }
         }

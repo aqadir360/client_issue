@@ -61,6 +61,21 @@ class OverlayNotifications
             $updated = 0;
 
             foreach ($inventory as $item) {
+                if ($settings->skipChecked) {
+                    $existing = $this->db->fetchOneFromCompanyDb(
+                        "select * from #t#_sync.`$storeId` s
+                            inner join #t#.users u on u.user_id = s.user_id
+                            where s.inventory_item_id = :inventory_item_id
+                            and i.expiration_date is not null and u.role <> 'P_ADMIN'",
+                        [
+                            'inventory_item_id' => $item->inventory_item_id,
+                        ]
+                    );
+                    if ($existing) {
+                        continue;
+                    }
+                }
+
                 $closestDate = $this->fetchNextClosestDate(
                     $item->product_id,
                     $companyId,

@@ -219,6 +219,10 @@ class FileStatus
     private function insertErrorMessage(string $status, string $message)
     {
         try {
+            if (strlen($message) > 1000) {
+                $message = substr($message, 0, 1000);
+            }
+
             $sql = "INSERT INTO import_errors (import_id, row, status, message, created_at)
             VALUES (:import_id, :row, :status, :message, NOW())";
 

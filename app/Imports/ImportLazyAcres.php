@@ -19,7 +19,7 @@ class ImportLazyAcres implements ImportInterface
 
     public function importUpdates()
     {
-        $files = glob(storage_path('imports/25.csv'));
+        $files = glob(storage_path('imports/lazy_acres.csv'));
 
         foreach ($files as $file) {
             $this->importProductsAndMetrics($file);
@@ -30,14 +30,17 @@ class ImportLazyAcres implements ImportInterface
 
     private function importProductsAndMetrics($file)
     {
-        // TODO: remove hard coding
-        $storeId = '585ab82a-87e1-64e7-4ba5-27416cdf0929'; // #25
         $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
                 if (!$this->import->recordRow()) {
                     break;
+                }
+
+                $storeId = $this->import->storeNumToStoreId(trim($data[0]));
+                if ($storeId === false) {
+                    continue;
                 }
 
                 $barcode = BarcodeFixer::fixUpc(trim($data[1]));
