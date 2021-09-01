@@ -323,6 +323,8 @@ class ImportSEG implements ImportInterface
                 return '45da886a-a062-d47e-16cd-185a257c858c';
             case '5ee880ee-ac21-fcf0-9833-6cb64117f5ea': // Baby Food
                 return '88ee85c9-bb73-f818-d79f-2625e8de5089';
+            case 'b6a2e154-98b6-4643-85ea-fb2c93edcd23': // Formula
+                return '1e54a0fc-8a9c-54e7-7252-05403c708cce';
             case 'd2135ea7-3891-d428-71b5-4af3283a5e8e': // Meat
                 return '7bafcd3c-0879-6864-c134-97ec182f58e3';
         }
