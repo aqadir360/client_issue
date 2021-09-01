@@ -38,7 +38,7 @@ class ImportLazyAcres implements ImportInterface
                     break;
                 }
 
-                $storeId = $this->import->storeNumToStoreId(trim($data[0]));
+                $storeId = $this->import->storeNumToStoreId(intval($data[0]));
                 if ($storeId === false) {
                     continue;
                 }
