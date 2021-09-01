@@ -34,7 +34,7 @@ class VallartaSettings
         ];
 
         foreach ($excluded as $item) {
-            if ($item == $aisle || $item == $section) {
+            if ($item === $aisle || $item === $section) {
                 return true;
             }
         }
@@ -46,7 +46,7 @@ class VallartaSettings
     public function shouldDisco(Location $location): bool
     {
         return empty(trim($location->aisle))
-            || strtolower($location->aisle) == 'out'
-            || strtolower($location->section) == 'out';
+            || trim(strtolower($location->aisle)) === 'out'
+            || trim(strtolower($location->section)) === 'out';
     }
 }
