@@ -34,6 +34,7 @@ class OverlayNotifications
             $this->overlayInventory($dbName, $companyId, $settings, $resultId);
             $this->proxy->triggerUpdateCounts($companyId);
         } catch (\Exception $e) {
+            var_dump($e);
             $this->db->updateOverlayResultsRow($resultId, 0, 0, 0, $e->getMessage());
             $this->db->completeImport($importStatusId, 1, 0, $e->getMessage());
             Log::error($e->getMessage());
@@ -60,13 +61,15 @@ class OverlayNotifications
             $max = $total - $settings->targetCount;
             $updated = 0;
 
+            echo count($inventory) . PHP_EOL;
+
             foreach ($inventory as $item) {
                 if ($settings->skipChecked) {
                     $existing = $this->db->fetchOneFromCompanyDb(
-                        "select * from #t#_sync.`$storeId` s
+                        "select * from #sync#.`$storeId` s
                             inner join #t#.users u on u.user_id = s.user_id
                             where s.inventory_item_id = :inventory_item_id
-                            and i.expiration_date is not null and u.role <> 'P_ADMIN'",
+                            and s.expiration_date is not null and u.role <> 'P_ADMIN'",
                         [
                             'inventory_item_id' => $item->inventory_item_id,
                         ]

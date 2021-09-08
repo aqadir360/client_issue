@@ -339,6 +339,21 @@ class Database
         ]);
     }
 
+    public function fetchImportByJobId($jobId)
+    {
+        $sql = "SELECT j.id as import_job_id, t.id as import_type_id, t.type, t.ftp_path,
+                s.company_id, s.id as import_schedule_id, c.db_name
+                FROM import_jobs j
+                INNER JOIN import_schedule s ON s.id = j.import_schedule_id
+                INNER JOIN import_types t ON t.id = s.import_type_id
+                INNER JOIN companies c ON c.company_id = s.company_id
+                WHERE j.id = :job_id";
+
+        return DB::selectOne($sql, [
+            'job_id' => $jobId,
+        ]);
+    }
+
     public function fetchImportSchedule($scheduleId)
     {
         $sql = "SELECT * FROM import_schedule WHERE id = :id AND archived_at IS NULL";
@@ -870,6 +885,7 @@ class Database
 
     private function companyPdoConvert(string $sql, string $dbName)
     {
+        $sql = str_replace("#sync#", '`' . $dbName . '_sync`', $sql);
         return str_replace("#t#", '`' . $dbName . '`', $sql);
     }
 }

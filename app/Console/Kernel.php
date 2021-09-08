@@ -8,6 +8,7 @@ use App\Console\Commands\CopyOverlayDates;
 use App\Console\Commands\DoImport;
 use App\Console\Commands\ImportDsdSkip;
 use App\Console\Commands\PopulateSkipList;
+use App\Console\Commands\ProcessJob;
 use App\Console\Commands\ProcessNextItem;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
@@ -27,6 +28,7 @@ class Kernel extends ConsoleKernel
         CopyOverlayDates::class,
         ImportDsdSkip::class,
         CopyNewDates::class,
+        ProcessJob::class,
     ];
 
     /**
