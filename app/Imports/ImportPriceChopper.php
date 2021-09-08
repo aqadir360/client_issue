@@ -21,6 +21,7 @@ use App\Objects\ImportManager;
 // [12] Side
 // [13] Section X-Coord
 // [14] Section Y-Coord
+// [15] Item Position
 class ImportPriceChopper implements ImportInterface
 {
     private $products = [];
@@ -53,7 +54,7 @@ class ImportPriceChopper implements ImportInterface
         $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
+            while (($data = fgetcsv($handle, 2000, ",")) !== false) {
                 if (!$this->import->recordRow()) {
                     continue;
                 }
@@ -64,6 +65,7 @@ class ImportPriceChopper implements ImportInterface
                 }
 
                 $upc = BarcodeFixer::fixUpc($data[2]);
+                $this->recordSku(intval($data[1]), $upc);
                 if ($this->import->isInvalidBarcode($upc, $data[2])) {
                     continue;
                 }
@@ -89,28 +91,56 @@ class ImportPriceChopper implements ImportInterface
                 }
 
                 if ($product->hasInventory()) {
-                    $this->import->recordSkipped();
-                    $this->import->writeFileOutput($data, "Skip: Existing Inventory");
-                    continue;
+                    $item = $product->getMatchingInventoryItem($location, $departmentId);
+
+                    if ($this->needToMoveItem($item, $location)) {
+                        $this->import->updateInventoryLocation(
+                            $item->inventory_item_id,
+                            $storeId,
+                            $departmentId,
+                            $location->aisle,
+                            $location->section,
+                            $location->shelf
+                        );
+                        $this->import->writeFileOutput($data, "Success: Moved Inventory");
+                    } else {
+                        $this->import->recordStatic();
+                        $this->import->writeFileOutput($data, "Static: Existing Inventory");
+                    }
+                } else {
+                    $this->import->implementationScan(
+                        $product,
+                        $storeId,
+                        $location->aisle,
+                        $location->section,
+                        $departmentId,
+                        $location->shelf,
+                        true
+                    );
+
+                    $this->import->writeFileOutput($data, "Success: Created Inventory");
                 }
 
-                $this->import->implementationScan(
-                    $product,
+                $this->import->persistMetric(
                     $storeId,
-                    $location->aisle,
-                    $location->section,
-                    $departmentId,
-                    $location->shelf,
-                    true
+                    $product,
+                    $this->import->convertFloatToInt(floatval($data[10])),
+                    $this->import->convertFloatToInt(floatval($data[9])),
+                    $this->import->convertFloatToInt(floatval($data[7])),
                 );
-
-                $this->import->writeFileOutput($data, "Success: Created Inventory");
             }
 
             fclose($handle);
         }
 
         $this->import->completeFile();
+    }
+
+    private function needToMoveItem($item, Location $location): bool
+    {
+        return !($item->aisle === $location->aisle
+            && $item->section === $location->section
+            && $item->shelf === $location->shelf);
     }
 
     private function parseLocation(array $data)
@@ -131,7 +161,9 @@ class ImportPriceChopper implements ImportInterface
         // Plus the integer value of Y-Coord without rounding
         $decimal = strpos(trim($data[14]), ".");
         $position = ($decimal === false) ? trim($data[14]) : substr(trim($data[14]), 0, $decimal);
-        $location = new Location($aisle, $side . $position);
+
+        $shelf = trim($data[15]);
+        $location = new Location($aisle, $side . $position, $shelf);
 
         // Skip blank aisles.
         if (!empty($location->aisle)) {
@@ -139,108 +171,6 @@ class ImportPriceChopper implements ImportInterface
         }
 
         return $location;
-    }
-
-    private function importMetrics($file)
-    {
-        $this->import->startNewFile($file);
-
-        if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-                if (strpos($data[0], 'Store') !== false) {
-                    continue;
-                }
-
-                if (!$this->import->recordRow()) {
-                    continue;
-                }
-
-                $storeId = $this->import->storeNumToStoreId(trim($data[0]));
-                if (!$storeId) {
-                    continue;
-                }
-
-                $upc = BarcodeFixer::fixUpc($data[2]);
-                $this->recordSku(intval($data[1]), $upc);
-                if ($this->import->isInvalidBarcode($upc, $data[2])) {
-                    continue;
-                }
-
-                $product = $this->getOrCreateProduct($upc, $data);
-
-                $this->import->persistMetric(
-                    $storeId,
-                    $product,
-                    $this->import->convertFloatToInt(floatval($data[10])),
-                    $this->import->convertFloatToInt(floatval($data[9])),
-                    $this->import->convertFloatToInt(floatval($data[7])),
-                );
-            }
-
-            fclose($handle);
-        }
-
-        $this->import->completeFile();
-    }
-
-    private function getOrCreateProduct($upc, $data)
-    {
-        if (isset($this->products[intval($upc)])) {
-            return $this->products[intval($upc)];
-        }
-
-        $product = $this->import->fetchProduct($upc);
-
-        if (!$product->isExistingProduct) {
-            echo $upc . PHP_EOL;
-            $product->setDescription($data[5]);
-            $product->setSize($data[6]);
-            $productId = $this->import->createProduct($product);
-            $product->setProductId($productId);
-        }
-
-        $this->products[intval($upc)] = $product;
-
-        return $product;
-    }
-
-    private function importProducts($file)
-    {
-        $this->import->startNewFile($file);
-
-        if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-                if (strpos($data[0], 'Store') !== false) {
-                    continue;
-                }
-
-                if (!$this->import->recordRow()) {
-                    continue;
-                }
-
-                $upc = BarcodeFixer::fixUpc($data[2]);
-                $this->recordSku(intval($data[1]), $upc);
-                if ($this->import->isInvalidBarcode($upc, $data[2])) {
-                    continue;
-                }
-
-                $product = $this->import->fetchProduct($upc);
-
-                if (!$product->isExistingProduct) {
-                    echo $upc . PHP_EOL;
-                    $product->setDescription($data[5]);
-                    $product->setSize($data[6]);
-                    $response = $this->import->createProduct($product);
-                    $this->import->recordResponse(!empty($response), 'add');
-                } else {
-                    $this->import->recordSkipped();
-                }
-            }
-
-            fclose($handle);
-        }
-
-        $this->import->completeFile();
     }
 
     private function setSkus()
