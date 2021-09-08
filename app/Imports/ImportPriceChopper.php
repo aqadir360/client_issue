@@ -108,17 +108,17 @@ class ImportPriceChopper implements ImportInterface
                         $this->import->writeFileOutput($data, "Static: Existing Inventory");
                     }
                 } else {
-                    $this->import->implementationScan(
-                        $product,
-                        $storeId,
-                        $location->aisle,
-                        $location->section,
-                        $departmentId,
-                        $location->shelf,
-                        true
-                    );
-
-                    $this->import->writeFileOutput($data, "Success: Created Inventory");
+//                    $this->import->implementationScan(
+//                        $product,
+//                        $storeId,
+//                        $location->aisle,
+//                        $location->section,
+//                        $departmentId,
+//                        $location->shelf,
+//                        true
+//                    );
+                    $this->import->recordSkipped();
+                    $this->import->writeFileOutput($data, "Skipped: New Inventory");
                 }
 
                 $this->import->persistMetric(
