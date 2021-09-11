@@ -10,7 +10,6 @@ use ZipArchive;
 
 class FtpManager
 {
-    private $ftp;
     private $ftpPath;
     private $newDate = 0;
     private $compareDate;
@@ -20,9 +19,6 @@ class FtpManager
     public function __construct(?string $ftpPath, ?int $compareDate)
     {
         $this->ftpPath = $ftpPath;
-        if ($ftpPath !== null) {
-            $this->ftp = Storage::disk('sftp');
-        }
         $this->compareDate = $compareDate;
     }
 
@@ -48,9 +44,9 @@ class FtpManager
         $lastModified = 0;
         $mostRecentFile = null;
 
-        $files = $this->ftp->files($this->ftpPath);
+        $files = Storage::disk('sftp')->files($this->ftpPath);
         foreach ($files as $file) {
-            $fileLastModified = $this->ftp->lastModified($file);
+            $fileLastModified = Storage::disk('sftp')->lastModified($file);
             if (($lastModified < $fileLastModified)) {
                 $lastModified = $fileLastModified;
                 $mostRecentFile = $file;
@@ -65,7 +61,7 @@ class FtpManager
     {
         try {
             if (!file_exists(storage_path('imports/' . basename($file)))) {
-                Storage::disk('imports')->put(basename($file), $this->ftp->get($file));
+                Storage::disk('imports')->put(basename($file), Storage::disk('sftp')->get($file));
             }
             return storage_path('imports/' . basename($file));
         } catch (FileNotFoundException $e) {
@@ -117,10 +113,10 @@ class FtpManager
     // Populates list of files modified since last date
     private function setRecentlyModified()
     {
-        $ftpFiles = $this->ftp->files($this->ftpPath);
+        $ftpFiles = Storage::disk('sftp')->files($this->ftpPath);
 
         foreach ($ftpFiles as $file) {
-            $lastModified = $this->ftp->lastModified($file);
+            $lastModified = Storage::disk('sftp')->lastModified($file);
             if ($this->isBefore($lastModified)) {
                 $this->setNewDate($lastModified);
                 $this->modifiedFiles[] = $file;
