@@ -31,13 +31,22 @@ class RaleysInventory implements ImportInterface
         $stores = $this->import->getStores();
         $files = $this->import->ftpManager->getRecentlyModifiedFiles();
 
+        $downloadedFiles = [];
+
         foreach ($stores as $storeNum => $storeId) {
             $locationFile = $this->import->downloadStoreFileByName($files, 'dcp_aisle_locations_full_as_of_', $storeNum);
             $masterFile = $this->import->downloadStoreFileByName($files, 'dcp_item_master_as_of_', $storeNum);
 
             if ($locationFile !== null && $masterFile !== null) {
-                $this->importInventory($storeId, $locationFile, $masterFile);
+                $downloadedFiles[$storeId] = [
+                    $locationFile,
+                    $masterFile
+                ];
             }
+        }
+
+        foreach ($downloadedFiles as $storeId => $file) {
+            $this->importInventory($storeId, $file[0], $file[1]);
         }
 
         $this->import->completeImport();
