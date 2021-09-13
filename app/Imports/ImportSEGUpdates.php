@@ -54,7 +54,6 @@ class ImportSEGUpdates implements ImportInterface
         foreach ($fileList as $file) {
             if (strpos($file, 'User') === false) {
                 $this->importInventory($file);
-                sleep(60);
             }
         }
 
