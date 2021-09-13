@@ -43,7 +43,8 @@ class DatabaseSeeder extends Seeder
 	    (28, '2291eca3-984d-b36e-a04d-462902ea6ax8', 'new_morning_market', 'New Morning Market', 'Imports inventory by comparison', 'newmorning/imports', '2021-06-04 03:41:43'),
 	    (29, '6859ef83-7f11-05fe-0661-075be46276ec', 'price_chopper', 'Price Chopper Pilot', 'Imports products and metrics', 'pricechopper/imports', '2021-06-18 15:30:43'),
 	    (30, NULL, 'overlay_notifications', 'Notification Dates Overlay', 'Copies dates for close dated and expiring items from within company', NULL, '2021-07-23 22:07:42'),
-        (31, '9a22701b-d7ae-aaac-1194-d583167f0ba4', 'lazy_acres', 'Lazy Acres Products and Metrics', 'Imports Products and Metrics', NULL, NULL);
+        (31, '9a22701b-d7ae-aaac-1194-d583167f0ba4', 'lazy_acres', 'Lazy Acres Products and Metrics', 'Imports Products and Metrics', NULL, '2021-09-01 17:26:57'),
+	    (32, 'b32d41be-f52d-11eb-a2d3-42010a80001c', 'b_green', 'B Green Products and Metrics', 'Imports Products and Metrics', 'bgreen/imports', '2021-09-13 17:10:58')
         */
     }
 }

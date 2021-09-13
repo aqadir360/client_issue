@@ -11,6 +11,8 @@ class ImportFactory
         switch ($key) {
             case 'alaska':
                 return new ImportAlaska($importManager);
+            case 'b_green':
+                return new ImportBGreen($importManager);
             case 'bristol_metrics':
                 return new ImportBristolMetrics($importManager);
             case 'buehlers':
