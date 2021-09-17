@@ -128,6 +128,19 @@ class Database
         ]);
     }
 
+    public function fetchStoreInventory(string $storeId)
+    {
+        $sql = "SELECT i.inventory_item_id, i.expiration_date, i.department_id, l.aisle, l.section, l.shelf, p.barcode
+             FROM #t#.inventory_items i
+             INNER JOIN #t#.locations l on l.location_id = i.location_id
+             INNER JOIN #t#.products p on p.product_id = i.product_id
+             WHERE l.store_id = :store_id AND i.disco = 0 AND l.markdown_department_id IS NULL";
+
+        return $this->fetchFromCompanyDb($sql, [
+            'store_id' => $storeId,
+        ]);
+    }
+
     public function insertCompanyProduct(Product $product)
     {
         $sql = "INSERT INTO #t#.products

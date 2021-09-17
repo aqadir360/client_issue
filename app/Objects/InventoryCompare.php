@@ -32,37 +32,31 @@ class InventoryCompare
         $this->minItemsForTrackedLoc = $minItems;
     }
 
-    // Gets inventory from the API and sets tracked locations
+    // Gets inventory and sets tracked locations
     public function setExistingInventory()
     {
         $this->inventoryLookup = [];
         $this->trackedLocations = [];
         $this->totalExistingItems = 0;
 
-        $response = $this->proxy->fetchAllInventory(
-            $this->companyId,
-            $this->storeId
-        );
+        $inventory = $this->import->db->fetchStoreInventory($this->storeId);
 
-        if ($this->proxy->validResponse($response)) {
-            foreach ($response->data->items as $item) {
-                $this->totalExistingItems++;
+        foreach ($inventory as $item) {
+            $this->totalExistingItems++;
 
-                // Sort all items by barcode
-                $this->inventoryLookup[intval($item->barcode)][] = [
-                    'id' => $item->inventoryItemId,
-                    'expiration' => $item->expirationDate,
-                    'status' => $item->status,
-                    'aisle' => $item->aisle,
-                    'section' => $item->section,
-                    'shelf' => $item->shelf,
-                    'departmentId' => $item->departmentId,
-                    'barcode' => $item->barcode,
-                    'found' => false,
-                ];
+            // Sort all items by barcode
+            $this->inventoryLookup[intval($item->barcode)][] = [
+                'id' => $item->inventory_item_id,
+                'expiration' => $item->expiration_date,
+                'aisle' => $item->aisle,
+                'section' => $item->section,
+                'shelf' => $item->shelf,
+                'departmentId' => $item->department_id,
+                'barcode' => $item->barcode,
+                'found' => false,
+            ];
 
-                $this->updateTrackedLocations($this->getLocKey($item->aisle, $item->section), $item->departmentId);
-            }
+            $this->updateTrackedLocations($this->getLocKey($item->aisle, $item->section), $item->department_id);
         }
 
         $this->import->outputContent($this->totalExistingItems . " existing inventory items");

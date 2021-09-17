@@ -7,6 +7,7 @@ use App\Imports\Settings\VallartaSettings;
 use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
+use App\Objects\InventoryCompare;
 
 // Refreshes Vallarta Existing Inventory
 // Requires store pilot files
@@ -47,6 +48,19 @@ class VallartaInventory implements ImportInterface
             return;
         }
 
+        $compare = new InventoryCompare($this->import, $storeId, 0);
+        $this->setFileInventory($compare, $file);
+
+        $this->import->outputAndResetFile();
+
+        $compare->setExistingInventory();
+        $compare->compareInventorySets();
+
+        $this->import->completeFile();
+    }
+
+    private function setFileInventory(InventoryCompare $compare, string $file)
+    {
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 5000, "|")) !== false) {
                 if (!$this->import->recordRow()) {
@@ -71,88 +85,31 @@ class VallartaInventory implements ImportInterface
                 }
 
                 $location = new Location(trim($data[1]), trim($data[3]));
-
-                $product = $this->import->fetchProduct($barcode, $storeId);
-                if ($product->isExistingProduct === false) {
-                    $product->setDescription($data[5]);
-                    $product->setSize($data[6]);
-                    $productId = $this->import->createProduct($product);
-                    $product->setProductId($productId);
-                } else if ($product->hasInventory()) {
-                    $item = $product->getMatchingInventoryItem($location, $deptId);
-
-                    if ($item !== null) {
-                        if ($this->settings->shouldDisco($location)) {
-                            $this->import->discontinueInventory($item->inventory_item_id);
-                            $this->import->writeFileOutput($data, 'Success: Disco');
-                            continue;
-                        }
-
-                        if ($this->settings->shouldSkipLocation($location)) {
-                            $this->import->recordSkipped();
-                            $this->import->writeFileOutput($data, 'Skipped: Invalid Location');
-                            continue;
-                        }
-
-                        $this->moveInventory($data, $item, $storeId, $deptId, $location);
-                        continue;
-                    }
-                }
-
                 if ($this->settings->shouldSkipLocation($location)) {
                     $this->import->recordSkipped();
                     $this->import->writeFileOutput($data, 'Skipped: Invalid Location');
                     continue;
                 }
 
-                // Adding as new any moves that do not exist in inventory
-                $success = $this->import->implementationScan(
-                    $product,
-                    $storeId,
-                    $location->aisle,
-                    $location->section,
+                $product = $this->import->fetchProduct($barcode);
+                if ($product->isExistingProduct === false) {
+                    $product->setDescription($data[5]);
+                    $product->setSize($data[6]);
+                    $productId = $this->import->createProduct($product);
+                    $product->setProductId($productId);
+                }
+
+                $compare->setFileInventoryItem(
+                    $product->barcode,
+                    $location,
+                    trim($data[5]),
+                    trim($data[6]),
                     $deptId
                 );
-
-                if ($success !== null) {
-                    $this->import->writeFileOutput($data, 'Success: Created Inventory');
-                } else {
-                    $this->import->writeFileOutput($data, 'Error: Could Not Create Inventory');
-                }
             }
 
             fclose($handle);
         }
-
-        $this->import->completeFile();
-    }
-
-    private function moveInventory($data, $item, string $storeId, string $deptId, Location $location)
-    {
-        if ($item->aisle === $location->aisle) {
-            if ($item->section === $location->section) {
-                $this->import->recordStatic();
-                $this->import->writeFileOutput($data, 'Static: Existing Location');
-                return;
-            }
-
-            if (empty($location->section) && !empty($item->section)) {
-                // Do not clear existing section information
-                $this->import->recordStatic();
-                $this->import->writeFileOutput($data, 'Static: Clearing Existing Section');
-                return;
-            }
-        }
-
-        $this->import->updateInventoryLocation(
-            $item->inventory_item_id,
-            $storeId,
-            $deptId,
-            $location->aisle,
-            $location->section
-        );
-
-        $this->import->writeFileOutput($data, 'Success: Updated Location');
     }
 
     private function fixBarcode(string $upc)
