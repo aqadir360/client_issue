@@ -54,13 +54,17 @@ class ImportBGreen implements ImportInterface
                     $this->import->createProduct($product);
                 }
 
-                $this->import->persistMetric(
-                    $storeId,
-                    $product,
-                    $this->import->convertFloatToInt(floatval($data[10])),
-                    $this->import->convertFloatToInt(floatval($data[9])),
-                    $this->import->convertFloatToInt(floatval($data[8]))
-                );
+                try {
+                    $this->import->persistMetric(
+                        $storeId,
+                        $product,
+                        $this->import->convertFloatToInt(floatval($data[10])),
+                        $this->import->convertFloatToInt(floatval($data[9])),
+                        $this->import->convertFloatToInt(floatval($data[8]))
+                    );
+                } catch (\Exception $e) {
+                    var_dump($product);
+                }
             }
 
             fclose($handle);
