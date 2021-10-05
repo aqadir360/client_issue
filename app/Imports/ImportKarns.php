@@ -6,7 +6,6 @@ use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 
 // Karns Product and Metrics Import
-// Not yet automated: update for FTP files
 class ImportKarns implements ImportInterface
 {
     /** @var ImportManager */
@@ -95,7 +94,7 @@ class ImportKarns implements ImportInterface
 
     private function parseStoreNum($file)
     {
-        $storeNum = substr($file, 5, 1);
+        $storeNum = substr($file, 5, strpos($file, '_') - 5);
         return $this->import->storeNumToStoreId($storeNum);
     }
 }
