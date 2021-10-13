@@ -31,7 +31,7 @@ class CopyNewDates extends Command
     private function overlayInventory(string $companyId)
     {
         // Fetch all new inventory grouped by products
-        $products = $this->fetchNewCompanyProducts($companyId);
+        $products = $this->fetchNewCompanyProducts();
 
         $total = count($products);
         echo $total . PHP_EOL;
@@ -47,7 +47,7 @@ class CopyNewDates extends Command
                 $updatedCount++;
 
                 // Write the date for all inventory items
-                $inventory = $this->db->fetchNewCompanyInventory($product->product_id, $companyId);
+                $inventory = $this->db->fetchNewCompanyInventory($product->product_id);
 
                 foreach ($inventory as $item) {
                     $this->proxy->writeInventoryExpiration($companyId, $item->inventory_item_id, $closestDate->expiration_date);
@@ -64,22 +64,19 @@ class CopyNewDates extends Command
         echo "From $total total products, updated $updatedCount dates for $inventoryCount items" . PHP_EOL;
     }
 
-    public function fetchNewCompanyProducts(string $companyId)
+    public function fetchNewCompanyProducts()
     {
         $sql = "select distinct p.product_id from #t#.products p
                 inner join (
                     select i.product_id from #t#.inventory_items i
                     inner join #t#.locations l on l.location_id = i.location_id
-                    inner join #t#.stores s on l.store_id = s.store_id
-                    where i.flag = 'NEW' and s.company_id = :company_id
+                    where i.flag = 'NEW'
                     group by i.product_id
                     order by count(i.inventory_item_id) desc
                 ) x on x.product_id = p.product_id
                 where p.no_expiration = 0";
 
-        return $this->db->fetchFromCompanyDb($sql, [
-            'company_id' => $companyId,
-        ]);
+        return $this->db->fetchFromCompanyDb($sql, []);
     }
 
     public function fetchClosestDate(string $productId, string $companyId, string $compareDate)

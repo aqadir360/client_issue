@@ -668,7 +668,6 @@ class Database
 
     public function fetchClosestDate(
         string $productId,
-        string $companyId,
         array $copyFromStores,
         string $orderDirection,
         string $maxDate
@@ -676,20 +675,54 @@ class Database
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on l.store_id = s.store_id
-            where i.product_id = :product_id and s.company_id = :company_id and i.expiration_date < :max_date
+            where i.product_id = :product_id and i.expiration_date < :max_date
             and i.close_dated_date > '2021-04-13' and i.expiration_date is not null and i.flag is null and i.disco = 0";
 
-//        if (!empty($copyFromStores)) {
-//            $sql .= " and s.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
-//        }
+        if (!empty($copyFromStores)) {
+            $sql .= " and s.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
+        }
 
         $sql .= " order by i.expiration_date $orderDirection ";
 
         return $this->fetchOneFromCompanyDb($sql, [
             'product_id' => $productId,
-            'company_id' => $companyId,
             'max_date' => $maxDate,
         ]);
+    }
+
+    public function fetchClosestDateInRange(
+        string $productId,
+        array $copyFromStores,
+        string $orderDirection,
+        ?string $startDate,
+        ?string $endDate
+    ) {
+        $sql = "select i.expiration_date from #t#.inventory_items i
+            inner join #t#.locations l on l.location_id = i.location_id
+            inner join #t#.stores s on l.store_id = s.store_id
+            where i.product_id = :product_id and i.expiration_date is not null and i.flag is null and i.disco = 0 ";
+
+        $params = [
+            'product_id' => $productId,
+        ];
+
+        if (!empty($copyFromStores)) {
+            $sql .= " and s.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
+        }
+
+        if (!is_null($startDate)) {
+            $sql .= "and i.expiration_date > :start_date";
+            $params['start_date'] = $startDate;
+        }
+
+        if (!is_null($endDate)) {
+            $sql .= " and i.expiration_date < :end_date ";
+            $params['end_date'] = $endDate;
+        }
+
+        $sql .= " order by i.expiration_date $orderDirection ";
+
+        return $this->fetchOneFromCompanyDb($sql, $params);
     }
 
     public function fetchProductsWithoutDates()
@@ -773,25 +806,21 @@ class Database
         );
     }
 
-    public function fetchNewCompanyProducts(string $companyId)
+    public function fetchNewCompanyProducts()
     {
         $sql = "select distinct p.product_id from #t#.products p
             inner join #t#.inventory_items i on i.product_id = p.product_id
-            inner join #t#.locations l on l.location_id = i.location_id
-            inner join #t#.stores s on l.store_id = s.store_id
-            where i.flag = 'NEW' and s.company_id = :company_id and p.no_expiration = 0";
+            where i.flag = 'NEW' and p.no_expiration = 0";
 
-        return $this->fetchFromCompanyDb($sql, [
-            'company_id' => $companyId,
-        ]);
+        return $this->fetchFromCompanyDb($sql, []);
     }
 
-    public function fetchNewCompanyInventory(string $productId, string $companyId, array $excludeStores = [], array $excludeDepts = [])
+    public function fetchNewCompanyInventory(string $productId, array $excludeStores = [], array $excludeDepts = [])
     {
         $sql = "select i.inventory_item_id from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             inner join #t#.stores s on l.store_id = s.store_id
-            where i.flag = 'NEW' and s.company_id = :company_id and i.product_id = :product_id
+            where i.flag = 'NEW' and i.product_id = :product_id
             and i.disco = 0 and l.markdown_department_id is null ";
 
         if (!empty($excludeStores)) {
@@ -803,7 +832,6 @@ class Database
         }
 
         return $this->fetchFromCompanyDb($sql, [
-            'company_id' => $companyId,
             'product_id' => $productId,
         ]);
     }

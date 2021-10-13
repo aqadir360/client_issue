@@ -48,7 +48,7 @@ class OverlayNew
         $this->db->setDbName($dbName);
 
         // Fetch all new inventory grouped by products
-        $products = $this->db->fetchNewCompanyProducts($companyId);
+        $products = $this->db->fetchNewCompanyProducts();
 
         $total = count($products);
         $updatedCount = 0;
@@ -56,23 +56,16 @@ class OverlayNew
         $skipped = 0;
 
         foreach ($products as $product) {
-            // Check for the next closest date
-            $closestDate = $this->db->fetchClosestDate(
-                $product->product_id,
-                $companyId,
-                $settings->copyFrom,
-                'asc',
-                $settings->maxDate
-            );
+            $expirationDate = $this->getExpirationDate($product, $settings);
 
-            if ($closestDate && $closestDate->expiration_date) {
+            if ($expirationDate) {
                 $updatedCount++;
 
                 // Write the date for all inventory items
-                $inventory = $this->db->fetchNewCompanyInventory($product->product_id, $companyId, $settings->excludeStores, $settings->excludeDepts);
+                $inventory = $this->db->fetchNewCompanyInventory($product->product_id, $settings->excludeStores, $settings->excludeDepts);
 
                 foreach ($inventory as $item) {
-                    $this->proxy->writeInventoryExpiration($companyId, $item->inventory_item_id, $closestDate->expiration_date);
+                    $this->proxy->writeInventoryExpiration($companyId, $item->inventory_item_id, $expirationDate);
                     $inventoryCount++;
                 }
             } else {
@@ -89,5 +82,36 @@ class OverlayNew
     {
         $result = $this->db->fetchCustomImportSettings($scheduleId);
         return new Settings($result);
+    }
+
+    private function getExpirationDate($item, Settings $settings): ?string
+    {
+        if ($settings->expirationDate === 'closest_non') {
+            // Get the closest non-notification date
+            $closestDate = $this->db->fetchClosestDateInRange(
+                $item->product_id,
+                $settings->copyFrom,
+                'asc',
+                $settings->compareDate,
+                null
+            );
+        } else if ($settings->expirationDate === 'date_range') {
+            // Get the closest date within given date range
+            $closestDate = $this->db->fetchClosestDateInRange(
+                $item->product_id,
+                $settings->copyFrom,
+                'asc',
+                $settings->startDate,
+                $settings->endDate
+            );
+        } else {
+            $direction = $settings->expirationDate === 'closest' ? 'asc' : 'desc';
+            $closestDate = $this->db->fetchClosestDate($item->product_id, $settings->copyFrom, $direction, $settings->maxDate);
+        }
+
+        if ($closestDate && $closestDate->expiration_date) {
+            return $closestDate->expiration_date;
+        }
+        return null;
     }
 }
