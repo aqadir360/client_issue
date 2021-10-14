@@ -88,12 +88,10 @@ class OverlayNew
     {
         if ($settings->expirationDate === 'closest_non') {
             // Get the closest non-notification date
-            $closestDate = $this->db->fetchClosestDateInRange(
+            $closestDate = $this->db->fetchClosestNonNotificationDate(
                 $item->product_id,
                 $settings->copyFrom,
-                'asc',
-                $settings->compareDate,
-                null
+                $settings->compareDate
             );
         } else if ($settings->expirationDate === 'date_range') {
             // Get the closest date within given date range

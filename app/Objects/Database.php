@@ -725,6 +725,28 @@ class Database
         return $this->fetchOneFromCompanyDb($sql, $params);
     }
 
+    public function fetchClosestNonNotificationDate(
+        string $productId,
+        array $copyFromStores,
+        string $startDate
+    ) {
+        $sql = "select i.expiration_date from #t#.inventory_items i
+            inner join #t#.locations l on l.location_id = i.location_id
+            where i.product_id = :product_id and i.expiration_date is not null
+            and i.flag is null and i.disco = 0 and i.close_dated_date > :start_date ";
+
+        if (!empty($copyFromStores)) {
+            $sql .= " and l.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
+        }
+
+        $sql .= " order by i.expiration_date asc ";
+
+        return $this->fetchOneFromCompanyDb($sql, [
+            'product_id' => $productId,
+            'start_date' => $startDate,
+        ]);
+    }
+
     public function fetchProductsWithoutDates()
     {
         $sql = "select product_id from #t#.product_dates where closest_date is null";
