@@ -63,7 +63,7 @@ class OverlayOos
                 $date->setTimestamp($startUnix + ($endUnix - $startUnix) * ($inventoryCount / $total));
                 $date->setTime(0, 0, 0);
             } else {
-                $date = $this->getExpirationDate($item, $settings, $companyId);
+                $date = $this->getExpirationDate($item, $settings);
 
                 if ($date === null) {
                     $skipped++;
@@ -88,10 +88,10 @@ class OverlayOos
         return new Settings($result);
     }
 
-    private function getExpirationDate($item, Settings $settings, $companyId): ?string
+    private function getExpirationDate($item, Settings $settings): ?string
     {
         $direction = $settings->expirationDate == 'closest_date' ? 'asc' : 'desc';
-        $closestDate = $this->db->fetchClosestDate($item->product_id, $companyId, $settings->copyFrom, $direction, $settings->maxDate);
+        $closestDate = $this->db->fetchClosestDate($item->product_id, $settings->copyFrom, $direction, $settings->maxDate);
 
         if ($closestDate && $closestDate->expiration_date) {
             return $closestDate->expiration_date;
