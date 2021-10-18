@@ -34,7 +34,7 @@ class ProcessNextItem extends Command
 
         $active = $database->fetchCurrentImport();
         if ($active) {
-            $this->log("Import already in progress");
+            echo "Import already in progress" . PHP_EOL;
             return;
         }
 
@@ -44,10 +44,11 @@ class ProcessNextItem extends Command
         $pending = $database->fetchNextUpcomingImport($now->format('Y-m-d H:i:s'));
 
         if ($pending === null) {
-            $this->log("No pending imports");
+            echo "No pending imports" . PHP_EOL;
             return;
         }
 
+        $this->log("Starting job " . $pending->import_job_id . " for " . $pending->db_name);
         $database->setImportJobInProgress($pending->import_job_id);
 
         if (strpos($pending->type, 'overlay') !== false) {
