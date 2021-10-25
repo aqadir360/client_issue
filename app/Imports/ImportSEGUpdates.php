@@ -16,8 +16,6 @@ class ImportSEGUpdates implements ImportInterface
 
     private $products = [];
 
-    private $skus;
-
     // Expected File Columns:
     // [0] Loc_Id
     // [1] Asl_Num
@@ -44,7 +42,6 @@ class ImportSEGUpdates implements ImportInterface
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
-        $this->setSkus();
     }
 
     public function importUpdates()
@@ -186,7 +183,6 @@ class ImportSEGUpdates implements ImportInterface
         $inputBarcode = trim($data[8]);
         $upc = BarcodeFixer::fixLength($inputBarcode);
         if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
-            $this->recordSku($sku, intval($inputBarcode), $upc);
             return null;
         }
 
@@ -194,10 +190,8 @@ class ImportSEGUpdates implements ImportInterface
             return $this->products[intval($upc)];
         }
 
-        $product = $this->import->fetchProduct($upc);
+        $product = $this->import->fetchProduct($upc, null, $sku);
         if (!$product->isExistingProduct) {
-            $this->recordSku($sku, intval($inputBarcode));
-
             $product->setDescription($data[9]);
             $product->setSize($data[10]);
 
@@ -210,6 +204,9 @@ class ImportSEGUpdates implements ImportInterface
             }
 
             $product->setProductId($productId);
+            $this->import->db->setProductSku($productId, $sku);
+        } else if ($product->sku !== $sku) {
+            $this->import->db->setProductSku($product->productId, $sku);
         }
 
         $this->products[intval($upc)] = $product;
@@ -254,23 +251,6 @@ class ImportSEGUpdates implements ImportInterface
     private function getStoreNum(string $filename)
     {
         return intval(substr($filename, 8, strrpos($filename, '_') - 1));
-    }
-
-    private function recordSku($sku, $inputBarcode, $barcode = null)
-    {
-        if (!isset($this->skus[intval($sku)])) {
-            $this->skus[intval($sku)] = $inputBarcode;
-            $this->import->db->insertSegSku($sku, $inputBarcode, $barcode);
-        }
-    }
-
-    private function setSkus()
-    {
-        $rows = $this->import->db->fetchSegSkus();
-
-        foreach ($rows as $row) {
-            $this->skus[intval($row->sku)] = $row->barcode;
-        }
     }
 
     private function getReclaimDepartment(string $departmentId): ?string

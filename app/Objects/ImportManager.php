@@ -361,7 +361,7 @@ class ImportManager
     // Populates product object by barcode, setting isExistingProduct = true if found
     // Sets store inventory if storeId is not null
     // Gets the company product or inserts from core table if existing
-    public function fetchProduct(string $upc, ?string $storeId = null): Product
+    public function fetchProduct(string $upc, ?string $storeId = null, ?string $sku = null): Product
     {
         $product = new Product($upc);
         $companyProduct = $this->db->fetchCompanyProductByBarcode($upc);
@@ -371,6 +371,7 @@ class ImportManager
             $product->setExistingProduct(
                 $companyProduct->product_id,
                 $companyProduct->barcode,
+                $companyProduct->sku,
                 $companyProduct->description,
                 $companyProduct->size,
                 $companyProduct->photo,
@@ -389,6 +390,7 @@ class ImportManager
         // If product exists in core db, copy to company db
         $product = $this->fetchCoreProduct($upc);
         if ($product->isExistingProduct) {
+            $product->sku = $sku;
             $this->db->insertCompanyProduct($product);
         }
 
@@ -405,6 +407,7 @@ class ImportManager
             $product->setExistingProduct(
                 $existing->product_id,
                 $existing->barcode,
+                null,
                 $existing->description,
                 $existing->size,
                 $existing->photo,

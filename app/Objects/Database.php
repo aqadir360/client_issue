@@ -95,6 +95,19 @@ class Database
         ]);
     }
 
+    public function setProductSku($productId, $sku)
+    {
+        $sql = "UPDATE #t#.products SET sku = :sku WHERE product_id = :product_id";
+
+        DB::connection('db_companies')->update(
+            $this->companyPdoConvert($sql, $this->dbName),
+            [
+                'product_id' => $productId,
+                'sku' => $sku,
+            ]
+        );
+    }
+
     public function fetchProductFromCompany(string $productId)
     {
         $sql = "SELECT * FROM #t#.products p WHERE p.product_id = :product_id";
@@ -144,14 +157,15 @@ class Database
     public function insertCompanyProduct(Product $product)
     {
         $sql = "INSERT INTO #t#.products
-            (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
-            VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
+            (product_id, barcode, sku, description, size, photo, no_expiration, created_at, updated_at)
+            VALUES (:product_id, :sku, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
 
         try {
             DB::connection('db_companies')->insert(
                 $this->companyPdoConvert($sql, $this->dbName), [
                     'product_id' => $product->productId,
                     'barcode' => $product->barcode,
+                    'sku' => $product->sku,
                     'description' => $product->description,
                     'size' => $product->size,
                     'photo' => $product->photo,

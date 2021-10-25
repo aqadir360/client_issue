@@ -8,6 +8,7 @@ use Ramsey\Uuid\Uuid;
 class Product
 {
     public $barcode;
+    public $sku;
     public $isExistingProduct = false;
     public $productId = null;
     public $description = null;
@@ -23,10 +24,11 @@ class Product
         $this->barcode = $barcode;
     }
 
-    public function setExistingProduct($productId, $barcode, $description, $size, $photo, $noExp, $createdAt, $updatedAt)
+    public function setExistingProduct($productId, $barcode, $sku, $description, $size, $photo, $noExp, $createdAt, $updatedAt)
     {
         $this->productId = $productId;
         $this->barcode = $barcode;
+        $this->sku = $sku;
         $this->description = $description;
         $this->size = $size;
         $this->photo = $photo;
