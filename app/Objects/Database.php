@@ -160,16 +160,15 @@ class Database
 
     public function insertCompanyProduct(Product $product)
     {
-        $sql = "INSERT INTO #t#.products
-            (product_id, barcode, sku, description, size, photo, no_expiration, created_at, updated_at)
+        $sql = "INSERT INTO #t#.products (product_id, sku, barcode, description, size, photo, no_expiration, created_at, updated_at)
             VALUES (:product_id, :sku, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
 
         try {
             DB::connection('db_companies')->insert(
                 $this->companyPdoConvert($sql, $this->dbName), [
                     'product_id' => $product->productId,
-                    'barcode' => $product->barcode,
                     'sku' => $product->sku,
+                    'barcode' => $product->barcode,
                     'description' => $product->description,
                     'size' => $product->size,
                     'photo' => $product->photo,
