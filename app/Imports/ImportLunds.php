@@ -140,7 +140,7 @@ class ImportLunds implements ImportInterface
                     $this->createNewProductAndItem($product, $storeId, $departmentId, $location);
                 }
 
-                $this->import->createVendor($upc, trim($data[8]));
+                $this->import->createVendor($product, trim($data[8]));
 
                 $this->persistMetric($product->barcode, $storeId, $data);
             }

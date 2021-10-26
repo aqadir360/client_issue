@@ -226,14 +226,14 @@ class Api
     }
 
     public function createVendor(
-        $barcode,
+        $productId,
         $vendor,
         $companyId
     ) {
         return $this->writeRequest(
             'create-product-vendor',
             [
-                'barcode' => $barcode,
+                'productId' => $productId,
                 'vendor' => $vendor,
                 'companyId' => $companyId,
             ]

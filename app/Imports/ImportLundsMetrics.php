@@ -76,7 +76,7 @@ class ImportLundsMetrics implements ImportInterface
                     continue;
                 }
 
-                $this->import->createVendor($upc, trim($data[8]));
+                $this->import->createVendor($product, trim($data[8]));
 
                 if (count($data) >= 12) {
                     // sending weekly movement

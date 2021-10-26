@@ -377,7 +377,8 @@ class ImportManager
                 $companyProduct->photo,
                 $companyProduct->no_expiration,
                 $companyProduct->created_at,
-                $companyProduct->updated_at
+                $companyProduct->updated_at,
+                $companyProduct->vendor
             );
 
             if ($storeId !== null) {
@@ -526,9 +527,11 @@ class ImportManager
         return $this->recordResponse($response, 'move');
     }
 
-    public function createVendor(string $barcode, string $vendor)
+    public function createVendor(Product $product, string $vendor)
     {
-        $this->proxy->createVendor($barcode, $vendor, $this->companyId);
+        if ($product->vendor !== $vendor) {
+            $this->proxy->createVendor($product->productId, $vendor, $this->companyId);
+        }
     }
 
     public function recordResponse($response, $type): bool

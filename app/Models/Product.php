@@ -17,6 +17,7 @@ class Product
     public $noExp = false;
     public $createdAt = null;
     public $updatedAt = null;
+    public $vendor = null;
     public $inventory = [];
 
     public function __construct(string $barcode)
@@ -24,8 +25,18 @@ class Product
         $this->barcode = $barcode;
     }
 
-    public function setExistingProduct($productId, $barcode, $sku, $description, $size, $photo, $noExp, $createdAt, $updatedAt)
-    {
+    public function setExistingProduct(
+        $productId,
+        $barcode,
+        $sku,
+        $description,
+        $size,
+        $photo,
+        $noExp,
+        $createdAt,
+        $updatedAt,
+        $vendor = null
+    ) {
         $this->productId = $productId;
         $this->barcode = $barcode;
         $this->sku = $sku;
@@ -36,6 +47,7 @@ class Product
         $this->isExistingProduct = true;
         $this->createdAt = $createdAt;
         $this->updatedAt = $updatedAt;
+        $this->vendor = $vendor;
     }
 
     public function hasInventory(): bool

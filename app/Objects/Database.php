@@ -88,7 +88,11 @@ class Database
 
     public function fetchCompanyProductByBarcode(string $barcode)
     {
-        $sql = "SELECT * FROM #t#.products WHERE barcode = :barcode";
+        $sql = "SELECT p.*, v.name as vendor
+                    FROM #t#.products p
+                    WHERE barcode = :barcode
+                    LEFT JOIN #t#.product_vendors pv on pv.product_id = p.product_id
+                    LEFT JOIN #t#.vendors v on v.vendor_id = pv.vendor_id";
 
         return $this->fetchOneFromCompanyDb($sql, [
             'barcode' => $barcode,
