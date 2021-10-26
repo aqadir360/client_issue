@@ -18,6 +18,7 @@ class CreateExportTypesTable extends Migration
             $table->char('company_id', 36);
             $table->text('type');
             $table->text('description');
+            $table->text('ftp_disk');
             $table->text('ftp_path');
             $table->timestamp('last_run')->nullable()->default(null);
             $table->timestamp('created_at')->nullable()->default(null);
