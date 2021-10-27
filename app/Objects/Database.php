@@ -90,9 +90,9 @@ class Database
     {
         $sql = "SELECT p.*, v.name as vendor
                     FROM #t#.products p
-                    WHERE barcode = :barcode
                     LEFT JOIN #t#.product_vendors pv on pv.product_id = p.product_id
-                    LEFT JOIN #t#.vendors v on v.vendor_id = pv.vendor_id";
+                    LEFT JOIN #t#.vendors v on v.vendor_id = pv.vendor_id
+                    WHERE barcode = :barcode";
 
         return $this->fetchOneFromCompanyDb($sql, [
             'barcode' => $barcode,
