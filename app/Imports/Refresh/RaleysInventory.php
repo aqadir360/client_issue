@@ -54,17 +54,15 @@ class RaleysInventory implements ImportInterface
 
     private function importInventory($storeId, $locationFile, $masterFile)
     {
-        $compare = new InventoryCompare($this->import, $storeId, 0);
+        $compare = new InventoryCompare($this->import, $storeId);
 
         $locationInventory = $this->readInLocationFile($locationFile, $storeId);
         $fullInventory = $this->readInMasterFile($masterFile, $locationInventory);
 
         foreach ($fullInventory as $barcode => $item) {
             $compare->setFileInventoryItem(
-                $item[0]->barcode,
+                $item[0],
                 $item[1],
-                $item[0]->description,
-                $item[0]->size,
                 $item[2]
             );
         }

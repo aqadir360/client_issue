@@ -53,7 +53,7 @@ class ImportNewMorningMarket implements ImportInterface
     {
         $this->import->startNewFile($file);
 
-        $compare = new InventoryCompare($this->import, $storeId, 0);
+        $compare = new InventoryCompare($this->import, $storeId);
 
         $exists = $this->setFileInventory($compare, $file, $storeId);
 
@@ -121,10 +121,8 @@ class ImportNewMorningMarket implements ImportInterface
                 }
 
                 $compare->setFileInventoryItem(
-                    $product->barcode,
+                    $product,
                     $location,
-                    trim($data[6]),
-                    trim($data[5]),
                     $departmentId
                 );
 

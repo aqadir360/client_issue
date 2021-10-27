@@ -46,11 +46,13 @@ class ImportSEGUpdates implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_86_20211021.csv');
 
         foreach ($fileList as $file) {
             if (strpos($file, 'User') === false) {
                 $this->importInventory($file);
+            } else {
+                unlink($file);
             }
         }
 
@@ -74,7 +76,7 @@ class ImportSEGUpdates implements ImportInterface
             return;
         }
 
-        $compare = new InventoryCompare($this->import, $storeId, 0);
+        $compare = new InventoryCompare($this->import, $storeId);
 
         $exists = $this->setFileInventory($compare, $file, $storeId);
 
@@ -132,10 +134,8 @@ class ImportSEGUpdates implements ImportInterface
                 }
 
                 $compare->setFileInventoryItem(
-                    $product->barcode,
+                    $product,
                     $location,
-                    trim($data[9]),
-                    trim($data[10]),
                     $departmentId
                 );
 

@@ -5,7 +5,7 @@ namespace App\Imports;
 use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
-use App\Objects\InventoryCompare;
+use App\Objects\InventoryCompareByLocation;
 use App\Objects\SkippedLocations;
 use Illuminate\Support\Facades\Storage;
 
@@ -59,7 +59,7 @@ class ImportHansens implements ImportInterface
             return;
         }
 
-        $compare = new InventoryCompare($this->import, $storeId);
+        $compare = new InventoryCompareByLocation($this->import, $storeId);
 
         $exists = $this->setFileInventory($compare, $file);
         if (!$exists) {
@@ -71,7 +71,7 @@ class ImportHansens implements ImportInterface
         $compare->compareInventorySets();
     }
 
-    private function setFileInventory(InventoryCompare $compare, $file): bool
+    private function setFileInventory(InventoryCompareByLocation $compare, $file): bool
     {
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {

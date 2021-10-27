@@ -48,7 +48,7 @@ class VallartaInventory implements ImportInterface
             return;
         }
 
-        $compare = new InventoryCompare($this->import, $storeId, 0);
+        $compare = new InventoryCompare($this->import, $storeId);
         $this->setFileInventory($compare, $file);
 
         $this->import->outputAndResetFile();
@@ -84,8 +84,8 @@ class VallartaInventory implements ImportInterface
                     continue;
                 }
 
-                $location = new Location(trim($data[1]), trim($data[3]));
-                if ($this->settings->shouldSkipLocation($location)) {
+                $location = $this->parseLocation($data);
+                if (!$location->valid) {
                     $this->import->recordSkipped();
                     $this->import->writeFileOutput($data, 'Skipped: Invalid Location');
                     continue;
@@ -100,10 +100,8 @@ class VallartaInventory implements ImportInterface
                 }
 
                 $compare->setFileInventoryItem(
-                    $product->barcode,
+                    $product,
                     $location,
-                    trim($data[5]),
-                    trim($data[6]),
                     $deptId
                 );
             }
@@ -121,5 +119,12 @@ class VallartaInventory implements ImportInterface
         $output = str_pad(ltrim($upc, '0'), 12, '0', STR_PAD_LEFT);
 
         return $output . BarcodeFixer::calculateMod10Checksum($output);
+    }
+
+    private function parseLocation(array $data): Location
+    {
+        $location = new Location(trim($data[1]), trim($data[3]));
+        $location->valid = !$this->settings->shouldSkipLocation($location);
+        return $location;
     }
 }
