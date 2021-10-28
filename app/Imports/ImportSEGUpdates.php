@@ -39,6 +39,7 @@ class ImportSEGUpdates implements ImportInterface
     // [19] DSD
     // [20] Reclaim
     // [21] Own_Brand
+    // [22] Item_Status (O = Inactive, D = Disco, A = Active)
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
@@ -46,7 +47,7 @@ class ImportSEGUpdates implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_86_20211021.csv');
+        $fileList = $this->import->downloadFilesByName('SEG_DCP_');
 
         foreach ($fileList as $file) {
             if (strpos($file, 'User') === false) {
@@ -131,6 +132,15 @@ class ImportSEGUpdates implements ImportInterface
 
                 if (intval($data[20]) === 1) {
                     $departmentId = $this->getReclaimDepartment($departmentId);
+                }
+
+                $status = trim($data[22]);
+                if ($status === 'D') {
+                    $this->import->writeFileOutput($data, "Skip: D Status");
+                    continue;
+                } else if ($status === 'O') {
+                    // Do not discontinue or add
+                    $location->valid = false;
                 }
 
                 $compare->setFileInventoryItem(
