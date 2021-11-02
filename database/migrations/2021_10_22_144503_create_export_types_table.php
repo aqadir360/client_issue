@@ -20,6 +20,7 @@ class CreateExportTypesTable extends Migration
             $table->text('description');
             $table->text('ftp_disk');
             $table->text('ftp_path');
+            $table->text('exp_day');
             $table->timestamp('last_run')->nullable()->default(null);
             $table->timestamp('created_at')->nullable()->default(null);
         });
