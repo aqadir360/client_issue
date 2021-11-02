@@ -39,6 +39,9 @@ class ImportAlaska implements ImportInterface
 
                 $storeNum = trim($data[0]);
                 $storeId = $this->import->storeNumToStoreId($storeNum);
+                if ($storeId === false) {
+                    continue;
+                }
 
                 $barcode = $this->fixBarcode(trim($data[2]));
                 if ($this->import->isInvalidBarcode($barcode, $data[2])) {
@@ -61,7 +64,9 @@ class ImportAlaska implements ImportInterface
                     $productId = $product->productId;
                 }
 
-                $this->import->db->setProductSku($productId, $sku);
+                if ($product->sku !== $sku) {
+                    $this->import->db->setProductSku($productId, $sku);
+                }
 
                 if ($productId) {
                     $this->import->persistMetric(
