@@ -18,7 +18,7 @@ class ImportAlaska implements ImportInterface
 
     public function importUpdates()
     {
-        $files = glob(storage_path('210126.csv'));
+        $files = glob(storage_path('211102.csv'));
 
         foreach ($files as $file) {
             $this->importMetricsFile($file);
@@ -32,17 +32,13 @@ class ImportAlaska implements ImportInterface
         $this->import->startNewFile($file);
 
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 1000, "|")) !== false) {
+            while (($data = fgetcsv($handle, 1000, "\t")) !== false) {
                 if (!$this->import->recordRow()) {
                     break;
                 }
 
                 $storeNum = trim($data[0]);
-                if ($storeNum != 295) {
-                    continue;
-                }
-
-                $storeId = '2bc86de4-d1f1-b428-c7a8-76668c67395e';
+                $storeId = $this->import->storeNumToStoreId($storeNum);
 
                 $barcode = $this->fixBarcode(trim($data[2]));
                 if ($this->import->isInvalidBarcode($barcode, $data[2])) {
@@ -54,15 +50,18 @@ class ImportAlaska implements ImportInterface
                     continue;
                 }
 
-                $product = $this->import->fetchProduct($barcode);
+                $sku = trim($data[1]);
+                $product = $this->import->fetchProduct($barcode, null, $sku);
                 if ($product->isExistingProduct === false) {
                     $product->setDescription(trim($data[8]));
-                    $product->setSize(trim($data[9]));
+                    $product->setSize($this->parseSize(trim($data[9])));
 
                     $productId = $this->import->createProduct($product);
                 } else {
                     $productId = $product->productId;
                 }
+
+                $this->import->db->setProductSku($productId, $sku);
 
                 if ($productId) {
                     $this->import->persistMetric(
@@ -79,6 +78,11 @@ class ImportAlaska implements ImportInterface
         }
 
         $this->import->completeFile();
+    }
+
+    private function parseSize($input)
+    {
+        return str_replace('#', 'lb', str_replace('>', 'oz', $input));
     }
 
     private function fixBarcode($input)
