@@ -46,6 +46,7 @@ class DatabaseSeeder extends Seeder
         (31, '9a22701b-d7ae-aaac-1194-d583167f0ba4', 'lazy_acres', 'Lazy Acres Products and Metrics', 'Imports Products and Metrics', NULL, '2021-09-01 17:26:57'),
 	    (32, 'b32d41be-f52d-11eb-a2d3-42010a80001c', 'b_green', 'B Green Products and Metrics', 'Imports Products and Metrics', 'bgreen/imports', '2021-09-13 17:10:58'),
 	    (33, '6489f200-452e-5b96-fd9e-c95c35eb7ad8', 'alaska', 'Alaksa Products and Metrics', 'Imports Metrics', 'alaska/imports', '2021-11-02 20:45:34'),
+	    (34, '6859ef83-7f11-05fe-0661-075be46276ec', 'price_chopper_compare', 'Price Chopper Inventory Update', 'Updates Inventory by comparison', 'pricechopper/imports', '2021-11-12 18:20:31'),
         */
     }
 }

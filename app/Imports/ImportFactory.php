@@ -49,6 +49,8 @@ class ImportFactory
                 return new ImportNewMorningMarket($importManager);
             case 'price_chopper':
                 return new ImportPriceChopper($importManager);
+            case 'price_chopper_compare':
+                return new Refresh\PriceChopperInventory($importManager);
             case 'raleys':
                 return new ImportRaleys($importManager);
             case 'raleys_refresh':
