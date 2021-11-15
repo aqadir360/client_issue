@@ -24,9 +24,6 @@ use App\Objects\ImportManager;
 // [15] Item Position
 class ImportPriceChopper implements ImportInterface
 {
-    private $products = [];
-    private $skus = [];
-
     /** @var ImportManager */
     private $import;
 
@@ -39,8 +36,6 @@ class ImportPriceChopper implements ImportInterface
     public function importUpdates()
     {
         $files = glob(storage_path('imports/price_chopper.csv'));
-
-        $this->setSkus();
 
         foreach ($files as $file) {
             $this->importInventory($file);
@@ -65,9 +60,28 @@ class ImportPriceChopper implements ImportInterface
                 }
 
                 $upc = BarcodeFixer::fixUpc($data[2]);
-                $this->recordSku(intval($data[1]), $upc);
                 if ($this->import->isInvalidBarcode($upc, $data[2])) {
+                    $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
                     continue;
+                }
+
+                $sku = trim($data[1]);
+                $product = $this->import->fetchProduct($upc, null, $sku);
+                if ($product->isExistingProduct === false) {
+                    $product->setDescription(trim($data[5]));
+                    $product->setSize(trim($data[6]));
+                    $productId = $this->import->createProduct($product);
+
+                    if ($productId) {
+                        $product->setProductId($productId);
+                    } else {
+                        $this->import->writeFileOutput($data, "Skip: Invalid Product");
+                        continue;
+                    }
+                }
+
+                if ($product->sku !== $sku) {
+                    $this->import->db->setProductSku($product->productId, $sku);
                 }
 
                 $location = $this->parseLocation($data);
@@ -77,49 +91,25 @@ class ImportPriceChopper implements ImportInterface
                     continue;
                 }
 
+                $this->import->db->recordCategory($product->productId, trim($data[3]), trim($data[4]));
                 $departmentId = $this->import->getDepartmentId(trim(strtolower($data[3])), trim(strtolower($data[4])), $upc);
+
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
                 }
 
-                $product = $this->import->fetchProduct($upc, $storeId);
-                if ($product->isExistingProduct === false) {
-                    $this->import->recordSkipped();
-                    $this->import->writeFileOutput($data, "Skip: Missing Product");
-                    continue;
-                }
+                $this->import->implementationScan(
+                    $product,
+                    $storeId,
+                    $location->aisle,
+                    $location->section,
+                    $departmentId,
+                    $location->shelf,
+                    true
+                );
 
-                if ($product->hasInventory()) {
-                    $item = $product->getMatchingInventoryItem($location, $departmentId);
-
-                    if ($this->needToMoveItem($item, $location)) {
-                        $this->import->updateInventoryLocation(
-                            $item->inventory_item_id,
-                            $storeId,
-                            $departmentId,
-                            $location->aisle,
-                            $location->section,
-                            $location->shelf
-                        );
-                        $this->import->writeFileOutput($data, "Success: Moved Inventory");
-                    } else {
-                        $this->import->recordStatic();
-                        $this->import->writeFileOutput($data, "Static: Existing Inventory");
-                    }
-                } else {
-//                    $this->import->implementationScan(
-//                        $product,
-//                        $storeId,
-//                        $location->aisle,
-//                        $location->section,
-//                        $departmentId,
-//                        $location->shelf,
-//                        true
-//                    );
-                    $this->import->recordSkipped();
-                    $this->import->writeFileOutput($data, "Skipped: New Inventory");
-                }
+                $this->import->writeFileOutput($data, "Success: Created");
 
                 $this->import->persistMetric(
                     $storeId,
@@ -134,13 +124,6 @@ class ImportPriceChopper implements ImportInterface
         }
 
         $this->import->completeFile();
-    }
-
-    private function needToMoveItem($item, Location $location): bool
-    {
-        return !($item->aisle === $location->aisle
-            && $item->section === $location->section
-            && $item->shelf === $location->shelf);
     }
 
     private function parseLocation(array $data)
@@ -166,27 +149,8 @@ class ImportPriceChopper implements ImportInterface
         $location = new Location($aisle, $side . $position, $shelf);
 
         // Skip blank aisles.
-        if (!empty($location->aisle)) {
-            $location->valid = true;
-        }
+        $location->valid = !empty($location->aisle);
 
         return $location;
-    }
-
-    private function setSkus()
-    {
-        $rows = $this->import->db->fetchPriceChopperSkus();
-
-        foreach ($rows as $row) {
-            $this->skus[intval($row->sku_num)][] = [$row->barcode];
-        }
-    }
-
-    private function recordSku($sku, $barcode)
-    {
-        if (!isset($this->skus[intval($sku)])) {
-            $this->skus[intval($sku)] = $barcode;
-            $this->import->db->insertPriceChopperSku($sku, $barcode);
-        }
     }
 }
