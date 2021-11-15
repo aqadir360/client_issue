@@ -69,8 +69,7 @@ class ImportVallarta implements ImportInterface
                         $this->import->writeFileOutput($data, "Skip: disco");
                         break;
                     case 'move':
-                        $location = new Location(trim($data[5]), trim($data[6]));
-                        $this->handleMove($data, $barcode, $storeId, trim($data[7]), trim($data[9]), $location);
+                        $this->handleMove($data, $barcode, $storeId);
                         break;
                     case 'add':
                         $this->handleAdd($data, $barcode, $storeId);
@@ -84,13 +83,10 @@ class ImportVallarta implements ImportInterface
         $this->import->completeFile();
     }
 
-    private function handleAdd($data, $barcode, $storeId)
+    private function handleAdd(array $data, string $barcode, string $storeId)
     {
-        $departmentId = $this->import->getDepartmentId(trim(strtolower($data[5])), trim(strtolower($data[9])));
-        if ($departmentId === false) {
-            $this->import->writeFileOutput($data, "Skip Add: Invalid Department");
-            return;
-        }
+        $department = trim($data[5]);
+        $category = trim($data[9]);
 
         $location = new Location(trim($data[3]), trim($data[4]));
         if ($this->settings->shouldSkipLocation($location)) {
@@ -106,9 +102,17 @@ class ImportVallarta implements ImportInterface
             return;
         }
 
-        if ($product->isExistingProduct === false) {
+        if ($product->isExistingProduct) {
+            $this->import->db->recordCategory($product->productId, $department, $category);
+        } else {
             $product->setDescription($data[6]);
             $product->setSize($data[7]);
+        }
+
+        $departmentId = $this->import->getDepartmentId($department, $category);
+        if ($departmentId === false) {
+            $this->import->writeFileOutput($data, "Skip Add: Invalid Department");
+            return;
         }
 
         $this->import->writeFileOutput($data, "Success: Creating Inventory");
@@ -121,26 +125,34 @@ class ImportVallarta implements ImportInterface
         );
     }
 
-    private function handleMove($data, $barcode, $storeId, $department, $category, Location $location)
+    private function handleMove(array $data, string $barcode, string $storeId)
     {
-        $deptId = $this->import->getDepartmentId(trim(strtolower($department)), trim(strtolower($category)));
-        if ($deptId === false) {
-            $this->import->writeFileOutput($data, "Skip Move: Invalid Department");
-            return;
-        }
+        $department = trim($data[7]);
+        $category = trim($data[9]);
 
         $product = $this->import->fetchProduct($barcode, $storeId);
-        if (!$product->isExistingProduct) {
+        if ($product->isExistingProduct) {
+            $this->import->db->recordCategory($product->productId, $department, $category);
+        } else {
             // Moves do not include product information
             $this->import->recordSkipped();
             $this->import->writeFileOutput($data, "Skip Move: New Product");
             return;
         }
 
+        $deptId = $this->import->getDepartmentId(strtolower($department), strtolower($category));
+        if ($deptId === false) {
+            $this->import->writeFileOutput($data, "Skip Move: Invalid Department");
+            return;
+        }
+
+        $location = new Location(trim($data[5]), trim($data[6]));
+
         if ($product->hasInventory()) {
             $item = $product->getMatchingInventoryItem($location, $deptId);
 
             if ($item !== null) {
+                // Disco takes priority over skip invalid location
                 if ($this->settings->shouldDisco($location)) {
                     $this->import->discontinueInventory($item->inventory_item_id);
                     $this->import->writeFileOutput($data, "Success: Discontinued");
@@ -174,7 +186,7 @@ class ImportVallarta implements ImportInterface
         );
     }
 
-    private function moveInventory($data, $item, string $storeId, string $deptId, Location $location)
+    private function moveInventory(array $data, $item, string $storeId, string $deptId, Location $location)
     {
         if ($item->aisle == $location->aisle) {
             if ($item->section == $location->section) {
@@ -201,7 +213,7 @@ class ImportVallarta implements ImportInterface
         );
     }
 
-    private function importMetricsFile($file)
+    private function importMetricsFile(string $file)
     {
         $this->import->startNewFile($file);
 
@@ -245,7 +257,7 @@ class ImportVallarta implements ImportInterface
         $this->import->completeFile();
     }
 
-    private function fixBarcode(string $upc)
+    private function fixBarcode(string $upc): string
     {
         while (strlen($upc) > 0 && $upc[0] === '0') {
             $upc = substr($upc, 1);

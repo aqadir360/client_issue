@@ -69,6 +69,10 @@ class ImportManager
 
         $this->ftpManager = $ftpManager;
         $this->debugMode = $debugMode;
+
+        if ($this->debugMode) {
+            echo "* DEBUG MODE *" . PHP_EOL;
+        }
     }
 
     public function companyId(): string
