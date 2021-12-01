@@ -22,6 +22,7 @@ class ImportVallarta implements ImportInterface
     {
         $this->import = $importManager;
         $this->settings = new VallartaSettings();
+        $this->import->setCategories();
     }
 
     public function importUpdates()
@@ -103,7 +104,7 @@ class ImportVallarta implements ImportInterface
         }
 
         if ($product->isExistingProduct) {
-            $this->import->db->recordCategory($product->productId, $department, $category);
+            $this->import->recordCategory($product, $department, $category);
         } else {
             $product->setDescription($data[6]);
             $product->setSize($data[7]);
@@ -132,7 +133,7 @@ class ImportVallarta implements ImportInterface
 
         $product = $this->import->fetchProduct($barcode, $storeId);
         if ($product->isExistingProduct) {
-            $this->import->db->recordCategory($product->productId, $department, $category);
+            $this->import->recordCategory($product, $department, $category);
         } else {
             // Moves do not include product information
             $this->import->recordSkipped();

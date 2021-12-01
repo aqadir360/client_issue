@@ -36,6 +36,7 @@ class ImportManager
 
     private $stores = [];
     private $skipList = [];
+    private $categories = [];
 
     private $invalidDepts = [];
     private $invalidStores = [];
@@ -267,6 +268,29 @@ class ImportManager
         $this->skipList[intval($barcode)] = true;
     }
 
+    public function setCategories()
+    {
+        $categories = $this->db->fetchCategories();
+        foreach ($categories as $category) {
+            $this->categories[$category->department . $category->name] = $category->category_id;
+        }
+    }
+
+    public function recordCategory(Product $product, string $department, string $category)
+    {
+        if (isset($this->categories[$department . $category])) {
+            $categoryId = $this->categories[$department . $category];
+        } else {
+            $categoryId = (string)Uuid::uuid1();
+            $this->db->insertCategory($categoryId, $department, $category);
+            $this->categories[$department . $category] = $categoryId;
+        }
+
+        if ($product->categoryId !== $categoryId) {
+            $this->db->updateProductCategory($product->productId, $categoryId);
+        }
+    }
+
     // Finds matching department id by company department mappings
     // Increments skipped or skipDepts and returns false if invalid
     public function getDepartmentId(string $department, string $category = '', string $upc = '')
@@ -379,6 +403,7 @@ class ImportManager
                 $companyProduct->description,
                 $companyProduct->size,
                 $companyProduct->photo,
+                $companyProduct->category_id,
                 $companyProduct->no_expiration,
                 $companyProduct->created_at,
                 $companyProduct->updated_at,
@@ -416,6 +441,7 @@ class ImportManager
                 $existing->description,
                 $existing->size,
                 $existing->photo,
+                $existing->category_id,
                 $existing->no_expiration,
                 $existing->created_at,
                 $existing->updated_at

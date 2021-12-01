@@ -112,38 +112,38 @@ class Database
         );
     }
 
-    public function recordCategory($productId, $department, $category)
+    public function insertCategory($categoryId, $department, $category)
     {
-        $sql = "INSERT INTO #t#.product_categories (product_id, department, category)
-                VALUES (:product_id, :department, :category)";
+        $sql = "INSERT INTO #t#.categories (category_id, department, category)
+                VALUES (:category_id, :department, :category)";
 
-        try {
-            DB::connection('db_companies')->insert(
-                $this->companyPdoConvert($sql, $this->dbName),
-                [
-                    'product_id' => $productId,
-                    'department' => $department,
-                    'category' => $category,
-                ]
-            );
-        } catch (\Exception $e) {
-            // TODO: suppressing duplicate errors
-        };
+        DB::connection('db_companies')->insert(
+            $this->companyPdoConvert($sql, $this->dbName),
+            [
+                'category_id' => $categoryId,
+                'department' => $department,
+                'category' => $category,
+            ]
+        );
     }
 
-    public function fetchProductsWithCategory()
+    public function updateProductCategory($productId, $categoryId)
     {
-        $sql = "SELECT product_id from #t#.product_categories";
+        $sql = "UPDATE #t#.products set category_id = :category_id where product_id = :product_id";
+
+        DB::connection('db_companies')->insert(
+            $this->companyPdoConvert($sql, $this->dbName),
+            [
+                'category_id' => $categoryId,
+                'product_id' => $productId,
+            ]
+        );
+    }
+
+    public function fetchCategories()
+    {
+        $sql = "SELECT * FROM #t#.categories";
         return $this->fetchFromCompanyDb($sql, []);
-    }
-
-    public function fetchProductFromCompany(string $productId)
-    {
-        $sql = "SELECT * FROM #t#.products p WHERE p.product_id = :product_id";
-
-        return $this->fetchFromCompanyDb($sql, [
-            'product_id' => $productId,
-        ]);
     }
 
     public function fetchProductInventory(string $productId, string $storeId)

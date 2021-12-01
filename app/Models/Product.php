@@ -14,6 +14,7 @@ class Product
     public $description = null;
     public $size = '';
     public $photo = null;
+    public $categoryId = null;
     public $noExp = false;
     public $createdAt = null;
     public $updatedAt = null;
@@ -32,6 +33,7 @@ class Product
         $description,
         $size,
         $photo,
+        $categoryId,
         $noExp,
         $createdAt,
         $updatedAt,
@@ -43,6 +45,7 @@ class Product
         $this->description = $description;
         $this->size = $size;
         $this->photo = $photo;
+        $this->categoryId = $categoryId;
         $this->noExp = $noExp;
         $this->isExistingProduct = true;
         $this->createdAt = $createdAt;

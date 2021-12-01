@@ -2,7 +2,7 @@
 
 namespace App\Imports;
 
-use App\Models\Location;
+use App\Imports\Settings\PriceChopperSettings;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 
@@ -31,6 +31,7 @@ class ImportPriceChopper implements ImportInterface
     {
         $this->import = $importManager;
         $this->import->setSkipList();
+        $this->import->setCategories();
     }
 
     public function importUpdates()
@@ -84,14 +85,14 @@ class ImportPriceChopper implements ImportInterface
                     $this->import->db->setProductSku($product->productId, $sku);
                 }
 
-                $location = $this->parseLocation($data);
+                $location = PriceChopperSettings::parseLocation($data);
                 if ($location->valid === false) {
                     $this->import->recordSkipped();
                     $this->import->writeFileOutput($data, "Skip: Invalid Location");
                     continue;
                 }
 
-                $this->import->db->recordCategory($product->productId, trim($data[3]), trim($data[4]));
+                $this->import->recordCategory($product->productId, trim($data[3]), trim($data[4]));
                 $departmentId = $this->import->getDepartmentId(trim(strtolower($data[3])), trim(strtolower($data[4])), $upc);
 
                 if ($departmentId === false) {
@@ -124,33 +125,5 @@ class ImportPriceChopper implements ImportInterface
         }
 
         $this->import->completeFile();
-    }
-
-    private function parseLocation(array $data)
-    {
-        $aisle = trim($data[11]);
-
-        // Include full aisle string when not beginning with AL (e.g. AL01 becomes 01, RX01 remains RX01).
-        if (strpos($aisle, 'AL') === 0) {
-            $aisle = substr($aisle, 2);
-        }
-
-        // Use the first character of Left or Right
-        $side = trim($data[12]);
-        if (strlen($side) > 1) {
-            $side = substr($side, 0, 1);
-        }
-
-        // Plus the integer value of Y-Coord without rounding
-        $decimal = strpos(trim($data[14]), ".");
-        $position = ($decimal === false) ? trim($data[14]) : substr(trim($data[14]), 0, $decimal);
-
-        $shelf = trim($data[15]);
-        $location = new Location($aisle, $side . $position, $shelf);
-
-        // Skip blank aisles.
-        $location->valid = !empty($location->aisle);
-
-        return $location;
     }
 }
