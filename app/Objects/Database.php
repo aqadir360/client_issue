@@ -114,15 +114,15 @@ class Database
 
     public function insertCategory($categoryId, $department, $category)
     {
-        $sql = "INSERT INTO #t#.categories (category_id, department, category)
-                VALUES (:category_id, :department, :category)";
+        $sql = "INSERT INTO #t#.categories (category_id, department, name)
+                VALUES (:category_id, :department, :name)";
 
         DB::connection('db_companies')->insert(
             $this->companyPdoConvert($sql, $this->dbName),
             [
                 'category_id' => $categoryId,
                 'department' => $department,
-                'category' => $category,
+                'name' => $category,
             ]
         );
     }

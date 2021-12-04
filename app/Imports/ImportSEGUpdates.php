@@ -43,6 +43,7 @@ class ImportSEGUpdates implements ImportInterface
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
+        $this->import->setCategories();
     }
 
     public function importUpdates()
@@ -123,6 +124,8 @@ class ImportSEGUpdates implements ImportInterface
                     $this->import->writeFileOutput($data, "Skip: DSD Sku");
                     continue;
                 }
+
+                $this->import->recordCategory($product, "", $this->parseCategory(trim($data[6])));
 
                 $departmentId = $this->import->getDepartmentId(trim(strtolower($data[12])), trim(strtolower($data[6])), $product->barcode);
                 if ($departmentId === false) {
@@ -285,5 +288,44 @@ class ImportSEGUpdates implements ImportInterface
         }
 
         return $departmentId;
+    }
+
+    private function parseCategory($input): string
+    {
+        // Remove everything after _WD
+        $pos = strpos($input, '_WD');
+        if ($pos !== false) {
+            $input = substr($input, 0, $pos);
+        }
+
+        // Remove everything after WD_
+        $pos = strpos($input, 'WD_');
+        if ($pos !== false) {
+            $input = substr($input, 0, $pos);
+        }
+
+        // Remove everything after strings of format <int><int>X<int><int>
+        $positions = $this->strpos_all($input, 'X');
+        foreach ($positions as $pos) {
+            if ($pos !== false && $pos > 3 && $pos < strlen($input) - 2) {
+                if ((is_numeric($input[$pos - 2]) && is_numeric($input[$pos - 1]))
+                    && (is_numeric($input[$pos + 2]) && is_numeric($input[$pos + 1]))) {
+                    $input = substr($input, 0, $pos - 3);
+                }
+            }
+        }
+
+        return $input;
+    }
+
+    private function strpos_all(string $haystack, string $needle): array
+    {
+        $offset = 0;
+        $all = [];
+        while (($pos = strpos($haystack, $needle, $offset)) !== FALSE) {
+            $offset = $pos + 1;
+            $all[] = $pos;
+        }
+        return $all;
     }
 }
