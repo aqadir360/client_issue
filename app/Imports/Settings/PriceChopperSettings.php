@@ -25,8 +25,7 @@ class PriceChopperSettings
         $decimal = strpos(trim($data[14]), ".");
         $position = ($decimal === false) ? trim($data[14]) : substr(trim($data[14]), 0, $decimal);
 
-        $shelf = trim($data[15]);
-        $location = new Location($aisle, $side . $position, $shelf);
+        $location = new Location($aisle, $side . $position);
 
         // Skip blank aisles.
         $location->valid = !empty($location->aisle);
