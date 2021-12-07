@@ -19,6 +19,7 @@ class ImportRaleys implements ImportInterface
     {
         $this->import = $importManager;
         $this->import->setSkipList();
+        $this->import->setCategories();
     }
 
     public function importUpdates()
@@ -182,6 +183,8 @@ class ImportRaleys implements ImportInterface
                     $this->import->writeFileOutput($data, "Skip: New Product");
                     continue;
                 }
+
+                $this->import->recordCategory($product, trim($data[6]), trim($data[7]));
 
                 $location = $this->normalizeRaleysLocation($data[3]);
                 if (!$location->valid) {
