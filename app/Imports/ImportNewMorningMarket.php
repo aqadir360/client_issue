@@ -40,11 +40,9 @@ class ImportNewMorningMarket implements ImportInterface
         // TODO: get value from file if provided
         $storeId = '9662b68e-bb14-11eb-af4c-080027af75ff';
 
-        $fileList = $this->import->downloadFilesByName('date');
+        $newestFile = $this->import->ftpManager->getMostRecentFile();
 
-        foreach ($fileList as $file) {
-            $this->importInventory($file, $storeId);
-        }
+        $this->importInventory($newestFile, $storeId);
 
         $this->import->completeImport();
     }
@@ -73,7 +71,7 @@ class ImportNewMorningMarket implements ImportInterface
     private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
     {
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 10000, "|")) !== false) {
+            while (($data = fgetcsv($handle, 10000, ",")) !== false) {
                 if (trim($data[0]) === 'UPC/PLU') {
                     continue;
                 }
@@ -113,6 +111,8 @@ class ImportNewMorningMarket implements ImportInterface
                     $this->import->writeFileOutput($data, "Skip: Invalid Location");
                     continue;
                 }
+
+                $this->import->recordCategory($product, trim($data[2]), trim($data[13]));
 
                 $departmentId = $this->import->getDepartmentId(trim(strtolower($data[2])), trim(strtolower($data[13])), $product->barcode);
                 if ($departmentId === false) {
