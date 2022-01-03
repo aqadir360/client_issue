@@ -41,8 +41,11 @@ class ImportNewMorningMarket implements ImportInterface
         $storeId = '9662b68e-bb14-11eb-af4c-080027af75ff';
 
         $newestFile = $this->import->ftpManager->getMostRecentFile();
+        $file = $this->import->ftpManager->downloadFile($newestFile);
 
-        $this->importInventory($newestFile, $storeId);
+        if ($file) {
+            $this->importInventory($file, $storeId);
+        }
 
         $this->import->completeImport();
     }
