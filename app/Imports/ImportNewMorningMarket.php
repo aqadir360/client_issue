@@ -71,7 +71,7 @@ class ImportNewMorningMarket implements ImportInterface
     private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
     {
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 10000, ",")) !== false) {
+            while (($data = fgetcsv($handle, 10000, "|")) !== false) {
                 if (trim($data[0]) === 'UPC/PLU') {
                     continue;
                 }
