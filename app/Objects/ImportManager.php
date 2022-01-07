@@ -506,6 +506,11 @@ class ImportManager
         if (!$product->isExistingProduct) {
             $product->setProductId((string)Uuid::uuid1());
         }
+
+        if ($product->invalidProduct()) {
+            return null;
+        }
+
         $response = $this->proxy->persistProduct($this->companyId, $product->productId, $product->barcode, $product->description, $product->size);
 
         if (!$this->proxy->validResponse($response)) {

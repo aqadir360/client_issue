@@ -78,6 +78,15 @@ class Product
         $this->size = strtolower(trim($input));
     }
 
+    public function invalidProduct(): bool
+    {
+        if (empty($this->description) || $this->description === '-1' || $this->description === 'null') {
+            return true;
+        }
+
+        return false;
+    }
+
     public function getMatchingInventoryItem(Location $location, ?string $deptId = null)
     {
         if (count($this->inventory) === 0) {
