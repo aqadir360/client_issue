@@ -43,6 +43,8 @@ class ImportFactory
                 return new ImportLunds($importManager);
             case 'lunds_metrics':
                 return new ImportLundsMetrics($importManager);
+            case 'mayville':
+                return new ImportMayville($importManager);
             case 'metcalfes_metrics':
                 return new ImportMetcalfesMetrics($importManager);
             case 'new_morning_market':
