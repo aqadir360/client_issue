@@ -95,46 +95,65 @@ class ImportHardings implements ImportInterface
                     continue;
                 }
 
-                if ($data[0] == 'STORE') {
+                if (trim($data[0]) === 'STORE') {
                     continue;
                 }
 
                 $upc = BarcodeFixer::fixUpc(trim($data[3]));
                 if ($this->import->isInvalidBarcode($upc, $data[3])) {
+                    $this->import->writeFileOutput([$data[3]], "Skip: Invalid Barcode");
                     continue;
                 }
 
                 $loc = $this->parseLocation(trim($data[18]));
-                if ($loc->valid === false) {
+                if ($loc->valid === false && !empty(trim($data[18]))) {
+                    $this->import->writeFileOutput([$upc, $data[18]], "Skip: Invalid Location");
                     continue;
+                }
+
+                $departmentId = $this->import->getDepartmentId(intval($data[4]), intval($data[28]));
+                if ($departmentId === false) {
+                    $this->import->writeFileOutput([$upc, trim($data[4]), trim($data[28])], "Skip: Invalid Department");
+                    continue;
+                }
+
+                $product = $this->import->fetchProduct($upc);
+                if ($product->isExistingProduct === false) {
+                    $product->setDescription(trim($data[35]));
+                    $product->setSize(trim(trim($data[36]) . " " . trim($data[37])));
+                    $productId = $this->import->createProduct($product);
+
+                    if ($productId) {
+                        $product->setProductId($productId);
+                    } else {
+                        $this->import->writeFileOutput([$upc, $data[35]], "Skip: Invalid Product");
+                        continue;
+                    }
                 }
 
                 $compare->setFileInventoryItem(
                     $upc,
                     $loc,
-                    trim($data[35]),
-                    trim($data[36] . " " . $data[37])
+                    $product->description,
+                    $product->size,
+                    $departmentId
                 );
 
                 if (count($data) < 61) {
                     continue;
                 }
 
-                $product = $this->import->fetchProduct($upc);
+                $cost = $this->parseCost(floatval($data[60]), intval($data[61]));
+                $retail = $this->parseRetail(trim($data[7]));
 
-                if ($product->isExistingProduct) {
-                    $cost = $this->parseCost(floatval($data[60]), intval($data[61]));
-                    $retail = $this->parseRetail(trim($data[7]));
-
-                    $this->import->persistMetric(
-                        $storeId,
-                        $product,
-                        $this->import->convertFloatToInt($cost),
-                        $this->import->convertFloatToInt($retail),
-                        $this->import->convertFloatToInt(abs(floatval($data[33]))),
-                        false
-                    );
-                }
+                $this->import->persistMetric(
+                    $storeId,
+                    $product,
+                    $this->import->convertFloatToInt($cost),
+                    $this->import->convertFloatToInt($retail),
+                    $this->import->convertFloatToInt(abs(floatval($data[33]))),
+                    false
+                );
             }
 
             fclose($handle);
@@ -152,9 +171,9 @@ class ImportHardings implements ImportInterface
             return $location;
         }
 
-        $location->aisle = substr($location, 0, 2);
-        $location->section = str_replace('_', '', substr($location, 3, 5));
-        $location->shelf = substr($location, 9, 2);
+        $location->aisle = substr($input, 0, 2);
+        $location->section = str_replace('_', '', substr($input, 3, 5));
+        $location->shelf = substr($input, 9, 2);
         $location->valid = true;
 
         return $location;
