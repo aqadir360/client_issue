@@ -106,8 +106,10 @@ class ImportHardings implements ImportInterface
                 }
 
                 $loc = $this->parseLocation(trim($data[18]));
-                if ($loc->valid === false && !empty(trim($data[18]))) {
-                    $this->import->writeFileOutput([$upc, $data[18]], "Skip: Invalid Location");
+                if ($loc->valid === false) {
+                    if (!empty(trim($data[18]))) {
+                        $this->import->writeFileOutput([$upc, $data[18]], "Skip: Invalid Location");
+                    }
                     continue;
                 }
 
