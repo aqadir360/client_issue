@@ -73,6 +73,8 @@ class ImportFactory
                 return new ImportWebsters($importManager);
             case 'websters_metrics':
                 return new ImportWebstersMetrics($importManager);
+            case 'bristol_farms_compare':
+                return new Refresh\BristolFarmInventory($importManager);
             default:
                 echo "Invalid Input $key" . PHP_EOL;
                 return null;
