@@ -40,7 +40,7 @@ class PriceChopperInventory implements ImportInterface
 
     public function importUpdates()
     {
-        $files = glob(storage_path('imports/pricechopper/*.csv'));
+        $files = glob(storage_path('imports/pricechopper/*.psv'));
 
         foreach ($files as $file) {
             $this->importInventory($file);
@@ -53,6 +53,9 @@ class PriceChopperInventory implements ImportInterface
     {
         $storeNum = $this->getStoreNum(basename($file));
         $storeId = $this->import->storeNumToStoreId($storeNum);
+        if ($storeId === false) {
+            return;
+        }
 
         $compare = new InventoryCompare($this->import, $storeId);
 
@@ -108,7 +111,7 @@ class PriceChopperInventory implements ImportInterface
                 }
 
                 // DSD column check and map departments to the related DSD department if the value is true
-                if ($data[7] == 'TRUE') {
+                if (trim($data[7]) === 'TRUE') {
                     $departmentId = $this->getRelatedDSDDepartment($departmentId);
                 }
 
@@ -145,9 +148,11 @@ class PriceChopperInventory implements ImportInterface
 
     private function getStoreNum(string $filename)
     {
-        return intval(substr($filename, 0, -4));
+        $start = strpos($filename, '_');
+        return intval(substr($filename, $start + 1, -4));
     }
-    private function getRelatedDSDDepartment(string $departmentId): ?string
+
+    private function getRelatedDSDDepartment(string $departmentId): string
     {
         switch ($departmentId) {
             case '06afcad5-4b27-b255-8581-d4e5fda38773': // Dairy
