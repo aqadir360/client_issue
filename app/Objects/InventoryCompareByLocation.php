@@ -242,20 +242,24 @@ class InventoryCompareByLocation
             return;
         }
 
-        if ($item['location']->valid === false) {
+        $loc = $item['location'];
+
+        if ($loc->valid === false) {
             $this->import->recordSkipped();
             return;
         }
 
-        if ($this->import->shouldSkipLocation($item['location']->aisle, $item['location']->section, $item['location']->shelf)) {
+        if ($this->import->shouldSkipLocation($loc->aisle, $loc->section, $loc->shelf)) {
             return;
         }
 
-        $locKey = $this->getLocKey($item['location']->aisle, $item['location']->section);
+        $locKey = $this->getLocKey($loc->aisle, $loc->section);
 
         if ($this->minItemsForTrackedLoc > 0) {
             // Do not add items in untracked locations
-            if (!isset($this->trackedLocations[$locKey]) || ($this->trackedLocations[$locKey]['count'] <= $this->minItemsForTrackedLoc)) {
+            if (!isset($this->trackedLocations[$locKey])
+                || ($this->trackedLocations[$locKey]['count'] <= $this->minItemsForTrackedLoc)
+            ) {
                 $this->import->recordSkipped();
                 return;
             }

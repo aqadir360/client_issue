@@ -15,7 +15,7 @@ use DateTime;
 use DateTimeZone;
 use Exception;
 use Illuminate\Console\Command;
-use Log;
+use Illuminate\Support\Facades\Log;
 
 // Checks for the next pending items and runs
 class ProcessNextItem extends Command

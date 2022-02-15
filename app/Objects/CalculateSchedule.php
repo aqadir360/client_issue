@@ -85,6 +85,8 @@ class CalculateSchedule
                 return 'saturday';
             case 6:
                 return 'sunday';
+            default:
+                return '';
         }
     }
 }

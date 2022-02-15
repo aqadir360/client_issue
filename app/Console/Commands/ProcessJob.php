@@ -13,7 +13,7 @@ use App\Objects\FtpManager;
 use App\Objects\ImportManager;
 use Exception;
 use Illuminate\Console\Command;
-use Log;
+use Illuminate\Support\Facades\Log;
 
 // Checks for the next pending items and runs
 class ProcessJob extends Command

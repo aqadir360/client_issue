@@ -115,9 +115,8 @@ class ImportNewMorningMarket implements ImportInterface
                     continue;
                 }
 
-                $this->import->recordCategory($product, trim($data[2]), trim($data[13]));
+                $departmentId = $this->import->getDeptIdAndRecordCategory($product, trim($data[2]), trim($data[13]));
 
-                $departmentId = $this->import->getDepartmentId(trim(strtolower($data[2])), trim(strtolower($data[13])), $product->barcode);
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;

@@ -65,7 +65,7 @@ class VallartaBaby implements ImportInterface
                 if (!$product->isExistingProduct) {
                     $product->setDescription($data[5]);
                     $product->setSize($data[6]);
-                } else if ($product->hasInventory()) {
+                } elseif ($product->hasInventory()) {
                     // Check if one already exists in the department
                     foreach ($product->inventory as $item) {
                         if ($item->department_id === $deptId) {

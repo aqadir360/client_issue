@@ -80,7 +80,7 @@ class ImportLePreKon implements ImportInterface
                 if (!$product->isExistingProduct) {
                     $product->setDescription($data[2]);
                     $product->setSize($this->parseSize(trim($data[3]), trim($data[4])));
-                } else if ($product->hasInventory()) {
+                } elseif ($product->hasInventory()) {
                     $this->import->recordStatic();
                     continue;
                 }

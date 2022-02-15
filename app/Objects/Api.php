@@ -4,7 +4,7 @@ namespace App\Objects;
 
 use App\Models\Product;
 use Illuminate\Support\Facades\Http;
-use Log;
+use Illuminate\Support\Facades\Log;
 
 class Api
 {

@@ -184,8 +184,6 @@ class ImportRaleys implements ImportInterface
                     continue;
                 }
 
-                $this->import->recordCategory($product, trim($data[6]), trim($data[7]));
-
                 $location = $this->normalizeRaleysLocation($data[3]);
                 if (!$location->valid) {
                     # these items are slated for disco and will appear in an upcoming disco file
@@ -194,7 +192,8 @@ class ImportRaleys implements ImportInterface
                     continue;
                 }
 
-                $departmentId = $this->import->getDepartmentId(trim($data[6]), trim($data[7]));
+                $departmentId = $this->import->getDeptIdAndRecordCategory($product, trim($data[6]), trim($data[7]));
+
                 if (!$departmentId) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
@@ -220,7 +219,7 @@ class ImportRaleys implements ImportInterface
                     if ($this->primarySkuInventoryExists($sku, $barcode, $storeId)) {
                         $this->import->writeFileOutput($data, "Skip: Primary SKU Exists");
                         $this->import->recordSkipped();
-                    } else if ($this->import->isInSkipList($barcode)) {
+                    } elseif ($this->import->isInSkipList($barcode)) {
                         $this->import->writeFileOutput($data, "Skip: Skip List");
                     } else {
                         $this->createInventory($product, $storeId, $location, $departmentId, $data);

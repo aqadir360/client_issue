@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Objects\Api;
 use App\Objects\Database;
 use Illuminate\Console\Command;
-use Log;
 
 // Overlays dates for all new items with closest non-expired date within company
 class CopyNewDates extends Command
@@ -50,7 +49,11 @@ class CopyNewDates extends Command
                 $inventory = $this->db->fetchNewCompanyInventory($product->product_id);
 
                 foreach ($inventory as $item) {
-                    $this->proxy->writeInventoryExpiration($companyId, $item->inventory_item_id, $closestDate->expiration_date);
+                    $this->proxy->writeInventoryExpiration(
+                        $companyId,
+                        $item->inventory_item_id,
+                        $closestDate->expiration_date
+                    );
                     $inventoryCount++;
                 }
 

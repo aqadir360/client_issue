@@ -5,7 +5,7 @@ namespace App\Imports\Overlay;
 use App\Imports\Overlay\Settings\NotificationsMapper as Settings;
 use App\Objects\Api;
 use App\Objects\Database;
-use Log;
+use Illuminate\Support\Facades\Log;
 
 // Overlays dates for close dated and expiring items
 class OverlayNotifications
@@ -34,7 +34,6 @@ class OverlayNotifications
             $this->overlayInventory($dbName, $companyId, $settings, $resultId);
             $this->proxy->triggerUpdateCounts($companyId);
         } catch (\Exception $e) {
-            var_dump($e);
             $this->db->updateOverlayResultsRow($resultId, 0, 0, 0, $e->getMessage());
             $this->db->completeImport($importStatusId, 1, 0, $e->getMessage());
             Log::error($e->getMessage());
@@ -90,7 +89,11 @@ class OverlayNotifications
 
                 if ($closestDate && $closestDate->expiration_date) {
                     $updated++;
-                    $this->proxy->writeInventoryExpiration($companyId, $item->inventory_item_id, $closestDate->expiration_date);
+                    $this->proxy->writeInventoryExpiration(
+                        $companyId,
+                        $item->inventory_item_id,
+                        $closestDate->expiration_date
+                    );
                 }
 
                 if ($updated > $max) {
