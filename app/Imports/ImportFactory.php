@@ -63,6 +63,8 @@ class ImportFactory
                 return new ImportSEGUpdates($importManager);
             case 'seg_users':
                 return new ImportSEGUserUpdates($importManager);
+            case 'sprouts':
+                return new ImportSprouts($importManager);
             case 'vallarta':
                 return new ImportVallarta($importManager);
             case 'vallarta_baby':
