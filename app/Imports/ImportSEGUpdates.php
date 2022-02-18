@@ -127,7 +127,12 @@ class ImportSEGUpdates implements ImportInterface
 
                 $this->import->recordCategory($product, "", $this->parseCategory(trim($data[6])));
 
-                $departmentId = $this->import->getDepartmentId(trim(strtolower($data[12])), trim(strtolower($data[6])), $product->barcode);
+                $departmentId = $this->import->getDepartmentId(
+                    trim(strtolower($data[12])),
+                    trim(strtolower($data[6])),
+                    $product->barcode
+                );
+
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
@@ -141,7 +146,7 @@ class ImportSEGUpdates implements ImportInterface
                 if ($status === 'D') {
                     $this->import->writeFileOutput($data, "Skip: D Status");
                     continue;
-                } else if ($status === 'O') {
+                } elseif ($status === 'O') {
                     // Do not discontinue or add
                     $location->valid = false;
                 }
@@ -220,7 +225,7 @@ class ImportSEGUpdates implements ImportInterface
 
             $product->setProductId($productId);
             $this->import->db->setProductSku($productId, $sku);
-        } else if ($product->sku !== $sku) {
+        } elseif ($product->sku !== $sku) {
             $this->import->db->setProductSku($product->productId, $sku);
         }
 
@@ -268,7 +273,7 @@ class ImportSEGUpdates implements ImportInterface
         return intval(substr($filename, 8, strrpos($filename, '_') - 1));
     }
 
-    private function getReclaimDepartment(string $departmentId): ?string
+    private function getReclaimDepartment(string $departmentId): string
     {
         switch ($departmentId) {
             case '2178be72-a05e-b7a0-06d6-2840b1c1c4a9': // Dairy
@@ -305,7 +310,7 @@ class ImportSEGUpdates implements ImportInterface
         }
 
         // Remove everything after strings of format <int><int>X<int><int>
-        $positions = $this->strpos_all($input, 'X');
+        $positions = $this->strposAll($input, 'X');
         foreach ($positions as $pos) {
             if ($pos !== false && $pos > 3 && $pos < strlen($input) - 2) {
                 if ((is_numeric($input[$pos - 2]) && is_numeric($input[$pos - 1]))
@@ -318,11 +323,11 @@ class ImportSEGUpdates implements ImportInterface
         return $input;
     }
 
-    private function strpos_all(string $haystack, string $needle): array
+    private function strposAll(string $haystack, string $needle): array
     {
         $offset = 0;
         $all = [];
-        while (($pos = strpos($haystack, $needle, $offset)) !== FALSE) {
+        while (($pos = strpos($haystack, $needle, $offset)) !== false) {
             $offset = $pos + 1;
             $all[] = $pos;
         }

@@ -92,8 +92,7 @@ class ImportPriceChopper implements ImportInterface
                     continue;
                 }
 
-                $this->import->recordCategory($product->productId, trim($data[3]), trim($data[4]));
-                $departmentId = $this->import->getDepartmentId(trim(strtolower($data[3])), trim(strtolower($data[4])), $upc);
+                $departmentId = $this->import->getDeptIdAndRecordCategory($product, trim($data[3]), trim($data[4]));
 
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");

@@ -60,7 +60,11 @@ class CopyOverlayDates extends Command
 
             if ($closestDate && $closestDate->expiration_date) {
                 $updated++;
-                $this->proxy->writeInventoryExpiration($companyId, $item->inventory_item_id, $closestDate->expiration_date);
+                $this->proxy->writeInventoryExpiration(
+                    $companyId,
+                    $item->inventory_item_id,
+                    $closestDate->expiration_date
+                );
             }
 
             if ($updated > $max) {
@@ -94,7 +98,11 @@ class CopyOverlayDates extends Command
 
             if ($closestDate && $closestDate->expiration_date) {
                 echo $closestDate->expiration_date . PHP_EOL;
-                $this->proxy->writeInventoryExpiration($companyId, $product->inventory_item_id, $closestDate->expiration_date);
+                $this->proxy->writeInventoryExpiration(
+                    $companyId,
+                    $product->inventory_item_id,
+                    $closestDate->expiration_date
+                );
             }
         }
     }

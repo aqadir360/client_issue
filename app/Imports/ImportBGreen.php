@@ -7,7 +7,6 @@ use App\Objects\ImportManager;
 
 // B Green Products and Metrics Import
 // TODO: Currently using local files, update when FTP files start sending
-// Barcode|Aisle|Section|Shelf|Department Name|Category|Product Description|Product Size|90 day average daily units sold|Retail Price|Cost
 class ImportBGreen implements ImportInterface
 {
     /** @var ImportManager */

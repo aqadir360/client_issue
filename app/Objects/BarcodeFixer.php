@@ -47,20 +47,15 @@ class BarcodeFixer
             return '0';
         }
 
-        //        try {
         $check = BarcodeFixer::calculateMod10Checksum(substr($upc, 0, 11));
-        //        } catch (\Exception $e) {
-        //            return '0';
-        //        }
-
         return '0' . $upc . $check;
     }
 
     /*
-    1.	Add the digits in the odd-numbered positions (first, third, fifth, etc.) together and multiply by three.
-    2.	Add the digits in the even-numbered positions (second, fourth, sixth, etc.) to the result.
-    3.	Find the result modulo 10 (i.e. the remainder when divided by 10.. 10 goes into 58 5 times with 8 leftover).
-    4.	If the result is not zero, subtract the result from ten.
+    1. Add the digits in the odd-numbered positions (first, third, fifth, etc.) together and multiply by three.
+    2. Add the digits in the even-numbered positions (second, fourth, sixth, etc.) to the result.
+    3. Find the result modulo 10 (i.e. the remainder when divided by 10.. 10 goes into 58 5 times with 8 leftover).
+    4. If the result is not zero, subtract the result from ten.
     */
     public static function calculateMod10Checksum(string $barcode): int
     {

@@ -5,7 +5,7 @@ namespace App\Objects;
 
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
-use Log;
+use Illuminate\Support\Facades\Log;
 use Ramsey\Uuid\Uuid;
 
 class Database
@@ -23,13 +23,13 @@ class Database
         $sql = 'insert into login_attempts (username, ip_address, version, user_agent, status, created_at)
             values (:username, :ip_address, :version, :user_agent, :status, NOW())';
         DB::insert($sql, [
-                'username' => config('scraper.user'),
-                'ip_address' => '',
-                'version' => 'Imports',
-                'user_agent' => '',
-                'status' => 1,
-            ]
-        );
+            'username' => config('scraper.user'),
+            'ip_address' => '',
+            'version' => 'Imports',
+            'user_agent' => '',
+            'status' => 1,
+        ]);
+
         $loginId = $this->lastInsertId();
         $sql = 'insert into login_success (user_id, login_id, company_id, token, created_at)
             values (:user_id, :login_id, :company_id, :token, NOW())';
@@ -44,7 +44,9 @@ class Database
 
     public function fetchStores(string $companyId)
     {
-        $sql = "SELECT store_id, store_num, name FROM #t#.stores WHERE company_id = :company_id AND archived_at IS NULL";
+        $sql = "SELECT store_id, store_num, name
+            FROM #t#.stores
+            WHERE company_id = :company_id AND archived_at IS NULL";
 
         return $this->fetchFromCompanyDb($sql, [
             'company_id' => $companyId,
@@ -185,12 +187,15 @@ class Database
 
     public function insertCompanyProduct(Product $product)
     {
-        $sql = "INSERT INTO #t#.products (product_id, sku, barcode, description, size, photo, no_expiration, created_at, updated_at)
-            VALUES (:product_id, :sku, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
+        $sql = "INSERT INTO #t#.products
+            (product_id, sku, barcode, description, size, photo, no_expiration, created_at, updated_at)
+            VALUES
+            (:product_id, :sku, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
 
         try {
             DB::connection('db_companies')->insert(
-                $this->companyPdoConvert($sql, $this->dbName), [
+                $this->companyPdoConvert($sql, $this->dbName),
+                [
                     'product_id' => $product->productId,
                     'sku' => $product->sku,
                     'barcode' => $product->barcode,
@@ -242,7 +247,8 @@ class Database
         try {
             $sql = "INSERT INTO #t#.raleys_products (sku_num, barcode) VALUES (:sku_num, :barcode)";
             DB::connection('db_companies')->insert(
-                $this->companyPdoConvert($sql, $this->dbName), [
+                $this->companyPdoConvert($sql, $this->dbName),
+                [
                     'sku_num' => $sku,
                     'barcode' => $barcode,
                 ]
@@ -252,11 +258,19 @@ class Database
         }
     }
 
-    public function insertDepartmentMapped($fileRowId, $department, $category, $departmentId, $departmentRule, $categoryRule, $skip)
-    {
+    public function insertDepartmentMapped(
+        $fileRowId,
+        $department,
+        $category,
+        $departmentId,
+        $departmentRule,
+        $categoryRule,
+        $skip
+    ) {
         $sql = "INSERT INTO import_department_mapped
             (import_result_id, department_id, department, category, department_rule, category_rule, skip)
-            VALUES (:import_result_id, :department_id, :department, :category, :department_rule, :category_rule, :skip)";
+            VALUES
+            (:import_result_id, :department_id, :department, :category, :department_rule, :category_rule, :skip)";
         DB::insert($sql, [
             'import_result_id' => $fileRowId,
             'department_id' => $departmentId,
@@ -279,7 +293,8 @@ class Database
         try {
             $sql = "INSERT INTO #t#.pc_products (sku_num, barcode, created_at) VALUES (:sku_num, :barcode, NOW())";
             DB::connection('db_companies')->insert(
-                $this->companyPdoConvert($sql, $this->dbName), [
+                $this->companyPdoConvert($sql, $this->dbName),
+                [
                     'sku_num' => $sku,
                     'barcode' => $barcode,
                 ]
@@ -313,7 +328,8 @@ class Database
             $sql = "INSERT INTO #t#.seg_products (sku, input_barcode, barcode)
                 VALUES (:sku, :input_barcode, :barcode)";
             DB::connection('db_companies')->insert(
-                $this->companyPdoConvert($sql, $this->dbName), [
+                $this->companyPdoConvert($sql, $this->dbName),
+                [
                     'sku' => $sku,
                     'input_barcode' => $inputBarcode,
                     'barcode' => $barcode,
@@ -330,7 +346,8 @@ class Database
             $sql = "INSERT INTO #t#.seg_dsd (sku, store_num)
                 VALUES (:sku, :store_num)";
             DB::connection('db_companies')->insert(
-                $this->companyPdoConvert($sql, $this->dbName), [
+                $this->companyPdoConvert($sql, $this->dbName),
+                [
                     'sku' => $sku,
                     'store_num' => $storeNum,
                 ]
@@ -531,7 +548,8 @@ class Database
         WHERE store_id = :store_id AND product_id = :product_id";
 
         return DB::connection('db_companies')->update(
-            $this->companyPdoConvert($sql, $this->dbName), [
+            $this->companyPdoConvert($sql, $this->dbName),
+            [
                 'store_id' => $storeId,
                 'product_id' => $productId,
                 'cost' => $cost,
@@ -562,7 +580,8 @@ class Database
         VALUES (:store_id, :product_id, :retail, :cost, :movement, NOW(), NOW())";
 
         return DB::connection('db_companies')->insert(
-            $this->companyPdoConvert($sql, $this->dbName), [
+            $this->companyPdoConvert($sql, $this->dbName),
+            [
                 'store_id' => $storeId,
                 'product_id' => $productId,
                 'cost' => $cost,
@@ -577,7 +596,8 @@ class Database
     {
         $sql = "SELECT product_id FROM #t#.products WHERE product_id = :product_id";
         $existing = DB::connection('db_companies')->selectOne(
-            $this->companyPdoConvert($sql, $this->dbName), [
+            $this->companyPdoConvert($sql, $this->dbName),
+            [
                 'product_id' => $product->productId,
             ]
         );
@@ -592,29 +612,33 @@ class Database
             (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
             VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, :created_at, :updated_at)";
                 DB::connection('db_companies')->insert(
-                    $this->companyPdoConvert($sql, $this->dbName), [
-                    'product_id' => $product->productId,
-                    'barcode' => $product->barcode,
-                    'description' => $product->description,
-                    'photo' => $product->photo,
-                    'no_expiration' => $product->noExp,
-                    'size' => $product->size,
-                    'created_at' => $product->createdAt,
-                    'updated_at' => $product->updatedAt,
-                ]);
+                    $this->companyPdoConvert($sql, $this->dbName),
+                    [
+                        'product_id' => $product->productId,
+                        'barcode' => $product->barcode,
+                        'description' => $product->description,
+                        'photo' => $product->photo,
+                        'no_expiration' => $product->noExp,
+                        'size' => $product->size,
+                        'created_at' => $product->createdAt,
+                        'updated_at' => $product->updatedAt,
+                    ]
+                );
             } else {
                 $sql = "INSERT INTO #t#.products
             (product_id, barcode, description, size, photo, no_expiration, created_at, updated_at)
             VALUES (:product_id, :barcode, :description, :size, :photo, :no_expiration, NOW(), NOW())";
                 DB::connection('db_companies')->insert(
-                    $this->companyPdoConvert($sql, $this->dbName), [
-                    'product_id' => $product->productId,
-                    'barcode' => $product->barcode,
-                    'description' => $product->description,
-                    'photo' => $product->photo,
-                    'no_expiration' => $product->noExp,
-                    'size' => $product->size,
-                ]);
+                    $this->companyPdoConvert($sql, $this->dbName),
+                    [
+                        'product_id' => $product->productId,
+                        'barcode' => $product->barcode,
+                        'description' => $product->description,
+                        'photo' => $product->photo,
+                        'no_expiration' => $product->noExp,
+                        'size' => $product->size,
+                    ]
+                );
             }
         } catch (\PDOException $e) {
             echo $product->productId . " " . $product->barcode . PHP_EOL;

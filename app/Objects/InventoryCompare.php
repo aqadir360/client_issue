@@ -100,7 +100,7 @@ class InventoryCompare
         // Create any items from file that were not in existing inventory
         foreach ($this->fileItemsLookup as $barcode => $items) {
             foreach ($items as $item) {
-                $this->createNewItem($barcode, $item);
+                $this->createNewItem($barcode, $item, $item->location);
             }
         }
     }
@@ -206,28 +206,28 @@ class InventoryCompare
         return !$item->matchingLocation($existing['aisle'], $existing['section'], $existing['shelf']);
     }
 
-    private function createNewItem($barcode, Inventory $item)
+    private function createNewItem($barcode, Inventory $item, Location $loc)
     {
         if ($this->import->isInSkipList($barcode)) {
             return;
         }
 
-        if ($item->location->valid === false) {
+        if ($loc->valid === false) {
             $this->import->recordSkipped();
             return;
         }
 
-        if ($this->import->shouldSkipLocation($item->location->aisle, $item->location->section, $item->location->shelf)) {
+        if ($this->import->shouldSkipLocation($loc->aisle, $loc->section, $loc->shelf)) {
             return;
         }
 
         $result = $this->import->implementationScan(
             $item->product,
             $this->storeId,
-            $item->location->aisle,
-            $item->location->section,
+            $loc->aisle,
+            $loc->section,
             $item->departmentId,
-            $item->location->shelf
+            $loc->shelf
         );
 
         if ($result !== null) {

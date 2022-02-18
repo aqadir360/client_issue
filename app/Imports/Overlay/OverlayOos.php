@@ -6,7 +6,7 @@ use App\Imports\Overlay\Settings\OosMapper as Settings;
 use App\Objects\Api;
 use App\Objects\Database;
 use DateTime;
-use Log;
+use Illuminate\Support\Facades\Log;
 
 // Overlays dates for all OOS items with closest non-expired date within company
 class OverlayOos
@@ -91,7 +91,12 @@ class OverlayOos
     private function getExpirationDate($item, Settings $settings): ?string
     {
         $direction = $settings->expirationDate == 'closest_date' ? 'asc' : 'desc';
-        $closestDate = $this->db->fetchClosestDate($item->product_id, $settings->copyFrom, $direction, $settings->maxDate);
+        $closestDate = $this->db->fetchClosestDate(
+            $item->product_id,
+            $settings->copyFrom,
+            $direction,
+            $settings->maxDate
+        );
 
         if ($closestDate && $closestDate->expiration_date) {
             return $closestDate->expiration_date;

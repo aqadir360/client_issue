@@ -5,7 +5,7 @@ namespace App\Imports\Overlay;
 use App\Imports\Overlay\Settings\NewMapper as Settings;
 use App\Objects\Api;
 use App\Objects\Database;
-use Log;
+use Illuminate\Support\Facades\Log;
 
 // Overlays dates for all new items with closest non-expired date within company
 class OverlayNew
@@ -62,7 +62,11 @@ class OverlayNew
                 $updatedCount++;
 
                 // Write the date for all inventory items
-                $inventory = $this->db->fetchNewCompanyInventory($product->product_id, $settings->excludeStores, $settings->excludeDepts);
+                $inventory = $this->db->fetchNewCompanyInventory(
+                    $product->product_id,
+                    $settings->excludeStores,
+                    $settings->excludeDepts
+                );
 
                 foreach ($inventory as $item) {
                     $this->proxy->writeInventoryExpiration($companyId, $item->inventory_item_id, $expirationDate);
@@ -93,7 +97,7 @@ class OverlayNew
                 $settings->copyFrom,
                 $settings->compareDate
             );
-        } else if ($settings->expirationDate === 'date_range') {
+        } elseif ($settings->expirationDate === 'date_range') {
             // Get the closest date within given date range
             $closestDate = $this->db->fetchClosestDateInRange(
                 $item->product_id,
@@ -104,12 +108,14 @@ class OverlayNew
             );
         } else {
             $direction = $settings->expirationDate === 'closest' ? 'asc' : 'desc';
-            $closestDate = $this->db->fetchClosestDate($item->product_id, $settings->copyFrom, $direction, $settings->maxDate);
+            $closestDate = $this->db->fetchClosestDate(
+                $item->product_id,
+                $settings->copyFrom,
+                $direction,
+                $settings->maxDate
+            );
         }
 
-        if ($closestDate && $closestDate->expiration_date) {
-            return $closestDate->expiration_date;
-        }
-        return null;
+        return ($closestDate && $closestDate->expiration_date) ? $closestDate->expiration_date : null;
     }
 }

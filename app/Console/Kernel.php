@@ -2,14 +2,6 @@
 
 namespace App\Console;
 
-use App\Console\Commands\CopyMetrics;
-use App\Console\Commands\CopyNewDates;
-use App\Console\Commands\CopyOverlayDates;
-use App\Console\Commands\DoImport;
-use App\Console\Commands\ImportDsdSkip;
-use App\Console\Commands\PopulateSkipList;
-use App\Console\Commands\ProcessJob;
-use App\Console\Commands\ProcessNextItem;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -21,14 +13,12 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        DoImport::class,
-        ProcessNextItem::class,
-        PopulateSkipList::class,
-        CopyMetrics::class,
-        CopyOverlayDates::class,
-        ImportDsdSkip::class,
-        CopyNewDates::class,
-        ProcessJob::class,
+        Commands\CopyNewDates::class,
+        Commands\CopyOverlayDates::class,
+        Commands\DoImport::class,
+        Commands\PopulateSkipList::class,
+        Commands\ProcessJob::class,
+        Commands\ProcessNextItem::class,
     ];
 
     /**
@@ -40,7 +30,6 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('dcp:process-import')->everyMinute();
-        // $schedule->command('dcp:copy-metrics')->daily();
     }
 
     /**

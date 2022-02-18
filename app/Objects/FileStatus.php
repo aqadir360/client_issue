@@ -158,13 +158,12 @@ class FileStatus
 
     public function updateCompletedRow()
     {
-        $sql = "UPDATE import_results
-                SET completed_at = NOW(), adds = :adds, moves = :moves, discos = :discos, skipped = :skipped,
-                    metrics = :metrics, errors = :errors, total = :total, static = :static, output = :output,
-                    skip_invalid_stores = :skip_invalid_stores, skip_invalid_barcodes = :skip_invalid_barcodes,
-                    skip_invalid_depts = :skip_invalid_depts, invalid_barcodes = :invalid_barcodes, skip_list = :skip_list,
-                    invalid_depts = :invalid_depts, invalid_stores = :invalid_stores, new_products = :new_products
-                    WHERE id = :id";
+        $sql = "UPDATE import_results SET completed_at = NOW(), adds = :adds, moves = :moves, discos = :discos,
+            skipped = :skipped, metrics = :metrics, errors = :errors, total = :total, new_products = :new_products,
+            output = :output, skip_invalid_stores = :skip_invalid_stores, skip_list = :skip_list, static = :static,
+            skip_invalid_barcodes = :skip_invalid_barcodes, skip_invalid_depts = :skip_invalid_depts,
+            invalid_barcodes = :invalid_barcodes, invalid_depts = :invalid_depts, invalid_stores = :invalid_stores
+            WHERE id = :id";
 
         DB::update($sql, [
             'id' => $this->fileRowId,

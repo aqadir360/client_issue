@@ -3,9 +3,10 @@
 namespace App\Objects;
 
 use Archive7z\Archive7z;
+use Archive7z\Exception;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Log;
 use ZipArchive;
 
 class FtpManager
@@ -99,12 +100,18 @@ class FtpManager
             mkdir($path);
         }
 
-        $zip = new Archive7z($zipFile);
-        if (!$zip->isValid()) {
+        try {
+            $zip = new Archive7z($zipFile);
+            if (!$zip->isValid()) {
+                return false;
+            }
+
+            $zip->setOutputDirectory($path);
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
             return false;
         }
 
-        $zip->setOutputDirectory($path);
         $zip->extract();
         unlink($zipFile);
         return true;

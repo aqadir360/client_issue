@@ -34,8 +34,17 @@ class RaleysInventory implements ImportInterface
         $downloadedFiles = [];
 
         foreach ($stores as $storeNum => $storeId) {
-            $locationFile = $this->import->downloadStoreFileByName($files, 'dcp_aisle_locations_full_as_of_', $storeNum);
-            $masterFile = $this->import->downloadStoreFileByName($files, 'dcp_item_master_as_of_', $storeNum);
+            $locationFile = $this->import->downloadStoreFileByName(
+                $files,
+                'dcp_aisle_locations_full_as_of_',
+                $storeNum
+            );
+
+            $masterFile = $this->import->downloadStoreFileByName(
+                $files,
+                'dcp_item_master_as_of_',
+                $storeNum
+            );
 
             if ($locationFile !== null && $masterFile !== null) {
                 $downloadedFiles[$storeId] = [
@@ -92,8 +101,10 @@ class RaleysInventory implements ImportInterface
                 }
 
                 // Skip if all info is already filled
-                if (isset($locationInventory[intval($barcode)]) && $locationInventory[intval($barcode)][0]->isExistingProduct === true) {
-                    continue;
+                if (isset($locationInventory[intval($barcode)])) {
+                    if ($locationInventory[intval($barcode)][0]->isExistingProduct === true) {
+                        continue;
+                    }
                 }
 
                 if ($this->import->isInSkipList($barcode)) {

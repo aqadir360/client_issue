@@ -276,6 +276,12 @@ class ImportManager
         }
     }
 
+    public function getDeptIdAndRecordCategory(Product $product, string $department, string $category = '')
+    {
+        $this->recordCategory($product, $department, $category);
+        return $this->getDepartmentId(strtolower($department), strtolower($category), $product->barcode);
+    }
+
     public function recordCategory(Product $product, string $department, string $category)
     {
         if (isset($this->categories[$department . $category])) {
@@ -511,7 +517,13 @@ class ImportManager
             return null;
         }
 
-        $response = $this->proxy->persistProduct($this->companyId, $product->productId, $product->barcode, $product->description, $product->size);
+        $response = $this->proxy->persistProduct(
+            $this->companyId,
+            $product->productId,
+            $product->barcode,
+            $product->description,
+            $product->size
+        );
 
         if (!$this->proxy->validResponse($response)) {
             $this->addInvalidBarcode($product->barcode);
@@ -523,8 +535,15 @@ class ImportManager
     }
 
     // Returns product id or null
-    public function implementationScan(Product $product, string $storeId, string $aisle, string $section, string $deptId, string $shelf = '', bool $skipDisco = false)
-    {
+    public function implementationScan(
+        Product $product,
+        string $storeId,
+        string $aisle,
+        string $section,
+        string $deptId,
+        string $shelf = '',
+        bool $skipDisco = false
+    ) {
         $response = $this->proxy->implementationScan(
             $product,
             $this->companyId,
@@ -548,8 +567,14 @@ class ImportManager
         return null;
     }
 
-    public function updateInventoryLocation(string $itemId, string $storeId, string $deptId, string $aisle, string $section, string $shelf = ''): bool
-    {
+    public function updateInventoryLocation(
+        string $itemId,
+        string $storeId,
+        string $deptId,
+        string $aisle,
+        string $section,
+        string $shelf = ''
+    ): bool {
         $response = $this->proxy->updateInventoryLocation(
             $this->companyId,
             $itemId,
@@ -655,8 +680,14 @@ class ImportManager
         return intval($value * 1000);
     }
 
-    public function persistMetric(string $storeId, Product $product, int $cost, int $retail, int $movement, bool $recordSkipped = false)
-    {
+    public function persistMetric(
+        string $storeId,
+        Product $product,
+        int $cost,
+        int $retail,
+        int $movement,
+        bool $recordSkipped = false
+    ) {
         if ($cost === 0 && $retail === 0 && $movement === 0) {
             if ($recordSkipped) {
                 $this->currentFile->skipped++;
