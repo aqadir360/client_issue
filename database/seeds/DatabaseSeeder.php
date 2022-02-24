@@ -48,7 +48,7 @@ class DatabaseSeeder extends Seeder
 	    (33, '6489f200-452e-5b96-fd9e-c95c35eb7ad8', 'alaska', 'Alaksa Products and Metrics', 'Imports Metrics', 'alaska/imports', '2021-11-02 20:45:34'),
 	    (34, '6859ef83-7f11-05fe-0661-075be46276ec', 'price_chopper_compare', 'Price Chopper Inventory Update', 'Updates Inventory by comparison', 'pricechopper/imports', '2021-11-12 18:20:31'),
 	    (35, 'e6fa66c6-6cbe-11ec-a378-42010a80001c', 'mayville', 'Mayville Piggly Wiggle Products and Metrics', 'Import Product and Metrics file', 'foxbros/imports', '2022-01-18 22:28:39'),
-        (36, '9a22701b-d7ae-aaac-1194-d583167f0ba4', 'bristol_farms_compare', 'Bristol Farms Inventory Update', 'Updates Inventory by comparison', 'imports/bristolfarms', '2022-02-02 18:20:31'),
+        (36, '9a22701b-d7ae-aaac-1194-d583167f0ba4', 'bristol_farms_compare', 'Bristol Farms Inventory Update', 'Updates Inventory by comparison', 'bristolfarms/imports', '2022-02-02 18:20:31'),
     	(37, '28e860a6-6ff8-11ec-8850-080027d17c37', 'sprouts', 'Sprouts Import', 'Imports Products', 'sprouts/imports', '2022-02-01 21:05:32'),
     	(38, '28e860a6-6ff8-11ec-8850-080027d17c37', 'sprouts_compare', 'Sprouts Weekly Inventory Comparison Import', 'Sprouts Weekly Inventory Comparison Import', 'sprouts/imports', '2022-02-01 21:05:32'),
         */

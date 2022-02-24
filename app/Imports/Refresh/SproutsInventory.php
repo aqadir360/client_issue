@@ -118,11 +118,6 @@ class SproutsInventory implements ImportInterface
                         $this->import->convertFloatToInt(floatval($data[8])),
                     );
 
-                    if ($location->valid) {
-                        $this->import->writeFileOutput($data, "Success: Valid Product");
-                    } else {
-                        $this->import->writeFileOutput($data, "Skipped: Invalid Location");
-                    }
                 } else {
                     $this->import->writeFileOutput($data, "Skipped: New Product");
                 }
