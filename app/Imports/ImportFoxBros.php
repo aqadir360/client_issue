@@ -33,6 +33,15 @@ class ImportFoxBros implements ImportInterface
         $this->import->completeImport();
     }
 
+    // [0] ACTION
+    // [1] STORE
+    // [2] BARCODE
+    // [3] AISLE
+    // [4] SECTION
+    // [5] DEPARTMENT NAME
+    // [6] PRODUCT GROUP_CATG
+    // [7] PRODUCT DESCRIPTION
+    // [8] PRODUCT SIZE
     private function importActiveFile($file)
     {
         $this->import->startNewFile($file);
@@ -78,20 +87,26 @@ class ImportFoxBros implements ImportInterface
 
     private function handleAdd($data, $barcode, $storeId)
     {
-        $departmentId = $this->import->getDepartmentId(trim(strtolower($data[5])));
+        $product = $this->import->fetchProduct($barcode, $storeId);
+
+        if ($product->isExistingProduct === false) {
+            $product->setDescription($data[7]);
+            $product->setSize($data[8]);
+        }
+
+        $departmentId = $this->import->getDeptIdAndRecordCategory(
+            $product,
+            trim(strtolower($data[5])),
+            trim(strtolower($data[6]))
+        );
+
         if ($departmentId === false) {
             return;
         }
 
-        $product = $this->import->fetchProduct($barcode, $storeId);
         if ($product->hasInventory()) {
             $this->import->recordSkipped();
             return;
-        }
-
-        if ($product->isExistingProduct === false) {
-            $product->setDescription($data[6]);
-            $product->setSize($data[7]);
         }
 
         $this->import->implementationScan(
