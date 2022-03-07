@@ -22,6 +22,7 @@ class ImportFactory
             case 'downtoearth':
                 return new ImportDownToEarth($importManager);
             case 'foxbros':
+            case 'mayville_compare': // Mayville shares files with Fox Bros
                 return new ImportFoxBros($importManager);
             case 'hansens':
                 return new ImportHansens($importManager);
