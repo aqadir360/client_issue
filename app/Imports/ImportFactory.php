@@ -80,6 +80,8 @@ class ImportFactory
                 return new Refresh\BristolFarmInventory($importManager);
             case 'sprouts_compare':
                 return new Refresh\SproutsInventory($importManager);
+            case 'alaska_compare':
+                return new Refresh\AlaskaInventory($importManager);
             default:
                 echo "Invalid Input $key" . PHP_EOL;
                 return null;
