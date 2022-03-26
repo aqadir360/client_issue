@@ -70,6 +70,7 @@ class ImportManager
 
         $this->ftpManager = $ftpManager;
         $this->debugMode = $debugMode;
+        $this->currentFile = new FileStatus('');
 
         if ($this->debugMode) {
             echo "* DEBUG MODE *" . PHP_EOL;
@@ -111,14 +112,14 @@ class ImportManager
         return $skip;
     }
 
-    public function startNewFile($filePath)
+    public function startNewFile($filePath, string $append = '')
     {
         $this->filesProcessed++;
         $file = basename($filePath);
-        $outputFileName = $file . time() . '-output.csv';
+        $outputFileName = $file . $append. time() . '-output.csv';
         $this->currentFile = new FileStatus($filePath);
         $this->currentFile->insertFileRow($this->importStatusId, $outputFileName);
-        $this->outputContent("---- Importing $file");
+        $this->outputContent("---- Importing $file $append");
 
         $this->mappedDepartments = [];
         $this->outputFile = fopen(storage_path('output/' . $outputFileName), 'w');
@@ -135,12 +136,12 @@ class ImportManager
         fputcsv($this->outputFile, $data);
     }
 
-    public function completeFile()
+    public function completeFile(bool $deleteFile = true)
     {
         $this->outputContent($this->currentFile->outputResults());
         $this->currentFile->updateCompletedRow();
 
-        if (!$this->debugMode) {
+        if ($deleteFile && !$this->debugMode) {
             $this->currentFile->deleteFile();
         }
 

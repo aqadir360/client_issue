@@ -3,13 +3,12 @@
 namespace App\Imports\Refresh;
 
 use App\Imports\ImportInterface;
-use App\Imports\Settings\PriceChopperSettings;
 use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 use App\Objects\InventoryCompare;
-use Illuminate\Support\Facades\Log;
 
+// Expects all store inventory in one file
 // [0] Store
 // [1] SKU
 // [2] Barcode
@@ -23,14 +22,13 @@ use Illuminate\Support\Facades\Log;
 // [10] 90 day average daily units sold
 // [11] Retail
 // [12] Cost
-
 class AlaskaInventory implements ImportInterface
 {
     /** @var ImportManager */
     private $import;
 
     public function __construct(ImportManager $importManager)
-    { 
+    {
         $this->import = $importManager;
         $this->import->setSkipList();
         $this->import->setCategories();
@@ -52,33 +50,36 @@ class AlaskaInventory implements ImportInterface
         $id_array = array();
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 10000, "|")) !== false) {
-                if($data[0]!= "Store" && !in_array($data[0],$id_array)){
-                    $id_array[] = $data[0];
-                    $storeNum = $data[0];
+                $storeNum = intval($data[0]);
+
+                if (!in_array($storeNum, $id_array)) {
+                    $id_array[] = $storeNum;
                     $storeId = $this->import->storeNumToStoreId($storeNum);
                     if ($storeId === false) {
                         continue;
                     }
+
                     $compare = new InventoryCompare($this->import, $storeId);
-                    $this->import->startNewFile($file);
+                    $this->import->startNewFile($file, "_" . $storeNum . "_");
                     $this->setFileInventory($compare, $file, $storeId, intval($storeNum));
                     $compare->setExistingInventory();
                     $compare->compareInventorySets();
-                    $this->import->completeFile();
+                    $this->import->completeFile(false);
                 }
             }
-        }                   
+        }
+
+        unlink($file);
     }
 
     private function setFileInventory(InventoryCompare $compare, string $file, string $storeId, int $storeNum)
     {
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 10000, "|")) !== false) {
-                if(intval($data[0]) !== $storeNum){
-                     continue;
+                if (intval($data[0]) !== $storeNum) {
+                    continue;
                 }
-                    
-                     
+
                 $upc = BarcodeFixer::fixLength($data[2]);
                 if ($this->import->isInvalidBarcode($upc, $data[2])) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
@@ -151,12 +152,7 @@ class AlaskaInventory implements ImportInterface
 
     private function parseSize($input)
     {
-        return str_replace('#', 'lb', str_replace('>', '<', $input));
-    }
-
-    private function getStoreNum(string $filename)
-    { 
-        return intval(substr($filename, 0, -4));
+        return str_replace('#', 'lb', str_replace('<', 'oz', $input));
     }
 
     private function parseLocation(array $data): Location
@@ -164,14 +160,12 @@ class AlaskaInventory implements ImportInterface
         $location = new Location();
 
         if (!empty($data[3]) || !empty($data[4])) {
-            // $trimData = trim($data[3]);
-            // preg_match('/s*(\d+)/', $trimData, $matches, PREG_OFFSET_CAPTURE);
             $location->aisle = trim($data[3]);
             $location->section = trim($data[4]);
             $location->shelf = trim($data[5]);
             $location->valid = true;
         }
-        
+
         return $location;
     }
 }
