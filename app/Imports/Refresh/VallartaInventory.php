@@ -40,11 +40,10 @@ class VallartaInventory implements ImportInterface
     private function importActiveFile($file)
     {
         $this->import->startNewFile($file);
-
-        $storeNum = substr(basename($file), 6, -4);
-        $storeId = $this->import->storeNumToStoreId(intval($storeNum));
+        $storeNum = $this->getStoreNum(basename($file));
+        $storeId = $this->import->storeNumToStoreId($storeNum);
         if ($storeId === false) {
-            echo "Invalid store " . $storeNum . PHP_EOL;
+            echo "Invalid store $storeNum" . PHP_EOL;
             return;
         }
 
@@ -126,5 +125,12 @@ class VallartaInventory implements ImportInterface
         $location = new Location(trim($data[1]), trim($data[3]));
         $location->valid = !$this->settings->shouldSkipLocation($location);
         return $location;
+    }
+
+    private function getStoreNum(string $file)
+    {
+        $storeNum = substr($file, 6);
+        $pos = strpos($storeNum, '_');
+        return intval(substr($storeNum, 0, $pos));
     }
 }
