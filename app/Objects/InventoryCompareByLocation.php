@@ -23,13 +23,15 @@ class InventoryCompareByLocation
     private $totalExistingItems = 0;
     private $maxAllowedDiscoPercent = 40;
     private $minItemsForTrackedLoc = 3;
+    private $updateDepts = true;
 
-    public function __construct(ImportManager $import, string $storeId)
+    public function __construct(ImportManager $import, string $storeId, bool $updateDepts = true)
     {
         $this->companyId = $import->companyId();
         $this->storeId = $storeId;
         $this->proxy = $import->getProxy();
         $this->import = $import;
+        $this->updateDepts = $updateDepts;
     }
 
     // Gets inventory and sets tracked locations
@@ -193,15 +195,15 @@ class InventoryCompareByLocation
         }
     }
 
-    private function moveItem($existingItem, $newItem)
+    private function moveItem(array $existingItem, array $newItem)
     {
-        if ($this->shouldMoveItem($existingItem, $newItem) && $newItem['location']->valid) {
-            $deptId = isset($newItem['departmentId']) ? $newItem['departmentId'] : $existingItem['departmentId'];
+        $departmentId = $this->getDepartmentId($existingItem, $newItem);
 
+        if ($this->shouldMoveItem($existingItem, $newItem, $departmentId) && $newItem['location']->valid) {
             $this->import->updateInventoryLocation(
                 $existingItem['id'],
                 $this->storeId,
-                $deptId,
+                $departmentId,
                 $newItem['location']->aisle,
                 $newItem['location']->section,
                 $newItem['location']->shelf
@@ -209,7 +211,7 @@ class InventoryCompareByLocation
 
             $this->updateTrackedLocations(
                 $this->getLocKey($newItem['location']->aisle, $newItem['location']->section),
-                $deptId
+                $departmentId
             );
 
             $this->import->writeFileOutput($newItem, "Success: Moved");
@@ -219,15 +221,24 @@ class InventoryCompareByLocation
         }
     }
 
+    private function getDepartmentId(array $existingItem, array $newItem): string
+    {
+        if ($this->updateDepts === false) {
+            return $existingItem['departmentId'];
+        }
+
+        return $newItem['departmentId'] ?? $existingItem['departmentId'];
+    }
+
     // Do not move to skipped or identical locations
-    private function shouldMoveItem($existing, $item): bool
+    private function shouldMoveItem($existing, $item, $departmentId): bool
     {
         if ($this->import->shouldSkipLocation($item['location']->aisle) || $item['location']->valid === false) {
             return false;
         }
 
         // Move to new department if changed
-        if (isset($item['departmentId']) && $item['departmentId'] !== $existing['departmentId']) {
+        if (isset($item['departmentId']) && $departmentId !== $existing['departmentId']) {
             return true;
         }
 
