@@ -65,7 +65,7 @@ class ImportHardings implements ImportInterface
             return;
         }
 
-        $compare = new InventoryCompareByLocation($this->import, $storeId);
+        $compare = new InventoryCompareByLocation($this->import, $storeId, false);
 
         $exists = $this->setFileInventory($compare, $file, $storeId);
         if (!$exists) {
