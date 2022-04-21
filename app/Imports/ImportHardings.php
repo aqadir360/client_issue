@@ -74,16 +74,7 @@ class ImportHardings implements ImportInterface
         }
 
         $compare->setExistingInventory();
-
-        // DCP2-560: Skipping location updates for North Muskegon and Middleville due to bad location data
-        switch ($storeNum) {
-            case 165: // North Muskegon
-            case 455: // Middleville
-                $compare->compareInventorySetsWithoutMoves();
-                break;
-            default:
-                $compare->compareInventorySets();
-        }
+        $compare->compareInventorySets();
     }
 
     private function setFileInventory(InventoryCompareByLocation $compare, $file, $storeId): bool
