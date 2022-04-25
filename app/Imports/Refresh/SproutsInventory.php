@@ -13,11 +13,11 @@ use App\Objects\InventoryCompare;
 // [2] Department
 // [3] Category
 // [4] Description
-// [5] Size
-// [6] Price
-// [7] Cost
-// [8] 90_Day_AVG_Daily_Movement
-
+// [5] Brand
+// [6] Size
+// [7] Price
+// [8] Cost
+// [9] 90_Day_AVG_Daily_Movement
 
 class SproutsInventory implements ImportInterface
 {
@@ -33,7 +33,7 @@ class SproutsInventory implements ImportInterface
 
     public function importUpdates()
     {
-        $files = glob(storage_path('imports\sprouts\*.csv'));
+        $files = $this->import->downloadFilesByName('sprouts_');
 
         foreach ($files as $file) {
             $this->importInventory($file);
@@ -77,8 +77,8 @@ class SproutsInventory implements ImportInterface
                 $product = $this->import->fetchProduct($upc);
 
                 if ($product->isExistingProduct === false) {
-                    $product->setDescription(str_replace('-', ' ', $data[4]));
-                    $product->setSize(trim($data[5]));
+                    $product->setDescription(trim(trim($data[5]) . " " . str_replace('-', ' ', $data[4])));
+                    $product->setSize(trim($data[6]));
                     $productId = $this->import->createProduct($product);
 
                     if ($productId) {
@@ -98,8 +98,9 @@ class SproutsInventory implements ImportInterface
                     continue;
                 }
 
+                // Map separate set of departments for pilot store #2
                 if ($storeId == '862fc0dd-8f7f-e681-5d40-78aabbd2c012') {
-                    $departmentId = $this->getStoreWiseDDepartment($departmentId);
+                    $departmentId = $this->getStoreDepartmentOverride($departmentId);
                 }
 
                 $compare->setFileInventoryItem(
@@ -108,19 +109,13 @@ class SproutsInventory implements ImportInterface
                     $departmentId
                 );
 
-                if ($product && $product->isExistingProduct) {
-
-                    $this->import->persistMetric(
-                        $storeId,
-                        $product,
-                        $this->import->convertFloatToInt(floatval($data[7])),
-                        $this->import->convertFloatToInt(floatval($data[6])),
-                        $this->import->convertFloatToInt(floatval($data[8])),
-                    );
-
-                } else {
-                    $this->import->writeFileOutput($data, "Skipped: New Product");
-                }
+                $this->import->persistMetric(
+                    $storeId,
+                    $product,
+                    $this->import->convertFloatToInt(floatval($data[8])),
+                    $this->import->convertFloatToInt(floatval($data[7])),
+                    $this->import->convertFloatToInt(floatval($data[9])),
+                );
             }
 
             fclose($handle);
@@ -129,7 +124,7 @@ class SproutsInventory implements ImportInterface
         return $compare->fileInventoryCount() > 0;
     }
 
-       private function getStoreNum($file)
+    private function getStoreNum($file)
     {
         $string = substr(($file), strpos(($file), '_') + 1);
         return substr($string, 0, strpos($string, '_'));
@@ -146,7 +141,7 @@ class SproutsInventory implements ImportInterface
         return $upc;
     }
 
-    private function getStoreWiseDDepartment(string $departmentId): string
+    private function getStoreDepartmentOverride(string $departmentId): string
     {
         switch ($departmentId) {
             case '11301709-5372-8791-f967-11fa0a9ce474':
@@ -165,7 +160,4 @@ class SproutsInventory implements ImportInterface
 
         return $departmentId;
     }
-
-
-
 }
