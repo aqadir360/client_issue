@@ -81,7 +81,7 @@ class ImportHardings implements ImportInterface
     {
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 5000, "|")) !== false) {
-                if (count($data) < 37) {
+                if (count($data) < 61) {
                     $this->import->recordFileLineError('ERROR', 'Line too short to parse');
                     continue;
                 }
@@ -93,6 +93,12 @@ class ImportHardings implements ImportInterface
                 $upc = BarcodeFixer::fixUpc(trim($data[3]));
                 if ($this->import->isInvalidBarcode($upc, $data[3])) {
                     $this->import->writeFileOutput([$data[3]], "Skip: Invalid Barcode");
+                    continue;
+                }
+
+                $movement = floatval($data[33]);
+                if ($movement <= 0) {
+                    $this->import->writeFileOutput([$data[3]], "Skip: Invalid Movement");
                     continue;
                 }
 
@@ -132,10 +138,6 @@ class ImportHardings implements ImportInterface
                     $departmentId
                 );
 
-                if (count($data) < 61) {
-                    continue;
-                }
-
                 $cost = $this->parseCost(floatval($data[60]), intval($data[61]));
                 $retail = $this->parseRetail(trim($data[7]));
 
@@ -144,8 +146,7 @@ class ImportHardings implements ImportInterface
                     $product,
                     $this->import->convertFloatToInt($cost),
                     $this->import->convertFloatToInt($retail),
-                    $this->import->convertFloatToInt(abs(floatval($data[33]))),
-                    false
+                    $this->import->convertFloatToInt($movement)
                 );
             }
 
