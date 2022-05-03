@@ -40,23 +40,23 @@ class PriceChopperInventory implements ImportInterface
 
     public function importUpdates()
     {
-        $files = glob(storage_path('imports/pricechopper/*.psv'));
+        $files = $this->import->downloadFilesByName("Store");
 
         foreach ($files as $file) {
-            $this->importInventory($file);
+            $storeNum = $this->parseStoreNum($file);
+            $storeId = $this->import->storeNumToStoreId($storeNum);
+            if (!$storeId) {
+                continue;
+            }
+
+            $this->importInventory($file, $storeId);
         }
 
         $this->import->completeImport();
     }
 
-    private function importInventory($file)
+    private function importInventory($file, $storeId)
     {
-        $storeNum = $this->getStoreNum(basename($file));
-        $storeId = $this->import->storeNumToStoreId($storeNum);
-        if ($storeId === false) {
-            return;
-        }
-
         $compare = new InventoryCompare($this->import, $storeId);
 
         $this->import->startNewFile($file);
@@ -69,7 +69,7 @@ class PriceChopperInventory implements ImportInterface
     private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
     {
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 10000, "|")) !== false) {
+            while (($data = fgetcsv($handle, 10000, ",")) !== false) {
                 $upc = BarcodeFixer::fixUpc($data[2]);
                 if ($this->import->isInvalidBarcode($upc, $data[2])) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
@@ -144,10 +144,9 @@ class PriceChopperInventory implements ImportInterface
         return $compare->fileInventoryCount() > 0;
     }
 
-    private function getStoreNum(string $filename)
+    private function parseStoreNum($file)
     {
-        $start = strpos($filename, '_');
-        return intval(substr($filename, $start + 1, -4));
+        return intval(substr($file, -7, 3));
     }
 
     private function getRelatedDSDDepartment(string $departmentId): string
