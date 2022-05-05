@@ -21,6 +21,9 @@ class InventoryCompare
     private $inventoryLookup = [];
     private $fileItemsLookup = [];
 
+    private $updateLocations = true;
+    private $updateDepartments = true;
+
     private $totalExistingItems = 0;
     private $maxAllowedDiscoPercent = 40;
 
@@ -61,8 +64,11 @@ class InventoryCompare
     // Moves any products with a 1:1 match
     // Creates items found in file but not existing inventory
     // Discontinues items in existing inventory but not in file if below allowed disco percent
-    public function compareInventorySets()
+    public function compareInventorySets(bool $updateLocations = true, bool $updateDepartments = true)
     {
+        $this->updateLocations = $updateLocations;
+        $this->updateDepartments = $updateDepartments;
+
         // Handle all products in common between both inventory sets
         foreach ($this->fileItemsLookup as $barcode => $items) {
             if (isset($this->inventoryLookup[$barcode])) {
@@ -175,16 +181,33 @@ class InventoryCompare
     private function moveItem($existingItem, Inventory $newItem)
     {
         if ($this->shouldMoveItem($existingItem, $newItem) && $newItem->location->valid) {
-            $this->import->updateInventoryLocation(
-                $existingItem['id'],
-                $this->storeId,
-                $newItem->departmentId,
-                $newItem->location->aisle,
-                $newItem->location->section,
-                $newItem->location->shelf
-            );
+            if ($this->updateLocations === false && $this->updateDepartments === false) {
+                $this->import->recordStatic();
+                $this->import->writeFileOutput([$newItem->product->barcode], "Static: Skipping Moves");
+            } else {
+                $departmentId = $this->updateDepartments ? $newItem->departmentId : $existingItem['department_id'];
 
-            $this->import->writeFileOutput([$newItem->product->barcode], "Success: Moved");
+                if ($this->updateLocations) {
+                    $updateLocation = $newItem->location;
+                } else {
+                    $updateLocation = new Location(
+                        $existingItem['aisle'],
+                        $existingItem['section'],
+                        $existingItem['shelf']
+                    );
+                }
+
+                $this->import->updateInventoryLocation(
+                    $existingItem['id'],
+                    $this->storeId,
+                    $departmentId,
+                    $updateLocation->aisle,
+                    $updateLocation->section,
+                    $updateLocation->shelf
+                );
+
+                $this->import->writeFileOutput([$newItem->product->barcode], "Success: Moved");
+            }
         } else {
             $this->import->recordStatic();
             $this->import->writeFileOutput([$newItem->product->barcode], "Static: Existing Inventory");

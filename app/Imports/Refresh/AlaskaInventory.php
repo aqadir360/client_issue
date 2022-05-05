@@ -36,9 +36,17 @@ class AlaskaInventory implements ImportInterface
 
     public function importUpdates()
     {
-        $files = glob(storage_path('imports/alaska/*.csv'));
-
+        $files = $this->import->ftpManager->getRecentlyModifiedFiles();
         foreach ($files as $file) {
+            if (strpos($file, 'Date Check Pro-Full') !== false) {
+                $zipFile = $this->import->ftpManager->downloadFile($file);
+                $this->import->ftpManager->unzipFile($zipFile, 'alaska_unzipped');
+            }
+        }
+
+        $filesToImport = glob(storage_path('imports/alaska_unzipped/*'));
+
+        foreach ($filesToImport as $file) {
             $this->importInventory($file);
         }
 
@@ -60,10 +68,10 @@ class AlaskaInventory implements ImportInterface
                     }
 
                     $compare = new InventoryCompare($this->import, $storeId);
-                    $this->import->startNewFile($file, "_" . $storeNum . "_");
+                    $this->import->startNewFile($file, "-" . $storeNum . "-");
                     $this->setFileInventory($compare, $file, $storeId, intval($storeNum));
                     $compare->setExistingInventory();
-                    $compare->compareInventorySets();
+                    $compare->compareInventorySets(false, false);
                     $this->import->completeFile(false);
                 }
             }
@@ -105,6 +113,18 @@ class AlaskaInventory implements ImportInterface
                     $this->import->db->setProductSku($product->productId, $sku);
                 }
 
+                // Items missing movement data are not in active inventory
+                if (trim($data[10]) === '' || trim($data[10]) === 'NULL') {
+                    $this->import->writeFileOutput($data, "Skip: Null Movement");
+                    continue;
+                }
+
+                $movement = floatval($data[10]);
+                if ($movement < 0) {
+                    $this->import->writeFileOutput($data, "Skip: Negative Movement");
+                    continue;
+                }
+
                 $location = $this->parseLocation($data);
 
                 if ($location->valid === false) {
@@ -131,7 +151,7 @@ class AlaskaInventory implements ImportInterface
                         $product,
                         $this->import->convertFloatToInt(floatval($data[12])),
                         $this->import->convertFloatToInt(floatval($data[11])),
-                        $this->import->convertFloatToInt(floatval($data[10])),
+                        $this->import->convertFloatToInt($movement),
                     );
 
                     if ($location->valid) {
