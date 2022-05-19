@@ -180,9 +180,8 @@ class AlaskaInventory implements ImportInterface
         $location = new Location();
 
         if (!empty($data[3]) || !empty($data[4])) {
-            $location->aisle = trim($data[3]);
-            $location->section = trim($data[4]);
-            $location->shelf = trim($data[5]);
+            // Not importing location data
+            $location->aisle = 'UNKN';
             $location->valid = true;
         }
 
