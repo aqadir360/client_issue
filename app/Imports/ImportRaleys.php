@@ -202,11 +202,11 @@ class ImportRaleys implements ImportInterface
                 $item = $product->getMatchingInventoryItem($location);
 
                 if ($item !== null) {
-                    if ($this->needToMoveItem($item, $location, $departmentId)) {
+                    if ($this->needToMoveItem($item, $location)) {
                         $this->moveInventoryItem(
                             $item->inventory_item_id,
                             $storeId,
-                            $departmentId,
+                            $item->department_id,
                             $location->aisle,
                             $location->section,
                             $data
@@ -280,12 +280,9 @@ class ImportRaleys implements ImportInterface
         return false;
     }
 
-    private function needToMoveItem($item, Location $location, string $departmentId)
+    private function needToMoveItem($item, Location $location): bool
     {
-        return !($item->aisle === $location->aisle
-            && $item->section === $location->section
-            && $item->department_id === $departmentId
-        );
+        return !($item->aisle === $location->aisle && $item->section === $location->section);
     }
 
     private function normalizeRaleysLocation(string $input): Location
