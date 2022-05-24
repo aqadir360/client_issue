@@ -109,7 +109,7 @@ class PriceChopperInventory implements ImportInterface
                 }
 
                 // DSD column check and map departments to the related DSD department if the value is true
-                if (trim($data[7]) === 'TRUE') {
+                if (strtolower(trim($data[7])) === 'true') {
                     $departmentId = $this->getRelatedDSDDepartment($departmentId);
                 }
 

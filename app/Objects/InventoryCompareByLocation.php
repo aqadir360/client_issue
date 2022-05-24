@@ -21,7 +21,7 @@ class InventoryCompareByLocation
     private $trackedLocations = [];
 
     private $totalExistingItems = 0;
-    private $maxAllowedDiscoPercent = 40;
+    private $maxAllowedDiscoPercent = 70;
     private $minItemsForTrackedLoc = 3;
     private $updateDepts = true;
 
@@ -158,7 +158,7 @@ class InventoryCompareByLocation
     private function handleOneToOneMatch($barcode, $items)
     {
         $newItem = array_shift($items);
-        $this->moveItem($this->inventoryLookup[$barcode][0], $newItem);
+        $this->moveItem($this->inventoryLookup[$barcode][0], $newItem, $barcode);
 
         unset($this->fileItemsLookup[$barcode]);
         $this->inventoryLookup[$barcode][0]['found'] = true;
@@ -171,7 +171,7 @@ class InventoryCompareByLocation
             foreach ($this->inventoryLookup[$barcode] as $i => $existingItem) {
                 if ($aisle == $existingItem['aisle']) {
                     $this->inventoryLookup[$barcode][$i]['found'] = true;
-                    $this->moveItem($this->inventoryLookup[$barcode][$i], $item);
+                    $this->moveItem($this->inventoryLookup[$barcode][$i], $item, $barcode);
                     unset($this->fileItemsLookup[$barcode][$aisle]);
                     break;
                 }
@@ -183,7 +183,7 @@ class InventoryCompareByLocation
             foreach ($this->inventoryLookup[$barcode] as $i => $existingItem) {
                 if (!$existingItem['found']) {
                     $this->inventoryLookup[$barcode][$i]['found'] = true;
-                    $this->moveItem($existingItem, $remainingItem);
+                    $this->moveItem($existingItem, $remainingItem, $barcode);
                     unset($this->fileItemsLookup[$barcode][$aisle]);
                     break;
                 }
@@ -195,7 +195,7 @@ class InventoryCompareByLocation
         }
     }
 
-    private function moveItem(array $existingItem, array $newItem)
+    private function moveItem(array $existingItem, array $newItem, string $barcode)
     {
         $departmentId = $this->getDepartmentId($existingItem, $newItem);
 
@@ -214,10 +214,11 @@ class InventoryCompareByLocation
                 $departmentId
             );
 
-            $this->import->writeFileOutput($newItem, "Success: Moved");
+            $this->writeFileOutput($barcode, (string)$newItem['location'], "Success: Moved");
+
         } else {
             $this->import->recordStatic();
-            $this->import->writeFileOutput($newItem, "Static: Existing Inventory");
+            $this->writeFileOutput($barcode, (string)$newItem['location'], "Static: Existing Inventory");
         }
     }
 
@@ -304,15 +305,14 @@ class InventoryCompareByLocation
             $item['departmentId'],
             $item['location']->shelf
         );
-
-        $this->import->writeFileOutput($item, "Success: Created");
+        $this->writeFileOutput($product->barcode, (string)$item['location'], "Success: Created");
     }
 
     private function discontinue($item)
     {
         $response = $this->proxy->writeInventoryDisco($this->companyId, $item['id']);
         $this->import->recordResponse($response, 'disco');
-        $this->import->writeFileOutput($item, "Success: Disco");
+        $this->writeFileOutput($item['barcode'], $item['aisle'] . " " . $item['section'], "Success: Disco");
     }
 
     private function getLocKey($aisle, $section)
@@ -355,5 +355,10 @@ class InventoryCompareByLocation
             return 0;
         }
         return number_format($ratio * 100, 1);
+    }
+
+    private function writeFileOutput(string $barcode, string $location, string $message)
+    {
+        $this->import->writeFileOutput([$barcode, $location], $message);
     }
 }

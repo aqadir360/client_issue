@@ -92,13 +92,13 @@ class ImportHardings implements ImportInterface
 
                 $upc = BarcodeFixer::fixUpc(trim($data[3]));
                 if ($this->import->isInvalidBarcode($upc, $data[3])) {
-                    $this->import->writeFileOutput([$data[3]], "Skip: Invalid Barcode");
+                    $this->import->writeFileOutput([$upc, $data[3]], "Skip: Invalid Barcode");
                     continue;
                 }
 
                 $movement = floatval($data[33]);
                 if ($movement <= 0) {
-                    $this->import->writeFileOutput([$data[3]], "Skip: Invalid Movement");
+                    $this->import->writeFileOutput([$upc, $data[33]], "Skip: Invalid Movement");
                     continue;
                 }
 
