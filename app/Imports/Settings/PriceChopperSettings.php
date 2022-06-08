@@ -10,6 +10,11 @@ class PriceChopperSettings
     {
         $aisle = trim($data[12]);
 
+        // Exclude any location with FE in aisle
+        if (strpos(strtolower($aisle), 'fe') !== false) {
+            return new Location($aisle);
+        }
+
         // Include full aisle string when not beginning with AL (e.g. AL01 becomes 01, RX01 remains RX01).
         if (strpos($aisle, 'AL') === 0) {
             $aisle = substr($aisle, 2);
