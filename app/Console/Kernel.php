@@ -19,6 +19,7 @@ class Kernel extends ConsoleKernel
         Commands\PopulateSkipList::class,
         Commands\ProcessJob::class,
         Commands\ProcessNextItem::class,
+        Commands\MoveOutputFile::class,
     ];
 
     /**
@@ -30,6 +31,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('dcp:process-import')->everyMinute();
+        $schedule->command('dcp:move_output_file')->hourly();
     }
 
     /**

@@ -18,7 +18,8 @@
         "guzzlehttp/guzzle": "^6.5",
         "laravel/framework": "^8.83",
         "laravel/tinker": "^2.7",
-        "league/flysystem-sftp": "^1.1"
+        "league/flysystem-sftp": "^1.1",
+        "matthewbdaly/laravel-azure-storage": "^1.6"
     },
     "require-dev": {
         "facade/ignition": "^2.17",

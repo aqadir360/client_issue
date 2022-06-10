@@ -5,6 +5,8 @@ namespace App\Objects;
 use App\Models\Department;
 use App\Models\Product;
 use Ramsey\Uuid\Uuid;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ImportManager
 {
@@ -31,6 +33,7 @@ class ImportManager
     private $importStatusId;
     private $filesProcessed = 0;
     private $outputFile;
+    private $outputUploadFileName;
 
     private $debugMode;
 
@@ -117,11 +120,17 @@ class ImportManager
         $this->filesProcessed++;
         $file = basename($filePath);
         $outputFileName = $file . $append. time() . '-output.csv';
+        $this->outputUploadFileName = $outputFileName;
         $this->currentFile = new FileStatus($filePath);
-        $this->currentFile->insertFileRow($this->importStatusId, $outputFileName);
+        $this->currentFile->insertFileRow($this->importStatusId, date("Y")."\/".date('m')."\/".$outputFileName);
         $this->outputContent("---- Importing $file $append");
 
         $this->mappedDepartments = [];
+
+        if(!Storage::disk('imports_output')->exists('upload/')){
+            Storage::disk('imports_output')->makeDirectory('upload/');
+        }
+
         $this->outputFile = fopen(storage_path('output/' . $outputFileName), 'w');
     }
 
@@ -146,6 +155,18 @@ class ImportManager
         }
 
         fclose($this->outputFile);
+
+        $outFiles = Storage::disk('imports_output');
+        $fileExists = $outFiles->exists($this->outputUploadFileName);
+        if($fileExists){
+            $fileSize = filesize(storage_path('output/' . $this->outputUploadFileName));
+            if($fileSize < 5){
+                $outFiles->delete($this->outputUploadFileName);
+            }else{
+                Storage::disk('imports_output_files')->put($this->outputUploadFileName, $outFiles->get($this->outputUploadFileName));
+                $outFiles->delete($this->outputUploadFileName);
+            }
+        }
     }
 
     public function outputAndResetFile()
