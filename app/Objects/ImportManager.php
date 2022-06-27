@@ -4,9 +4,8 @@ namespace App\Objects;
 
 use App\Models\Department;
 use App\Models\Product;
-use Ramsey\Uuid\Uuid;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Ramsey\Uuid\Uuid;
 
 class ImportManager
 {
@@ -119,15 +118,15 @@ class ImportManager
     {
         $this->filesProcessed++;
         $file = basename($filePath);
-        $outputFileName = $file . $append. time() . '-output.csv';
+        $outputFileName = $file . $append . time() . '-output.csv';
         $this->outputUploadFileName = $outputFileName;
         $this->currentFile = new FileStatus($filePath);
-        $this->currentFile->insertFileRow($this->importStatusId, date("Y")."\/".date('m')."\/".$outputFileName);
+        $this->currentFile->insertFileRow($this->importStatusId, date("Y") . "\/" . date('m') . "\/" . $outputFileName);
         $this->outputContent("---- Importing $file $append");
 
         $this->mappedDepartments = [];
 
-        if(!Storage::disk('imports_output')->exists('upload/')){
+        if (!Storage::disk('imports_output')->exists('upload/')) {
             Storage::disk('imports_output')->makeDirectory('upload/');
         }
 
@@ -158,11 +157,11 @@ class ImportManager
 
         $outFiles = Storage::disk('imports_output');
         $fileExists = $outFiles->exists($this->outputUploadFileName);
-        if($fileExists){
+        if ($fileExists) {
             $fileSize = filesize(storage_path('output/' . $this->outputUploadFileName));
-            if($fileSize < 5){
+            if ($fileSize < 5) {
                 $outFiles->delete($this->outputUploadFileName);
-            }else{
+            } else {
                 Storage::disk('imports_output_files')->put($this->outputUploadFileName, $outFiles->get($this->outputUploadFileName));
                 $outFiles->delete($this->outputUploadFileName);
             }
@@ -199,6 +198,25 @@ class ImportManager
             if (strpos($file, $name) !== false && strpos($file, $storeNum) !== false) {
                 return $this->ftpManager->downloadFile($file);
             }
+        }
+        return null;
+    }
+
+    public function downloadMostRecentMatchingFile(array $files, string $name): ?string
+    {
+        $lastModified = 0;
+        $mostRecentFile = null;
+        foreach ($files as $file) {
+            if (strpos($file, $name) !== false) {
+                $fileLastModified = Storage::disk('sftp')->lastModified($file);
+                if (($lastModified < $fileLastModified)) {
+                    $lastModified = $fileLastModified;
+                    $mostRecentFile = $file;
+                }
+            }
+        }
+        if ($mostRecentFile !== null) {
+            return $this->ftpManager->downloadFile($mostRecentFile);
         }
         return null;
     }

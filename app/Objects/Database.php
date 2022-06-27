@@ -210,7 +210,7 @@ class Database
             return true;
         } catch (\Exception $e) {
             Log::error("Insert Company Product Error " . $this->dbName);
-            Log::error($e);
+            Log::error($e->getMessage());
         }
         return false;
     }
@@ -254,7 +254,7 @@ class Database
                 ]
             );
         } catch (\Exception $e) {
-            Log::error($e);
+            Log::error($e->getMessage());
         }
     }
 
@@ -300,7 +300,7 @@ class Database
                 ]
             );
         } catch (\Exception $e) {
-            Log::error($e);
+            Log::error($e->getMessage());
         }
     }
 
@@ -336,7 +336,7 @@ class Database
                 ]
             );
         } catch (\Exception $e) {
-            Log::error($e);
+            Log::error($e->getMessage());
         }
     }
 
@@ -353,7 +353,7 @@ class Database
                 ]
             );
         } catch (\Exception $e) {
-            Log::error($e);
+            Log::error($e->getMessage());
         }
     }
 
@@ -367,7 +367,7 @@ class Database
                 'barcode' => $barcode,
             ]);
         } catch (\Exception $e) {
-            Log::error($e);
+            Log::error($e->getMessage());
         }
     }
 
@@ -736,16 +736,16 @@ class Database
         string $productId,
         array $copyFromStores,
         string $orderDirection,
-        string $maxDate
+        string $maxDate,
+        string $minDate
     ) {
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
-            inner join #t#.stores s on l.store_id = s.store_id
             where i.product_id = :product_id and i.expiration_date < :max_date
-            and i.close_dated_date > '2021-04-13' and i.expiration_date is not null and i.flag is null and i.disco = 0";
+            and i.close_dated_date > :start_date and i.expiration_date is not null and i.flag is null and i.disco = 0";
 
         if (!empty($copyFromStores)) {
-            $sql .= " and s.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
+            $sql .= " and l.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
         }
 
         $sql .= " order by i.expiration_date $orderDirection ";
@@ -753,6 +753,7 @@ class Database
         return $this->fetchOneFromCompanyDb($sql, [
             'product_id' => $productId,
             'max_date' => $maxDate,
+            'min_date' => $minDate,
         ]);
     }
 
@@ -765,7 +766,6 @@ class Database
     ) {
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
-            inner join #t#.stores s on l.store_id = s.store_id
             where i.product_id = :product_id and i.expiration_date is not null and i.flag is null and i.disco = 0 ";
 
         $params = [
@@ -773,7 +773,7 @@ class Database
         ];
 
         if (!empty($copyFromStores)) {
-            $sql .= " and s.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
+            $sql .= " and l.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
         }
 
         if (!is_null($startDate)) {

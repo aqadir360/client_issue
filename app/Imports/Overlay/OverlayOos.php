@@ -52,6 +52,10 @@ class OverlayOos
         $inventoryCount = 0;
         $skipped = 0;
 
+        $date = new \DateTime();
+        $date->add(new \DateInterval('P1M'));
+        $minDate = $date->format('Y-M-D');
+
         foreach ($inventory as $item) {
             $date = null;
 
@@ -63,7 +67,7 @@ class OverlayOos
                 $date->setTimestamp($startUnix + ($endUnix - $startUnix) * ($inventoryCount / $total));
                 $date->setTime(0, 0, 0);
             } else {
-                $date = $this->getExpirationDate($item, $settings);
+                $date = $this->getExpirationDate($item, $settings, $minDate);
 
                 if ($date === null) {
                     $skipped++;
@@ -88,14 +92,15 @@ class OverlayOos
         return new Settings($result);
     }
 
-    private function getExpirationDate($item, Settings $settings): ?string
+    private function getExpirationDate($item, Settings $settings, string $minDate): ?string
     {
         $direction = $settings->expirationDate == 'closest_date' ? 'asc' : 'desc';
-        $closestDate = $this->db->fetchClosestDate(
+        $closestDate = $this->db->fetchClosestDateInRange(
             $item->product_id,
             $settings->copyFrom,
             $direction,
-            $settings->maxDate
+            $settings->maxDate,
+            $minDate
         );
 
         if ($closestDate && $closestDate->expiration_date) {
