@@ -7,18 +7,18 @@ use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
 use App\Objects\InventoryCompare;
-use Illuminate\Support\Facades\Log;
 
 // [0] Store
 // [1] UPC
-// [2] Product Name
-// [3] Size
-// [4] Section Name
+// [2] Aisle
+// [3] Section
+// [4] Department
 // [5] Category
-// [6] Area_Aisle
-// [7] Movement
-// [8] Price($)
-// [9] Cost($)
+// [6] Description
+// [7] Size
+// [8] Movement
+// [9] Price($)
+// [10] Cost($)
 
 class BristolFarmInventory implements ImportInterface
 {
@@ -34,7 +34,7 @@ class BristolFarmInventory implements ImportInterface
 
     public function importUpdates()
     {
-        $files = glob(storage_path('imports\bristolfarms\*.psv'));
+        $files = $this->import->downloadFilesByName('DateCheckPro_FileExport_');
 
         foreach ($files as $file) {
             $this->importInventory($file);
@@ -63,7 +63,7 @@ class BristolFarmInventory implements ImportInterface
     private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
     {
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 10000, "|")) !== false) {
+            while (($data = fgetcsv($handle, 1000, "|")) !== false) {
                 if ($this->import->recordRow() === false) {
                     continue;
                 }
@@ -98,7 +98,7 @@ class BristolFarmInventory implements ImportInterface
                     continue;
                 }
 
-                $departmentId = $this->import->getDeptIdAndRecordCategory($product, trim($data[5]), trim($data[4]));
+                $departmentId = $this->import->getDeptIdAndRecordCategory($product, trim($data[4]), trim($data[5]));
 
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
@@ -111,14 +111,14 @@ class BristolFarmInventory implements ImportInterface
                     $departmentId
                 );
 
-                if ($product && $product->isExistingProduct) {
-                    $movement = is_numeric($data[7]) ? (intval($data[7]) / 90) : 0;
+                if ($product->isExistingProduct) {
+                    $movement = is_numeric($data[8]) ? (intval($data[8]) / 90) : 0;
 
                     $this->import->persistMetric(
                         $storeId,
                         $product,
+                        $this->import->convertFloatToInt(floatval($data[10])),
                         $this->import->convertFloatToInt(floatval($data[9])),
-                        $this->import->convertFloatToInt(floatval($data[8])),
                         $this->import->convertFloatToInt($movement),
                     );
 
@@ -138,20 +138,21 @@ class BristolFarmInventory implements ImportInterface
         return $compare->fileInventoryCount() > 0;
     }
 
-    private function getStoreNum(string $filename)
+    private function getStoreNum(string $filename): int
     {
-        return intval(substr($filename, 0, -4));
+        return intval(substr($filename, strrpos($filename, '_') - 4, 4));
     }
 
     private function parseLocation(array $data): Location
     {
-        $location = new Location();
+        $location = new Location(trim($data[2]), trim($data[3]));
 
-        if (!empty($data[6])) {
-            $trimData = trim($data[6]);
-            preg_match('/s*(\d+)/', $trimData, $matches, PREG_OFFSET_CAPTURE);
-            $location->aisle = substr($trimData, 0, $matches[0][1] + 1);
-            $location->section = substr($trimData, $matches[0][1] + 1);
+        // skip any aisle with an "RG" prefix, and skip any aisle with an "OT" prefix
+        if (strpos($location->aisle, 'RG') || strpos($location->aisle, 'OT')) {
+            return $location;
+        }
+
+        if (!empty($location->aisle)) {
             $location->valid = true;
         }
 

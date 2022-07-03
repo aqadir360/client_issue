@@ -736,13 +736,12 @@ class Database
         string $productId,
         array $copyFromStores,
         string $orderDirection,
-        string $maxDate,
-        string $minDate
+        string $maxDate
     ) {
         $sql = "select i.expiration_date from #t#.inventory_items i
             inner join #t#.locations l on l.location_id = i.location_id
             where i.product_id = :product_id and i.expiration_date < :max_date
-            and i.close_dated_date > :start_date and i.expiration_date is not null and i.flag is null and i.disco = 0";
+            and i.expiration_date is not null and i.flag is null and i.disco = 0";
 
         if (!empty($copyFromStores)) {
             $sql .= " and l.store_id IN (" . $this->getListParams($copyFromStores) . ") ";
@@ -753,7 +752,6 @@ class Database
         return $this->fetchOneFromCompanyDb($sql, [
             'product_id' => $productId,
             'max_date' => $maxDate,
-            'min_date' => $minDate,
         ]);
     }
 

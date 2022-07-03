@@ -40,10 +40,10 @@ class PriceChopperInventory implements ImportInterface
 
     public function importUpdates()
     {
-        $files = $this->import->downloadFilesByName("Store");
+        $files = $this->import->downloadFilesByName("DataCheckPro");
 
         foreach ($files as $file) {
-            $storeNum = $this->parseStoreNum($file);
+            $storeNum = $this->parseStoreNum(basename($file));
             $storeId = $this->import->storeNumToStoreId($storeNum);
             if (!$storeId) {
                 continue;
@@ -69,7 +69,12 @@ class PriceChopperInventory implements ImportInterface
     private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
     {
         if (($handle = fopen($file, "r")) !== false) {
-            while (($data = fgetcsv($handle, 10000, ",")) !== false) {
+            while (($data = fgetcsv($handle, 10000, "|")) !== false) {
+                if (count($data) < 10) {
+                    $this->import->writeFileOutput($data, "Skip: Unable to Parse");
+                    continue;
+                }
+
                 $upc = BarcodeFixer::fixUpc($data[2]);
                 if ($this->import->isInvalidBarcode($upc, $data[2])) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
@@ -144,9 +149,10 @@ class PriceChopperInventory implements ImportInterface
         return $compare->fileInventoryCount() > 0;
     }
 
-    private function parseStoreNum($file)
+    private function parseStoreNum(string $file): int
     {
-        return intval(substr($file, -7, 3));
+        $start = strpos($file, 'Store') + 5;
+        return intval(substr($file, $start, strpos($file, '_') - $start));
     }
 
     private function getRelatedDSDDepartment(string $departmentId): string
