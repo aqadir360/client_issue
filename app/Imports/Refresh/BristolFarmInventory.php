@@ -78,8 +78,8 @@ class BristolFarmInventory implements ImportInterface
                 $product = $this->import->fetchProduct($upc);
 
                 if ($product->isExistingProduct === false) {
-                    $product->setDescription(trim($data[2]));
-                    $product->setSize(trim($data[3]));
+                    $product->setDescription(trim($data[6]));
+                    $product->setSize(trim($data[7]));
                     $productId = $this->import->createProduct($product);
 
                     if ($productId) {
@@ -148,7 +148,7 @@ class BristolFarmInventory implements ImportInterface
         $location = new Location(trim($data[2]), trim($data[3]));
 
         // skip any aisle with an "RG" prefix, and skip any aisle with an "OT" prefix
-        if (strpos($location->aisle, 'RG') || strpos($location->aisle, 'OT')) {
+        if (strpos($location->aisle, 'RG') !== false || strpos($location->aisle, 'OT') !== false) {
             return $location;
         }
 
