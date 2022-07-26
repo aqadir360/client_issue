@@ -90,7 +90,7 @@ class ImportSEGUpdates implements ImportInterface
         $this->import->outputAndResetFile();
 
         $compare->setExistingInventory();
-        $compare->compareInventorySets();
+        $compare->compareInventorySets(true, false);
 
         $this->import->completeFile();
     }
