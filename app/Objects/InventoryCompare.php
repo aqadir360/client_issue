@@ -185,7 +185,7 @@ class InventoryCompare
                 $this->import->recordStatic();
                 $this->import->writeFileOutput([$newItem->product->barcode], "Static: Skipping Moves");
             } else {
-                $departmentId = $this->updateDepartments ? $newItem->departmentId : $existingItem['department_id'];
+                $departmentId = $this->updateDepartments ? $newItem->departmentId : $existingItem['departmentId'];
 
                 if ($this->updateLocations) {
                     $updateLocation = $newItem->location;
