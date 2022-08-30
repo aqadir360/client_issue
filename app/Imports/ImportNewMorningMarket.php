@@ -29,6 +29,8 @@ class ImportNewMorningMarket implements ImportInterface
     // [11] Cur Price
     // [12] Base Un Cst
     // [13] Category Name
+    // [14] Credited Item
+    // [15] DateCheckPro Exception
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
@@ -40,8 +42,10 @@ class ImportNewMorningMarket implements ImportInterface
         // TODO: get value from file if provided
         $storeId = '9662b68e-bb14-11eb-af4c-080027af75ff';
 
-        $newestFile = $this->import->ftpManager->getMostRecentFile();
-        $file = $this->import->ftpManager->downloadFile($newestFile);
+//        $newestFile = $this->import->ftpManager->getMostRecentFile();
+//        $file = $this->import->ftpManager->downloadFile($newestFile);
+
+        $file = (storage_path('/imports/TestDCPExport_8.csv'));
 
         if ($file) {
             $this->importInventory($file, $storeId);
@@ -122,6 +126,15 @@ class ImportNewMorningMarket implements ImportInterface
                     continue;
                 }
 
+                if (strtolower(trim($data[14])) === 'y') {
+                    $departmentId = $this->mapCreditDepartment($departmentId);
+                }
+
+                if (strtolower(trim($data[15])) === 'y') {
+                    $this->import->writeFileOutput($data, "Skip: Exception Item");
+                    continue;
+                }
+
                 $compare->setFileInventoryItem(
                     $product,
                     $location,
@@ -163,5 +176,19 @@ class ImportNewMorningMarket implements ImportInterface
         $location = new Location(trim($data[8]), trim($data[9]));
         $location->valid = true;
         return $location;
+    }
+
+    private function mapCreditDepartment(string $departmentId): string
+    {
+        switch ($departmentId) {
+            case '80072628-c9a9-e6a4-ec11-469828c77439': // Dairy
+                return '5e6ed52e-1d73-11ed-a115-0022484b8b22';
+            case 'c70e3308-bb14-11eb-9086-080027af75ff': // Grocery
+                return '79d88b70-1d73-11ed-8ebf-0022484b8b22';
+            case 'd10d8383-95a8-b0d5-48b5-b8d4e89e5c9f': // Meat
+                return 'cecc9072-1d73-11ed-8bca-0022484b8b22';
+        }
+
+        return $departmentId;
     }
 }
