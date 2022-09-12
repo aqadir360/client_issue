@@ -5,7 +5,7 @@ namespace App\Imports;
 use App\Models\Location;
 use App\Objects\BarcodeFixer;
 use App\Objects\ImportManager;
-use App\Objects\InventoryCompareByLocation;
+use App\Objects\InventoryCompare;
 
 class ImportHardings implements ImportInterface
 {
@@ -65,7 +65,7 @@ class ImportHardings implements ImportInterface
             return;
         }
 
-        $compare = new InventoryCompareByLocation($this->import, $storeId, false);
+        $compare = new InventoryCompare($this->import, $storeId);
 
         $exists = $this->setFileInventory($compare, $file, $storeId);
         if (!$exists) {
@@ -74,10 +74,10 @@ class ImportHardings implements ImportInterface
         }
 
         $compare->setExistingInventory();
-        $compare->compareInventorySets();
+        $compare->compareInventorySets(true, false);
     }
 
-    private function setFileInventory(InventoryCompareByLocation $compare, $file, $storeId): bool
+    private function setFileInventory(InventoryCompare $compare, $file, $storeId): bool
     {
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 5000, "|")) !== false) {
@@ -131,10 +131,8 @@ class ImportHardings implements ImportInterface
                 }
 
                 $compare->setFileInventoryItem(
-                    $upc,
+                    $product,
                     $loc,
-                    $product->description,
-                    $product->size,
                     $departmentId
                 );
 
