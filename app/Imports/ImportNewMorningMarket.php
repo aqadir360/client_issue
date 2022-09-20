@@ -42,10 +42,8 @@ class ImportNewMorningMarket implements ImportInterface
         // TODO: get value from file if provided
         $storeId = '9662b68e-bb14-11eb-af4c-080027af75ff';
 
-//        $newestFile = $this->import->ftpManager->getMostRecentFile();
-//        $file = $this->import->ftpManager->downloadFile($newestFile);
-
-        $file = (storage_path('/imports/TestDCPExport_8.csv'));
+        $newestFile = $this->import->ftpManager->getMostRecentFile();
+        $file = $this->import->ftpManager->downloadFile($newestFile);
 
         if ($file) {
             $this->importInventory($file, $storeId);
