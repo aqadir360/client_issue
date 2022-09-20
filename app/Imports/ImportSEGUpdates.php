@@ -40,6 +40,8 @@ class ImportSEGUpdates implements ImportInterface
     // [20] Reclaim
     // [21] Own_Brand
     // [22] Item_Status (O = Inactive, D = Disco, A = Active)
+    // [23] SubCategory
+
     public function __construct(ImportManager $importManager)
     {
         $this->import = $importManager;
@@ -125,11 +127,11 @@ class ImportSEGUpdates implements ImportInterface
                     continue;
                 }
 
-                $this->import->recordCategory($product, "", $this->parseCategory(trim($data[6])));
+                $this->import->recordCategory($product, $this->parseCategory(trim($data[6])), trim($data[23]));
 
                 $departmentId = $this->import->getDepartmentId(
                     trim(strtolower($data[12])),
-                    trim(strtolower($data[6])),
+                    trim(strtolower($data[23])),
                     $product->barcode
                 );
 
