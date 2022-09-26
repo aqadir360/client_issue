@@ -64,6 +64,17 @@ class Database
         ]);
     }
 
+    public function fetchAllBristolFarmsLaStorId(string $companyId)
+    { // fetch only la stores from bristol company db
+        $sql = "SELECT store_id, store_num, name
+            FROM #t#.stores
+            WHERE company_id = :company_id AND name like 'LA%' AND archived_at IS NULL";
+
+        return $this->fetchFromCompanyDb($sql, [
+            'company_id' => $companyId,
+        ]);
+    }
+
     public function fetchSkipItems(string $companyId)
     {
         $sql = "SELECT barcode FROM import_skip_list WHERE company_id = :company_id ";
@@ -1015,4 +1026,5 @@ class Database
         $sql = str_replace("#sync#", '`' . $dbName . '_sync`', $sql);
         return str_replace("#t#", '`' . $dbName . '`', $sql);
     }
+
 }

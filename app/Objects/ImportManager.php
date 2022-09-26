@@ -387,6 +387,11 @@ class ImportManager
         }
     }
 
+    public function getBristolFarmsLaStorId(){ // fetch store id containing "LA" from bristol company db
+
+        return $this->db->fetchAllBristolFarmsLaStorId($this->companyId);
+    }
+
     // Finds store id by store number mapping
     // Increments skipStores and returns false if invalid
     public function storeNumToStoreId($storeNum)

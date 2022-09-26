@@ -24,6 +24,7 @@ class BristolFarmInventory implements ImportInterface
 {
     /** @var ImportManager */
     private $import;
+    private $laStoreIds;
 
     public function __construct(ImportManager $importManager)
     {
@@ -54,13 +55,17 @@ class BristolFarmInventory implements ImportInterface
         $compare = new InventoryCompare($this->import, $storeId);
 
         $this->import->startNewFile($file);
-        $this->setFileInventory($compare, $file, $storeId);
+        $this->laStoreIds = $this->import->getBristolFarmsLaStorId(); // get store ids having name 'LA%'
+
+        $isLaStore = $this->checkLaStore($storeId, $this->laStoreIds);
+
+        $this->setFileInventory($compare, $file, $storeId, $isLaStore);
         $compare->setExistingInventory();
         $compare->compareInventorySets();
         $this->import->completeFile();
     }
 
-    private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
+    private function setFileInventory(InventoryCompare $compare, string $file, string $storeId, bool $isLaStore = false)
     {
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 1000, "|")) !== false) {
@@ -100,6 +105,24 @@ class BristolFarmInventory implements ImportInterface
 
                 $departmentId = $this->import->getDeptIdAndRecordCategory($product, trim($data[4]), trim($data[5]));
 
+                if($isLaStore){ // if store is LA then skip the follwoing departments
+                    // Meat, Deli, Produce, and Speciality Cheese
+                    switch($departmentId){
+                        case 'ac078188-1d72-11ed-9189-0022484b8b22':
+                            $this->import->writeFileOutput($data, "Skip: Meat Department");
+                            continue 2;
+                        case '8f579a00-1d72-11ed-b410-0022484b8b22':
+                            $this->import->writeFileOutput($data, "Skip: Deli Department");
+                            continue 2;
+                        case '11e56ab0-1d73-11ed-9564-0022484b8b22':
+                            $this->import->writeFileOutput($data, "Skip: Produce Department");
+                            continue 2;
+                        case 'fc4a0fe4-1d72-11ed-8b5b-0022484b8b22':
+                            $this->import->writeFileOutput($data, "Skip: Specialty Cheese Department");
+                            continue 2;
+                    }
+                }
+
                 if ($departmentId === false) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Department");
                     continue;
@@ -136,6 +159,15 @@ class BristolFarmInventory implements ImportInterface
         }
 
         return $compare->fileInventoryCount() > 0;
+    }
+
+    private function checkLaStore($storeId,$laStoreIds){
+        foreach($laStoreIds as $laStore){
+            if($laStore->store_id == $storeId){
+                return true;
+            }
+        }
+        return false;
     }
 
     private function getStoreNum(string $filename): int
