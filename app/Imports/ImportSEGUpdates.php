@@ -122,6 +122,11 @@ class ImportSEGUpdates implements ImportInterface
                 // Do not skip invalid locations until after the comparison to avoid disco
                 $location = $this->normalizeLocation($data);
 
+                if ($this->isExcludedLocation($location)) {
+                    $this->import->writeFileOutput($data, "Skip: Excluded Location");
+                    continue;
+                }
+
                 if (intval($data[19]) === 1) {
                     $this->import->writeFileOutput($data, "Skip: DSD Sku");
                     continue;
@@ -268,6 +273,26 @@ class ImportSEGUpdates implements ImportInterface
         }
 
         return true;
+    }
+
+    private function isExcludedLocation(Location $location): bool {
+        $excluded = [
+            "Cust",
+            "CustS",
+            "Rgstr",
+            "Beers",
+            "Shell",
+            "Promo",
+            "Racks",
+        ];
+
+        foreach ($excluded as $str) {
+            if (strpos($location->aisle, $str) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function getStoreNum(string $filename)
