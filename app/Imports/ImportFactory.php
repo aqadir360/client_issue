@@ -19,6 +19,8 @@ class ImportFactory
                 return new ImportBuehlers($importManager);
             case 'caputos':
                 return new ImportCaputos($importManager);
+            case 'cub':
+                return new ImportCubFoods($importManager);
             case 'downtoearth':
                 return new ImportDownToEarth($importManager);
             case 'foxbros':
