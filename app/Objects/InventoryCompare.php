@@ -197,16 +197,6 @@ class InventoryCompare
                     );
                 }
 
-                if ($existingItem['departmentId'] === $departmentId
-                    && $existingItem['aisle'] === $updateLocation->aisle
-                    && $existingItem['section'] === $updateLocation->section
-                    && $existingItem['shelf'] === $updateLocation->shelf
-                ) {
-                    $this->import->recordStatic();
-                    $this->import->writeFileOutput([$newItem->product->barcode], "Static");
-                    return;
-                }
-
                 $this->import->updateInventoryLocation(
                     $existingItem['id'],
                     $this->storeId,
