@@ -82,13 +82,14 @@ class ImportSEGUpdates implements ImportInterface
 
         $compare = new InventoryCompare($this->import, $storeId);
 
-        $exists = $this->setFileInventory($compare, $file, $storeId);
+        $total = $this->setFileInventory($compare, $file, $storeId);
 
-        if (!$exists) {
+        if ($total <= 0) {
             $this->import->outputContent("Skipping $storeNum - Import file was empty");
             return;
         }
 
+        $this->import->setTotalCount($total);
         $this->import->outputAndResetFile();
 
         $compare->setExistingInventory();
@@ -97,7 +98,7 @@ class ImportSEGUpdates implements ImportInterface
         $this->import->completeFile();
     }
 
-    private function setFileInventory(InventoryCompare $compare, string $file, string $storeId)
+    private function setFileInventory(InventoryCompare $compare, string $file, string $storeId): int
     {
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 10000, "|")) !== false) {
@@ -122,7 +123,7 @@ class ImportSEGUpdates implements ImportInterface
                 // Do not skip invalid locations until after the comparison to avoid disco
                 $location = $this->normalizeLocation($data);
 
-                if ($this->isExcludedLocation($location)) {
+                if ($this->isExcludedLocation(strtolower($location->aisle))) {
                     $this->import->writeFileOutput($data, "Skip: Excluded Location");
                     continue;
                 }
@@ -201,7 +202,7 @@ class ImportSEGUpdates implements ImportInterface
             fclose($handle);
         }
 
-        return $compare->fileInventoryCount() > 0;
+        return $compare->fileInventoryCount();
     }
 
     private function getOrCreateProduct(array $data): ?Product
@@ -275,19 +276,37 @@ class ImportSEGUpdates implements ImportInterface
         return true;
     }
 
-    private function isExcludedLocation(Location $location): bool {
+    private function isExcludedLocation(string $aisle): bool
+    {
         $excluded = [
-            "Cust",
-            "CustS",
-            "Rgstr",
-            "Beers",
-            "Shell",
-            "Promo",
-            "Racks",
+            "baglc",
+            "bakry",
+            "beers",
+            "cust",
+            "delid",
+            "dollr",
+            "endcp",
+            "frozn",
+            "gmhbc",
+            "hbcgm",
+            "liqur",
+            "meatd",
+            "na",
+            "pharm",
+            "prodd",
+            "promo",
+            "racks",
+            "rgstr",
+            "seafd",
+            "shell",
+            "supbr",
+            "test",
+            "wallv",
+            "wines",
         ];
 
         foreach ($excluded as $str) {
-            if (strpos($location->aisle, $str) !== false) {
+            if (strpos($aisle, $str) !== false) {
                 return true;
             }
         }
