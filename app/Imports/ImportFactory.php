@@ -21,6 +21,8 @@ class ImportFactory
                 return new ImportCaputos($importManager);
             case 'cub':
                 return new ImportCubFoods($importManager);
+            case 'cub_inventory':
+                return new Refresh\CubFoodsInventory($importManager);
             case 'downtoearth':
                 return new ImportDownToEarth($importManager);
             case 'foxbros':
