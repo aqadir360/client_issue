@@ -14,8 +14,6 @@ class ImportSEGUpdates implements ImportInterface
     /** @var ImportManager */
     private $import;
 
-    private $products = [];
-
     // Expected File Columns:
     // [0] Loc_Id
     // [1] Asl_Num
@@ -168,38 +166,30 @@ class ImportSEGUpdates implements ImportInterface
                     $departmentId
                 );
 
-                if ($product && $product->isExistingProduct) {
-                    $movement = $this->import->parsePositiveFloat($data[16]);
-                    $price = $this->import->parsePositiveFloat($data[13]);
-                    $priceModifier = intval($data[14]);
-                    if ($priceModifier <= 0) {
-                        $price = 0;
-                    } else {
-                        $price = $price / $priceModifier;
-                    }
-
-                    $this->import->persistMetric(
-                        $storeId,
-                        $product,
-                        $this->import->convertFloatToInt($price), // clone retail to cost
-                        $this->import->convertFloatToInt($price),
-                        $this->import->convertFloatToInt($movement)
-                    );
-
-                    if (trim($data[21]) === 'Y') {
-                        $this->import->createVendor($product, 'Own Brand');
-                    } else {
-                        $this->import->createVendor($product, 'None');
-                    }
-
-                    if ($location->valid) {
-                        $this->import->writeFileOutput($data, "Success: Valid Product");
-                    } else {
-                        $this->import->writeFileOutput($data, "Skipped: Invalid Location");
-                    }
+                $movement = $this->import->parsePositiveFloat($data[16]);
+                $price = $this->import->parsePositiveFloat($data[13]);
+                $priceModifier = intval($data[14]);
+                if ($priceModifier <= 0) {
+                    $price = 0;
                 } else {
-                    $this->import->writeFileOutput($data, "Skipped: New Product");
+                    $price = $price / $priceModifier;
                 }
+
+                $this->import->persistMetric(
+                    $storeId,
+                    $product,
+                    $this->import->convertFloatToInt($price), // clone retail to cost
+                    $this->import->convertFloatToInt($price),
+                    $this->import->convertFloatToInt($movement)
+                );
+
+                if (trim($data[21]) === 'Y') {
+                    $this->import->createVendor($product, 'Own Brand');
+                } else {
+                    $this->import->createVendor($product, 'None');
+                }
+
+                $this->import->writeFileOutput($data, "Success: Valid Product");
             }
 
             fclose($handle);
@@ -210,39 +200,13 @@ class ImportSEGUpdates implements ImportInterface
 
     private function getOrCreateProduct(array $data): ?Product
     {
-        $sku = trim($data[7]);
         $inputBarcode = trim($data[8]);
         $upc = BarcodeFixer::fixLength($inputBarcode);
         if ($this->import->isInvalidBarcode($upc, $inputBarcode)) {
             return null;
         }
 
-        if (isset($this->products[intval($upc)])) {
-            return $this->products[intval($upc)];
-        }
-
-        $product = $this->import->fetchProduct($upc, null, $sku);
-        if (!$product->isExistingProduct) {
-            $product->setDescription($data[9]);
-            $product->setSize($data[10]);
-
-            $productId = $this->import->createProduct($product);
-
-            if ($productId === null) {
-                $this->import->writeFileOutput($data, "Skip: Could not create product");
-                $this->products[intval($upc)] = null;
-                return null;
-            }
-
-            $product->setProductId($productId);
-            $this->import->db->setProductSku($productId, $sku);
-        } elseif ($product->sku !== $sku) {
-            $this->import->db->setProductSku($product->productId, $sku);
-        }
-
-        $this->products[intval($upc)] = $product;
-
-        return $product;
+        return $this->import->getOrCreateProduct($upc, $data[9], $data[10], trim($data[7]));
     }
 
     private function normalizeLocation(array $data): Location

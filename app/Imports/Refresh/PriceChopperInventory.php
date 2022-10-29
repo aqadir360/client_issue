@@ -81,23 +81,9 @@ class PriceChopperInventory implements ImportInterface
                     continue;
                 }
 
-                $sku = trim($data[1]);
-                $product = $this->import->fetchProduct($upc, null, $sku);
-                if ($product->isExistingProduct === false) {
-                    $product->setDescription(trim($data[5]));
-                    $product->setSize(trim($data[6]));
-                    $productId = $this->import->createProduct($product);
-
-                    if ($productId) {
-                        $product->setProductId($productId);
-                    } else {
-                        $this->import->writeFileOutput($data, "Skip: Invalid Product");
-                        continue;
-                    }
-                }
-
-                if ($product->sku !== $sku) {
-                    $this->import->db->setProductSku($product->productId, $sku);
+                $product = $this->import->getOrCreateProduct($upc, $data[5], $data[6], $data[1]);
+                if ($product === null) {
+                    continue;
                 }
 
                 $location = PriceChopperSettings::parseLocation($data);
@@ -124,23 +110,15 @@ class PriceChopperInventory implements ImportInterface
                     $departmentId
                 );
 
-                if ($product && $product->isExistingProduct) {
-                    $this->import->persistMetric(
-                        $storeId,
-                        $product,
-                        $this->import->convertFloatToInt(floatval($data[11])),
-                        $this->import->convertFloatToInt(floatval($data[10])),
-                        $this->import->convertFloatToInt(floatval($data[8])),
-                    );
+                $this->import->persistMetric(
+                    $storeId,
+                    $product,
+                    $this->import->convertFloatToInt(floatval($data[11])),
+                    $this->import->convertFloatToInt(floatval($data[10])),
+                    $this->import->convertFloatToInt(floatval($data[8])),
+                );
 
-                    if ($location->valid) {
-                        $this->import->writeFileOutput($data, "Success: Valid Product");
-                    } else {
-                        $this->import->writeFileOutput($data, "Skipped: Invalid Location");
-                    }
-                } else {
-                    $this->import->writeFileOutput($data, "Skipped: New Product");
-                }
+                $this->import->writeFileOutput($data, "Success: Valid Product");
             }
 
             fclose($handle);

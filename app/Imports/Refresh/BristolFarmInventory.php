@@ -105,9 +105,9 @@ class BristolFarmInventory implements ImportInterface
 
                 $departmentId = $this->import->getDeptIdAndRecordCategory($product, trim($data[4]), trim($data[5]));
 
-                if($isLaStore){ // if store is LA then skip the follwoing departments
+                if ($isLaStore) { // if store is LA then skip the follwoing departments
                     // Meat, Deli, Produce, and Speciality Cheese
-                    switch($departmentId){
+                    switch ($departmentId) {
                         case 'ac078188-1d72-11ed-9189-0022484b8b22':
                             $this->import->writeFileOutput($data, "Skip: Meat Department");
                             continue 2;
@@ -134,25 +134,17 @@ class BristolFarmInventory implements ImportInterface
                     $departmentId
                 );
 
-                if ($product->isExistingProduct) {
-                    $movement = is_numeric($data[8]) ? (intval($data[8]) / 90) : 0;
+                $movement = is_numeric($data[8]) ? (intval($data[8]) / 90) : 0;
 
-                    $this->import->persistMetric(
-                        $storeId,
-                        $product,
-                        $this->import->convertFloatToInt(floatval($data[10])),
-                        $this->import->convertFloatToInt(floatval($data[9])),
-                        $this->import->convertFloatToInt($movement),
-                    );
+                $this->import->persistMetric(
+                    $storeId,
+                    $product,
+                    $this->import->convertFloatToInt(floatval($data[10])),
+                    $this->import->convertFloatToInt(floatval($data[9])),
+                    $this->import->convertFloatToInt($movement),
+                );
 
-                    if ($location->valid) {
-                        $this->import->writeFileOutput($data, "Success: Valid Product");
-                    } else {
-                        $this->import->writeFileOutput($data, "Skipped: Invalid Location");
-                    }
-                } else {
-                    $this->import->writeFileOutput($data, "Skipped: New Product");
-                }
+                $this->import->writeFileOutput($data, "Success: Valid Product");
             }
 
             fclose($handle);
@@ -161,9 +153,10 @@ class BristolFarmInventory implements ImportInterface
         return $compare->fileInventoryCount() > 0;
     }
 
-    private function checkLaStore($storeId,$laStoreIds){
-        foreach($laStoreIds as $laStore){
-            if($laStore->store_id == $storeId){
+    private function checkLaStore($storeId, $laStoreIds)
+    {
+        foreach ($laStoreIds as $laStore) {
+            if ($laStore->store_id == $storeId) {
                 return true;
             }
         }

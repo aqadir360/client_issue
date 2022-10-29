@@ -145,23 +145,15 @@ class AlaskaInventory implements ImportInterface
                     $departmentId
                 );
 
-                if ($product && $product->isExistingProduct) {
-                    $this->import->persistMetric(
-                        $storeId,
-                        $product,
-                        $this->import->convertFloatToInt(floatval($data[12])),
-                        $this->import->convertFloatToInt(floatval($data[11])),
-                        $this->import->convertFloatToInt($movement),
-                    );
+                $this->import->persistMetric(
+                    $storeId,
+                    $product,
+                    $this->import->convertFloatToInt(floatval($data[12])),
+                    $this->import->convertFloatToInt(floatval($data[11])),
+                    $this->import->convertFloatToInt($movement),
+                );
 
-                    if ($location->valid) {
-                        $this->import->writeFileOutput($data, "Success: Valid Product");
-                    } else {
-                        $this->import->writeFileOutput($data, "Skipped: Invalid Location");
-                    }
-                } else {
-                    $this->import->writeFileOutput($data, "Skipped: New Product");
-                }
+                $this->import->writeFileOutput($data, "Success: Valid Product");
             }
 
             fclose($handle);

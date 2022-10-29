@@ -139,12 +139,8 @@ class ImportNewMorningMarket implements ImportInterface
                     $departmentId
                 );
 
-                if ($product && $product->isExistingProduct) {
-                    $this->createMetric($storeId, $product, $data);
-                    $this->import->writeFileOutput($data, "Success: Valid Product");
-                } else {
-                    $this->import->writeFileOutput($data, "Skip: Invalid Product");
-                }
+                $this->createMetric($storeId, $product, $data);
+                $this->import->writeFileOutput($data, "Success: Valid Product");
             }
 
             fclose($handle);
