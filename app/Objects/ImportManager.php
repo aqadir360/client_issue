@@ -45,6 +45,8 @@ class ImportManager
     private $invalidBarcodes = [];
     private $mappedDepartments = [];
 
+    private $products = [];
+
     public function __construct(
         Api $api,
         Database $database,
@@ -334,6 +336,10 @@ class ImportManager
 
         if ($product->categoryId !== $categoryId) {
             $this->db->updateProductCategory($product->productId, $categoryId);
+            if (isset($this->products[intval($product->barcode)])) {
+                $product->categoryId = $categoryId;
+                $this->products[intval($product->barcode)] = $product;
+            }
         }
     }
 
@@ -766,5 +772,39 @@ class ImportManager
             $this->db->insertMetric($storeId, $product->productId, $cost, $retail, $movement);
             $this->currentFile->metrics++;
         }
+    }
+
+    // Saves products in local array to avoid multiple database lookups
+    public function getOrCreateProduct(string $upc, string $description, string $size, ?string $sku = null): ?Product
+    {
+        if (isset($this->products[intval($upc)])) {
+            return $this->products[intval($upc)];
+        }
+
+        $product = $this->fetchProduct($upc, null, $sku);
+        if (!$product->isExistingProduct) {
+            $product->setDescription(trim($description));
+            $product->setSize(trim($size));
+
+            $productId = $this->createProduct($product);
+
+            if ($productId === null) {
+                $this->writeFileOutput([$upc], "Skip: Could not create product");
+                $this->products[intval($upc)] = null;
+                return null;
+            }
+
+            $product->setProductId($productId);
+
+            if ($sku) {
+                $this->db->setProductSku($productId, $sku);
+            }
+        } elseif ($sku && intval($product->sku) !== intval($sku)) {
+            $this->db->setProductSku($product->productId, $sku);
+        }
+
+        $this->products[intval($upc)] = $product;
+
+        return $product;
     }
 }
