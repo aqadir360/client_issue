@@ -56,7 +56,7 @@ class CubFoodsInventory implements ImportInterface
         $this->setFileInventory($compare, $file, $storeId);
 
         $compare->setExistingInventory();
-        $compare->compareInventorySets();
+        $compare->compareInventorySets(true, false);
         $this->import->completeFile();
     }
 
@@ -64,6 +64,8 @@ class CubFoodsInventory implements ImportInterface
     {
         if (($handle = fopen($file, "r")) !== false) {
             while (($data = fgetcsv($handle, 10000, "|")) !== false) {
+                $this->import->recordRow();
+
                 $upc = BarcodeFixer::fixUpc(trim($data[1]));
                 if ($this->import->isInvalidBarcode($upc, $data[1])) {
                     $this->import->writeFileOutput($data, "Skip: Invalid Barcode");
