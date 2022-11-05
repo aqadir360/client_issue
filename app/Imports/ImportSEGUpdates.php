@@ -48,27 +48,33 @@ class ImportSEGUpdates implements ImportInterface
 
     public function importUpdates()
     {
-        $fileList = $this->import->downloadFilesByName('SEG_DCP_');
+        $files = $this->getStoreFiles();
 
-        foreach ($fileList as $file) {
-            if (strpos($file, 'User') === false) {
-                $this->importInventory($file);
-            } else {
-                unlink($file);
-            }
+        foreach ($files as $storeNum => $file) {
+            $this->importInventory($file, $storeNum);
         }
 
         $this->import->completeImport();
     }
 
-    private function importInventory($file)
+    private function getStoreFiles(): array
     {
-        $storeNum = $this->getStoreNum(basename($file));
+        $storeFiles = [];
+        $stores = $this->import->getStores();
+        $files = $this->import->ftpManager->getRecentlyModifiedFiles();
 
-        if ($storeNum === null) {
-            return;
+        foreach ($stores as $storeNum => $store) {
+            $file = $this->import->downloadMostRecentMatchingFile($files, 'SEG_DCP_' . $storeNum . '_');
+            if (!is_null($file)) {
+                $storeFiles[$storeNum] = $file;
+            }
         }
 
+        return $storeFiles;
+    }
+
+    private function importInventory(string $file, int $storeNum)
+    {
         $this->import->startNewFile($file);
 
         $storeId = $this->import->storeNumToStoreId($storeNum);
